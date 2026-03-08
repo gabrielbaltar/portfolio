@@ -1,0 +1,29 @@
+{
+  "name": "portfolio-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "vite --config apps/web/vite.config.ts",
+    "dev:cms": "vite --config apps/cms/vite.config.ts",
+    "build:web": "vite build --config apps/web/vite.config.ts",
+    "build:cms": "vite build --config apps/cms/vite.config.ts",
+    "build": "npm run build:web && npm run build:cms",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "seed:supabase": "node --env-file=.env --import tsx scripts/seed-supabase.ts"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.12",
+    "@types/react": "18.3.24",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "tailwindcss": "4.1.12",
+    "tsx": "^4.20.5",
+    "typescript": "5.8.2",
+    "vite": "6.3.5"
+  }
+}

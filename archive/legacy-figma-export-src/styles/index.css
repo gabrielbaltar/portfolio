@@ -1,0 +1,10 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Ensure placeholder text follows theme changes */
+::placeholder {
+  color: var(--text-secondary, #ababab) !important;
+  opacity: 0.7;
+  transition: color 0.3s ease;
+}

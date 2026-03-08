@@ -1,0 +1,126 @@
+Crie uma landing page ONE-PAGE (scroll) de portfólio/currículo em dark theme, com estética minimalista, muito espaço negativo e cards discretos. A tela deve replicar fielmente o layout do screenshot: coluna central estreita, tipografia clara, links sublinhados, grid de projetos 2x2, timelines em “linha vertical” e seção final com formulário.
+
+FRAME / GRID
+- Frame: Desktop 1440px de largura (altura longa ~4200px ou Auto Layout vertical).
+- Fundo: preto/quase preto com leve vinheta/gradiente (centro um pouco mais claro, bordas mais escuras).
+  Ex.: base #0B0B0D; overlay radial suave #141418 no centro (10–15%).
+- Conteúdo central: container com max-width ~920–980px, alinhado ao centro (left-aligned internamente).
+- Ritmo vertical: espaçamento generoso entre seções (64–96px).
+- Use Auto Layout vertical no container principal.
+
+TIPOGRAFIA (estilo do screenshot)
+- Fonte: Inter (ou equivalente). 
+- Heading seção: 20–24px, semibold.
+- Título nome: 22–26px, semibold.
+- Corpo: 14–16px, regular, line-height 150–170%.
+- Cor texto primário: #EDEDED; secundário: #A0A0A0; muted: #6F6F6F.
+
+NAVEGAÇÃO TOPO (PILL + BOTÃO “+”)
+- Navbar flutuante (fixed/sticky) centralizada no topo, formato pill (radius 12–16).
+- Altura ~40–44px; padding horizontal 14–18px; gap 16px.
+- Fundo: cinza escuro #202124 com leve blur (glass muito sutil) e sombra suave.
+- Itens (texto pequeno 13–14px, cor #CFCFCF):
+  “Intro”, “About”, “Projetos”, “Experiência”, [botão quadrado com ícone +], “Educação”, “Ferramentas”, “Blog”, “Contato”.
+- O botão “+” fica no meio, dentro de um quadrado pequeno (32–36px), fundo levemente diferente (#2A2B2F), ícone + central.
+- Estados: hover clareia texto; item ativo pode ter texto um pouco mais branco.
+
+SEÇÃO INTRO (TOPO DO CONTEÚDO)
+Estrutura em 2 colunas (esquerda info, direita links), alinhado ao topo:
+Esquerda:
+- Avatar quadrado com cantos arredondados (56–64px), imagem do usuário.
+- Ao lado do avatar:
+  - Nome: “Gabriel Baltar Pereira”
+  - Cargo: “UX Designer”
+  - Linha com ícone (quadradinho) + “Rio de Janeiro, Brazil” (texto secundário)
+  - Linha status com bolinha verde pequena (6–8px) + “Available for new projects” (texto muted/secondary).
+- Abaixo, um texto de email/link simples (ex.: “gabrielbaltar@gmail.com”) em cinza claro.
+Direita:
+- Dois links empilhados (alinhados à direita): “Get Template” e “Download CV”
+- Estilo link: texto claro + sublinhado fino (underline).
+- Abaixo, dois links em linha: “Twitter” e “LinkedIn”, cada um precedido por um pequeno ícone/quadradinho.
+
+SEÇÃO “Sobre mim”
+- Título: “Sobre mim”
+- 2 parágrafos curtos (texto placeholder igual ao template do screenshot; tom profissional).
+- Largura de leitura confortável, sem caixa, só texto no fundo.
+
+SEÇÃO “Projetos”
+- Header em linha: esquerda “Projetos”; direita link “Ver todos” (underline).
+- Grid 2 colunas, 2 linhas (4 cards).
+- Card de projeto:
+  - Fundo quase preto (#0F1012) com borda 1px muito sutil (#2A2A2A 40%).
+  - Radius 12–14.
+  - Imagem grande no topo (thumbnail) ocupando ~70% do card.
+  - Abaixo: título do projeto (ex.: “Brandly”, “Silo”, “Vivo”, “Capa”) + subtítulo menor (ex.: “Search Visual…” / “Dashboard…”).
+  - Hover: levanta 2–4px e clareia borda.
+
+SEÇÃO “Experiência”
+- Título: “Experiência”
+- Layout de timeline: uma linha vertical fina à esquerda (1px, #2A2A2A) e pequenos marcadores quadrados (6–8px).
+- Para cada experiência:
+  - Linha 1: empresa (ex.: “Digital Innovations Agency”) em texto claro
+  - Linha 2: cargo (ex.: “Digital Product Designer”) semibold
+  - Linha 3: local (texto secundário)
+  - À direita (alinhado): período (ex.: “Jun 2023 – Present”)
+  - Abaixo: lista de bullets (3–5 itens) com pontos pequenos.
+
+SEÇÃO “Education”
+- Mesmo padrão visual do bloco (sem cards pesados), com entradas e período à direita.
+- 2 entradas com: curso/degree (semibold), instituição, descrição curta.
+
+SEÇÃO “Certifications”
+- Lista simples (1 coluna) com 4 itens.
+- Cada item: nome da certificação (semibold), linha de detalhe pequena (instituição/ano).
+- À direita, link “View” alinhado (underline).
+
+SEÇÃO “Stack”
+- Grid 2 colunas com pequenos “mini-cards”/linhas:
+  - Ícone 28–32px à esquerda
+  - Nome (semibold) + descrição curta (texto secondary)
+- Itens como no screenshot (ex.: Figma, Notion, Next.js / DaisyUI, Framer, etc.). Pode usar ícones placeholders.
+
+SEÇÃO “Awards”
+- Lista simples com 4 itens:
+  - Nome do award + subtítulo (evento/ano) à esquerda
+  - Link “Visit” à direita (underline)
+
+SEÇÃO “Recommendations”
+- Título: “Recommendations”
+- 3 blocos de depoimento empilhados.
+- Cada bloco com uma barrinha vertical sutil à esquerda (ou alinhamento com a linha do timeline) e:
+  - Nome (semibold)
+  - Cargo/empresa (secondary)
+  - Parágrafo do depoimento (texto secondary).
+
+SEÇÃO “Articles & publications”
+- Header em linha: esquerda “Articles & publications”; direita link “View all” (underline).
+- Lista com 3 itens, cada item em 2 colunas:
+  - Esquerda: thumbnail grande (radius 12–14).
+  - Direita: título do artigo (semibold), meta (data/categoria), resumo curto, link “Read article” (underline).
+
+SEÇÃO CONTATO (“Let’s talk”)
+- Título: “Let’s talk”
+- Layout 2 colunas:
+  Coluna esquerda (lista):
+  - “Time here:” + horário
+  - “Email:” + email
+  - “Phone:” + telefone
+  - “Socials:” + lista (Twitter, Instagram, LinkedIn)
+  Coluna direita (form):
+  - Card/fundo levemente destacado (#101114) com radius 12–14 e borda sutil.
+  - Inputs: “Your name”, “Your Email address”, textarea “Message”.
+  - Estilo inputs: fundo #15161A, borda 1px #2A2A2A, texto claro, placeholder muted.
+  - Botão full width “Send Message” com fundo claro (quase branco) e texto escuro; radius 10–12.
+
+RODAPÉ
+- Linha final discreta:
+  Esquerda: “Designed and built by …”
+  Direita: “© Copyright 2025”
+- Separação por uma linha/top border sutil.
+
+REGRAS DE FIDELIDADE
+- Manter tudo bem minimalista: sem ícones grandes, sem cores fortes (só o verde do status).
+- Links sempre com underline fino.
+- Bordas e sombras MUITO sutis.
+- Tudo alinhado à esquerda no container, com bastante respiro.
+- Nomeie as seções com IDs/âncoras correspondentes aos itens da navbar (Intro, About, Projetos, Experiência, Educação, Ferramentas, Blog, Contato) para navegação.

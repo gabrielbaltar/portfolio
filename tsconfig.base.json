@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@portfolio/ui/*": ["packages/ui/src/*"],
+      "@portfolio/core/*": ["packages/core/src/*"],
+      "@portfolio/supabase/*": ["packages/supabase/src/*"],
+      "@portfolio/ui": ["packages/ui/src/index.ts"],
+      "@portfolio/core": ["packages/core/src/index.ts"],
+      "@portfolio/supabase": ["packages/supabase/src/index.ts"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": [
+    "apps/**/*",
+    "packages/**/*",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "packages/ui/src/imports/**/*",
+    "packages/ui/src/app/App.tsx",
+    "packages/ui/src/app/routes.ts",
+    "packages/ui/src/app/components/blog-editor.tsx",
+    "packages/ui/src/app/components/cms-admin.tsx"
+  ]
+}
