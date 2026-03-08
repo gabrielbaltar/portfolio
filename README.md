@@ -259,6 +259,35 @@ No `portfolio-cms`:
 
 Nunca configure `SUPABASE_SERVICE_ROLE_KEY` no Render para esses dois static sites.
 
+## Keepalive opcional do Supabase
+
+Se o projeto Supabase gratuito estiver pausando por inatividade, este repo inclui um keepalive simples via GitHub Actions:
+
+- workflow: `.github/workflows/supabase-keepalive.yml`
+- script: `scripts/supabase-keepalive.mjs`
+
+Como funciona:
+
+- a cada 12 horas, o GitHub Actions faz um `SELECT` leve em `site_settings`
+- a chamada usa apenas a `anon key`
+- se o projeto estiver acordado, o job retorna `200`
+
+Secrets necessarios no GitHub:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+
+Configuracao:
+
+1. Abra `GitHub > Settings > Secrets and variables > Actions`.
+2. Crie os secrets `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
+3. Va em `Actions` e rode manualmente o workflow `Supabase Keepalive` uma vez.
+
+Observacao:
+
+- isso e apenas best effort para gerar atividade periodica
+- a forma garantida de evitar pause e usar um plano pago do Supabase
+
 ### Deploy por Blueprint
 
 1. Garanta que o repositorio esta publicado no GitHub.
