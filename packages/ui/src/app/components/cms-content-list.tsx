@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   ArrowUpRight,
   BookOpen,
@@ -7,6 +9,7 @@ import {
   Clock,
   Copy,
   FileText,
+  GripVertical,
   Grid3X3,
   Image as ImageIcon,
   List,
@@ -18,7 +21,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { ensureUniqueSlug, slugify } from "@portfolio/core";
+import { ensureUniqueSlug, legacySeedData, slugify } from "@portfolio/core";
 import { toast } from "sonner";
 import { useCMS, type BlogPost, type ContentStatus, type Page, type Project } from "./cms-data";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
@@ -26,6 +29,29 @@ import { CMSConfirmDialog } from "./cms-confirm-dialog";
 type ContentType = "projects" | "articles" | "pages";
 
 type ContentItem = Project | BlogPost | Page;
+type ContentRowDragItem = { index: number; type: string };
+
+const CONTENT_ROW_DND_TYPE = "CMS_CONTENT_ROW";
+
+const DEMO_SIGNATURES: Record<ContentType, { ids: Set<string>; slugs: Set<string> }> = {
+  projects: {
+    ids: new Set(legacySeedData.projects.map((item) => item.id)),
+    slugs: new Set(legacySeedData.projects.map((item) => item.slug)),
+  },
+  articles: {
+    ids: new Set(legacySeedData.blogPosts.map((item) => item.id)),
+    slugs: new Set(legacySeedData.blogPosts.map((item) => item.slug)),
+  },
+  pages: {
+    ids: new Set(legacySeedData.pages.map((item) => item.id)),
+    slugs: new Set(legacySeedData.pages.map((item) => item.slug)),
+  },
+};
+
+function isDemoItem(contentType: ContentType, item: ContentItem) {
+  const signature = DEMO_SIGNATURES[contentType];
+  return signature.ids.has(item.id) || signature.slugs.has(item.slug);
+}
 
 function StatusBadge({ status }: { status: ContentStatus }) {
   const config: Record<ContentStatus, { bg: string; text: string; label: string }> = {
@@ -168,17 +194,223 @@ function buildDraftSlug(base: string, existingSlugs: string[], fallback: string)
   return ensureUniqueSlug(slugify(base) || fallback, existingSlugs, fallback);
 }
 
+function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  if (fromIndex === toIndex) return items;
+
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
+function applyIdOrder<T extends { id: string }>(items: T[], ids: string[] | null) {
+  if (!ids?.length) return items;
+
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const ordered = ids
+    .map((id) => byId.get(id))
+    .filter((item): item is T => Boolean(item));
+
+  if (ordered.length === items.length) return ordered;
+
+  return [...ordered, ...items.filter((item) => !ids.includes(item.id))];
+}
+
+function hasSameOrder(items: Array<{ id: string }>, ids: string[]) {
+  return items.length === ids.length && items.every((item, index) => item.id === ids[index]);
+}
+
+function DraggableContentRow({
+  item,
+  index,
+  isLast,
+  contentType,
+  category,
+  date,
+  isFeatured,
+  isProtected,
+  fullIndex,
+  canReorder,
+  onMovePreview,
+  onCommit,
+  onCancel,
+  onDuplicate,
+  menuOpen,
+  setMenuOpen,
+  setPendingDelete,
+}: {
+  item: ContentItem;
+  index: number;
+  isLast: boolean;
+  contentType: ContentType;
+  category: string;
+  date: string | null;
+  isFeatured: boolean;
+  isProtected: boolean;
+  fullIndex: number;
+  canReorder: boolean;
+  onMovePreview: (dragIndex: number, hoverIndex: number) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+  onDuplicate: (item: ContentItem) => void;
+  menuOpen: string | null;
+  setMenuOpen: (value: string | null) => void;
+  setPendingDelete: (item: ContentItem | null) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLSpanElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: CONTENT_ROW_DND_TYPE,
+    canDrag: canReorder,
+    item: (): ContentRowDragItem => ({ index, type: CONTENT_ROW_DND_TYPE }),
+    end: (_item, monitor) => {
+      if (!canReorder) return;
+      if (monitor.didDrop()) {
+        onCommit();
+        return;
+      }
+      onCancel();
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver, canDrop }, drop] = useDrop<ContentRowDragItem, { moved: true } | void, { isOver: boolean; canDrop: boolean }>({
+    accept: CONTENT_ROW_DND_TYPE,
+    hover(dragItem, monitor) {
+      if (!canReorder || !ref.current) return;
+      const dragIndex = dragItem.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverRect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverRect.bottom - hoverRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      const hoverClientY = clientOffset.y - hoverRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      onMovePreview(dragIndex, hoverIndex);
+      dragItem.index = hoverIndex;
+    },
+    drop() {
+      if (!canReorder) return;
+      return { moved: true };
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  drag(handleRef);
+  drop(ref);
+
+  return (
+    <div
+      ref={ref}
+      className={`flex items-center gap-4 px-4 transition-all hover:bg-[#2a2a2a] ${
+        isDragging
+          ? "opacity-45"
+          : isOver && canDrop
+            ? "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            : ""
+      }`}
+      style={{
+        height: isLast ? "63.5px" : "64.5px",
+        borderBottom: isLast ? undefined : "1px solid #363636",
+      }}
+    >
+      {fullIndex >= 0 && (
+        <div className="flex shrink-0 items-center gap-2">
+          <span
+            ref={handleRef}
+            onClick={(event) => event.stopPropagation()}
+            className={`inline-flex items-center justify-center rounded-md p-1 transition-colors ${
+              canReorder
+                ? "cursor-grab text-[#555] hover:text-[#aaa] active:cursor-grabbing"
+                : "cursor-not-allowed text-[#333]"
+            }`}
+            title={canReorder ? "Arrastar para reordenar" : "Limpe a busca e deixe o filtro em Todos para reordenar"}
+          >
+            <GripVertical size={14} />
+          </span>
+          <span
+            className="rounded-full px-2 py-0.5 text-[#888]"
+            style={{ backgroundColor: "#1a1a1a", fontSize: "11px", lineHeight: "16.5px" }}
+          >
+            #{fullIndex + 1}
+          </span>
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/content/${contentType}/${item.id}/edit`}
+            className="truncate text-[#fafafa]"
+            style={{ fontSize: "14px", lineHeight: "21px" }}
+          >
+            {item.title || "Sem titulo"}
+          </Link>
+          {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
+          {isProtected && <Lock size={11} className="text-[#ffa500]" />}
+        </div>
+
+        <div className="mt-0.5 flex items-center gap-3">
+          {category ? (
+            <span style={{ fontSize: "12px", lineHeight: "18px", color: "#ababab" }}>{category}</span>
+          ) : null}
+          {date ? (
+            <span
+              className="flex items-center gap-1"
+              style={{ fontSize: "11px", lineHeight: "16.5px", color: "#ababab", opacity: 0.6 }}
+            >
+              <Clock size={10} />
+              {date}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        <StatusBadge status={item.status} />
+        <ActionMenu
+          isOpen={menuOpen === item.id}
+          onToggle={() => setMenuOpen(menuOpen === item.id ? null : item.id)}
+          editLink={`/content/${contentType}/${item.id}/edit`}
+          onDuplicate={() => {
+            setMenuOpen(null);
+            onDuplicate(item);
+          }}
+          onDelete={() => {
+            setPendingDelete(item);
+            setMenuOpen(null);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function CMSContentList() {
   const { type } = useParams<{ type: ContentType }>();
   const contentType = (type || "projects") as ContentType;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { data, updateBlogPosts, updatePages, updateProjects } = useCMS();
+  const { data, updateBlogPosts, updatePages, updateProjects, updateSiteSettings } = useCMS();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContentStatus | "all">("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ContentItem | null>(null);
+  const [pendingDemoCleanup, setPendingDemoCleanup] = useState(false);
+  const [dragOrderIds, setDragOrderIds] = useState<string[] | null>(null);
 
   const config: Record<
     ContentType,
@@ -222,12 +454,20 @@ export function CMSContentList() {
   };
 
   const currentConfig = config[contentType];
+  const sourceItemsForType = contentType === "projects" ? data.projects : contentType === "articles" ? data.blogPosts : data.pages || [];
+  const allItemsForType = useMemo(
+    () => applyIdOrder(sourceItemsForType, dragOrderIds),
+    [dragOrderIds, sourceItemsForType],
+  );
+  const demoItems = useMemo(
+    () => allItemsForType.filter((item) => isDemoItem(contentType, item)),
+    [allItemsForType, contentType],
+  );
+  const isReorderableContent = contentType === "projects" || contentType === "articles";
+  const isReorderBlocked = statusFilter !== "all" || Boolean(search.trim());
 
   const items = useMemo(() => {
-    let list: ContentItem[] = [];
-    if (contentType === "projects") list = data.projects;
-    if (contentType === "articles") list = data.blogPosts;
-    if (contentType === "pages") list = data.pages || [];
+    let list: ContentItem[] = allItemsForType;
 
     if (statusFilter !== "all") {
       list = list.filter((item) => item.status === statusFilter);
@@ -246,7 +486,75 @@ export function CMSContentList() {
     }
 
     return list;
-  }, [contentType, data, search, statusFilter]);
+  }, [allItemsForType, search, statusFilter]);
+
+  const persistProjectOrder = (projects: Project[]) => {
+    updateProjects(projects);
+    updateSiteSettings({
+      ...data.siteSettings,
+      projectOrder: projects.map((project) => project.id),
+    });
+  };
+
+  const persistBlogPostOrder = (posts: BlogPost[]) => {
+    updateBlogPosts(posts);
+    updateSiteSettings({
+      ...data.siteSettings,
+      blogPostOrder: posts.map((post) => post.id),
+    });
+  };
+
+  const moveDragPreview = (dragIndex: number, hoverIndex: number) => {
+    if (!isReorderableContent || isReorderBlocked) return;
+    setDragOrderIds((current) => moveArrayItem(current ?? allItemsForType.map((item) => item.id), dragIndex, hoverIndex));
+  };
+
+  const cancelDragOrder = () => {
+    setDragOrderIds(null);
+  };
+
+  const commitDragOrder = () => {
+    if (!isReorderableContent || !dragOrderIds?.length) return;
+
+    if (contentType === "projects") {
+      const nextItems = applyIdOrder(data.projects, dragOrderIds);
+      setDragOrderIds(null);
+      if (!hasSameOrder(data.projects, dragOrderIds)) {
+        persistProjectOrder(nextItems);
+      }
+      return;
+    }
+
+    const nextItems = applyIdOrder(data.blogPosts, dragOrderIds);
+    setDragOrderIds(null);
+    if (!hasSameOrder(data.blogPosts, dragOrderIds)) {
+      persistBlogPostOrder(nextItems);
+    }
+  };
+
+  useEffect(() => {
+    setDragOrderIds(null);
+  }, [contentType, data.projects, data.blogPosts]);
+
+  const handleDuplicate = (item: ContentItem) => {
+    const id = Date.now().toString();
+    const now = new Date().toISOString();
+    const cloned = {
+      ...item,
+      id,
+      title: `${item.title} (copia)`,
+      slug: `${item.slug || ""}-copy`,
+      status: "draft" as ContentStatus,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (contentType === "projects") persistProjectOrder([...data.projects, cloned as Project]);
+    if (contentType === "articles") persistBlogPostOrder([...data.blogPosts, cloned as BlogPost]);
+    if (contentType === "pages") updatePages([...(data.pages || []), cloned as Page]);
+
+    toast.success("Conteudo duplicado.");
+  };
 
   const handleNew = () => {
     const id = Date.now().toString();
@@ -277,7 +585,7 @@ export function CMSContentList() {
         updatedAt: now,
         imageBgColor: "",
       };
-      updateProjects([...data.projects, nextProject]);
+      persistProjectOrder([...data.projects, nextProject]);
       navigate(`/content/projects/${id}/edit`);
       return;
     }
@@ -304,7 +612,7 @@ export function CMSContentList() {
         createdAt: now,
         updatedAt: now,
       };
-      updateBlogPosts([...data.blogPosts, nextPost]);
+      persistBlogPostOrder([...data.blogPosts, nextPost]);
       navigate(`/content/articles/${id}/edit`);
       return;
     }
@@ -332,35 +640,23 @@ export function CMSContentList() {
     }
   }, []);
 
-  const handleDuplicate = (item: ContentItem) => {
-    const id = Date.now().toString();
-    const now = new Date().toISOString();
-    const cloned = {
-      ...item,
-      id,
-      title: `${item.title} (copia)`,
-      slug: `${item.slug || ""}-copy`,
-      status: "draft" as ContentStatus,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    if (contentType === "projects") updateProjects([...data.projects, cloned as Project]);
-    if (contentType === "articles") updateBlogPosts([...data.blogPosts, cloned as BlogPost]);
-    if (contentType === "pages") updatePages([...(data.pages || []), cloned as Page]);
-
-    toast.success("Conteudo duplicado.");
-    setMenuOpen(null);
-  };
-
   const handleDelete = (item: ContentItem) => {
-    if (contentType === "projects") updateProjects(data.projects.filter((project) => project.id !== item.id));
-    if (contentType === "articles") updateBlogPosts(data.blogPosts.filter((post) => post.id !== item.id));
+    if (contentType === "projects") persistProjectOrder(data.projects.filter((project) => project.id !== item.id));
+    if (contentType === "articles") persistBlogPostOrder(data.blogPosts.filter((post) => post.id !== item.id));
     if (contentType === "pages") updatePages((data.pages || []).filter((page) => page.id !== item.id));
 
     toast.success("Conteudo removido.");
     setPendingDelete(null);
     setMenuOpen(null);
+  };
+
+  const handleRemoveDemoItems = () => {
+    if (contentType === "projects") persistProjectOrder(data.projects.filter((project) => !isDemoItem("projects", project)));
+    if (contentType === "articles") persistBlogPostOrder(data.blogPosts.filter((post) => !isDemoItem("articles", post)));
+    if (contentType === "pages") updatePages((data.pages || []).filter((page) => !isDemoItem("pages", page)));
+
+    toast.success("Conteudo demo removido.");
+    setPendingDemoCleanup(false);
   };
 
   const Icon = currentConfig.icon;
@@ -386,14 +682,26 @@ export function CMSContentList() {
           </div>
         </div>
 
-        <button
-          onClick={handleNew}
-          className="flex h-[35.5px] items-center gap-2 rounded-[10px] px-4 text-white"
-          style={{ backgroundColor: currentConfig.color, fontSize: "13px", lineHeight: "19.5px" }}
-        >
-          <Plus size={16} />
-          {currentConfig.addLabel}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {demoItems.length > 0 && (
+            <button
+              onClick={() => setPendingDemoCleanup(true)}
+              className="flex h-[35.5px] items-center gap-2 rounded-[10px] px-4 text-[#fca5a5]"
+              style={{ backgroundColor: "#1a1111", border: "1px solid #3b1b1b", fontSize: "13px", lineHeight: "19.5px" }}
+            >
+              <Trash2 size={14} />
+              Remover demos ({demoItems.length})
+            </button>
+          )}
+          <button
+            onClick={handleNew}
+            className="flex h-[35.5px] items-center gap-2 rounded-[10px] px-4 text-white"
+            style={{ backgroundColor: currentConfig.color, fontSize: "13px", lineHeight: "19.5px" }}
+          >
+            <Plus size={16} />
+            {currentConfig.addLabel}
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -439,6 +747,19 @@ export function CMSContentList() {
         </div>
       </div>
 
+      {isReorderableContent && (
+        <div
+          className="mb-4 rounded-[12px] border px-3 py-2 text-[#ababab]"
+          style={{ backgroundColor: "#1b1b1b", borderColor: "#2b2b2b", fontSize: "12px", lineHeight: "18px" }}
+        >
+          {isReorderBlocked
+            ? "Limpe a busca e deixe o filtro em \"Todos\" para reorganizar a ordem publica."
+            : viewMode !== "list"
+              ? "Use a visualizacao em lista para mover quem aparece primeiro e por ultimo no portfolio."
+              : "Arraste os itens pela alca lateral. A ordem desta lista define exatamente a ordem publica dos projetos e artigos no portfolio."}
+        </div>
+      )}
+
       {items.length === 0 ? (
         <div
           className="flex h-[258.5px] w-full flex-col items-center justify-center gap-4 rounded-[14px] border"
@@ -458,78 +779,50 @@ export function CMSContentList() {
           </button>
         </div>
       ) : viewMode === "list" ? (
-        <div
-          className="w-full overflow-hidden rounded-[14px] border"
-          style={{ backgroundColor: "#242424", borderColor: "#363636" }}
-        >
-          {items.map((item, index) => {
-            const date = formatDate(item.updatedAt);
-            const category = "category" in item ? item.category : "";
-            const isFeatured = "featured" in item && item.featured;
-            const isProtected = "password" in item && Boolean(item.password);
+        <DndProvider backend={HTML5Backend}>
+          <div
+            className="w-full overflow-hidden rounded-[14px] border"
+            style={{ backgroundColor: "#242424", borderColor: "#363636" }}
+          >
+            {items.map((item, index) => {
+              const date = formatDate(item.updatedAt);
+              const category = ("category" in item ? item.category : "") ?? "";
+              const isFeatured = "featured" in item && item.featured;
+              const isProtected = "password" in item && Boolean(item.password);
+              const fullIndex = isReorderableContent ? allItemsForType.findIndex((entry) => entry.id === item.id) : -1;
 
-            return (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 px-4 transition-colors hover:bg-[#2a2a2a]"
-                style={{
-                  height: index === items.length - 1 ? "63.5px" : "64.5px",
-                  borderBottom: index === items.length - 1 ? undefined : "1px solid #363636",
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/content/${contentType}/${item.id}/edit`}
-                      className="truncate text-[#fafafa]"
-                      style={{ fontSize: "14px", lineHeight: "21px" }}
-                    >
-                      {item.title || "Sem titulo"}
-                    </Link>
-                    {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
-                    {isProtected && <Lock size={11} className="text-[#ffa500]" />}
-                  </div>
-
-                  <div className="mt-0.5 flex items-center gap-3">
-                    {category ? (
-                      <span style={{ fontSize: "12px", lineHeight: "18px", color: "#ababab" }}>{category}</span>
-                    ) : null}
-                    {date ? (
-                      <span
-                        className="flex items-center gap-1"
-                        style={{ fontSize: "11px", lineHeight: "16.5px", color: "#ababab", opacity: 0.6 }}
-                      >
-                        <Clock size={10} />
-                        {date}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-3">
-                  <StatusBadge status={item.status} />
-                  <ActionMenu
-                    isOpen={menuOpen === item.id}
-                    onToggle={() => setMenuOpen(menuOpen === item.id ? null : item.id)}
-                    editLink={`/content/${contentType}/${item.id}/edit`}
-                    onDuplicate={() => handleDuplicate(item)}
-                    onDelete={() => {
-                      setPendingDelete(item);
-                      setMenuOpen(null);
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              return (
+                <DraggableContentRow
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  isLast={index === items.length - 1}
+                  contentType={contentType}
+                  category={category}
+                  date={date}
+                  isFeatured={isFeatured}
+                  isProtected={isProtected}
+                  fullIndex={fullIndex}
+                  canReorder={isReorderableContent && !isReorderBlocked}
+                  onMovePreview={moveDragPreview}
+                  onCommit={commitDragOrder}
+                  onCancel={cancelDragOrder}
+                  onDuplicate={handleDuplicate}
+                  menuOpen={menuOpen}
+                  setMenuOpen={setMenuOpen}
+                  setPendingDelete={setPendingDelete}
+                />
+              );
+            })}
+          </div>
+        </DndProvider>
       ) : (
         <div className="grid gap-4 min-[1180px]:grid-cols-2 min-[1440px]:grid-cols-3 min-[1800px]:grid-cols-4">
           {items.map((item) => {
             const isFeatured = "featured" in item && item.featured;
             const isProtected = "password" in item && Boolean(item.password);
             const date = formatDate(item.updatedAt);
-            const category = "category" in item ? item.category : "";
+            const category = ("category" in item ? item.category : "") ?? "";
 
             return (
               <Link
@@ -599,6 +892,15 @@ export function CMSContentList() {
         onConfirm={() => {
           if (pendingDelete) handleDelete(pendingDelete);
         }}
+      />
+      <CMSConfirmDialog
+        open={pendingDemoCleanup}
+        onOpenChange={setPendingDemoCleanup}
+        title="Remover conteudo demo?"
+        description={`Esta acao remove ${demoItems.length} item(ns) de exemplo desta area do CMS.`}
+        confirmLabel="Remover demos"
+        cancelLabel="Cancelar"
+        onConfirm={handleRemoveDemoItems}
       />
     </div>
   );

@@ -1,38 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { MapPin, ExternalLink, ArrowUpRight, ChevronRight, Mail, Copy, Phone, Check, Lock } from "lucide-react";
+import { MapPin, ExternalLink, ChevronRight, Mail, Copy, Phone, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { StaggerChildren, StaggerItem } from "./stagger-children";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { ContentImage } from "./content-image";
+import { ArticlePreviewCard, ProjectPreviewCard } from "./content-preview-cards";
 import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
-import profilePhoto from "figma:asset/e8291c3a362b891f8907c1dda2d130a4b807f1b9.png";
-
-import projectThumb1 from "figma:asset/41b8590575d31ccb2d14524e52ac80f769b0c27a.png";
-import projectThumb2 from "figma:asset/6152ef9e71bb7cd6e66a5a401a0c518b8b77fde7.png";
-import projectThumb3 from "figma:asset/f74e8c8e6ce6a8687ceb8511bee3d4fab9235e7a.png";
-import projectThumb4 from "figma:asset/a8a2910330eef4e894aef9565ddca1a5ca0a0df0.png";
-import projectThumb5 from "figma:asset/fdfa8c140757c8eb1cd3df086c85525d05145841.png";
-
-const PROJECT_IMAGES = [
-  projectThumb1,
-  projectThumb2,
-  projectThumb3,
-  projectThumb4,
-  projectThumb5,
-];
-
-const BLOG_IMAGES = [
-  "https://images.unsplash.com/photo-1635069243450-e13812625d8c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXNpZ24lMjB0cmVuZHMlMjBmdXR1cmlzdGljJTIwbGFwdG9wfGVufDF8fHx8MTc3MjU5MjgyMXww&ixlib=rb-4.1.0&q=80&w=1080",
-  "https://images.unsplash.com/photo-1609921212029-bb5a28e60960?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXNwb25zaXZlJTIwZGVzaWduJTIwZGV2aWNlcyUyMHNjcmVlbnN8ZW58MXx8fHwxNzcyNTkyODIxfDA&ixlib=rb-4.1.0&q=80&w=1080",
-  "https://images.unsplash.com/photo-1608682285597-156feb50eb4e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwd29ya3NwYWNlJTIwY2xlYW4lMjBkZXNrfGVufDF8fHx8MTc3MjU5MjgyMnww&ixlib=rb-4.1.0&q=80&w=1080",
-];
-
-const PROFILE_IMAGE = profilePhoto;
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -43,6 +21,19 @@ function SectionTitle({ children, className = "" }: { children: React.ReactNode;
       {children}
     </h2>
   );
+}
+
+function hasExternalUrl(value?: string | null) {
+  return Boolean(value && value.trim() && value !== "#");
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 export function PortfolioHome() {
@@ -90,6 +81,12 @@ export function PortfolioHome() {
   const publishedBlogPosts = blogPosts.filter((b: any) => !b.status || b.status === "published");
   const displayedProjects = publishedProjects.slice(0, 4);
   const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
+  const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
+  const avatarLabel = getInitials(displayName) || "Foto";
+  const socialLinks = [
+    { label: "Twitter", url: profile.twitter },
+    { label: "LinkedIn", url: profile.linkedin },
+  ].filter((item) => hasExternalUrl(item.url));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -116,9 +113,10 @@ export function PortfolioHome() {
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
             className="shrink-0"
           >
-            <ImageWithFallback
-              src={profile.photo || PROFILE_IMAGE}
-              alt={profile.name}
+            <ContentImage
+              src={profile.photo}
+              alt={displayName}
+              emptyLabel={avatarLabel}
               className="rounded-xl object-cover"
               style={{ width: "122px", height: "122px", border: "1px solid var(--border-primary)" }}
             />
@@ -134,21 +132,25 @@ export function PortfolioHome() {
                 className="text-center sm:text-left"
               >
                 <h1 style={{ fontSize: "22px", lineHeight: "26.4px", color: "var(--text-primary)" }}>
-                  {profile.name}
+                  {displayName}
                 </h1>
-                <p className="mt-1" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
-                  {profile.role}
-                </p>
-                <p className="flex items-center justify-center sm:justify-start gap-1 mt-1" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                  <MapPin size={14} />
-                  {profile.location}
-                </p>
+                {profile.role && (
+                  <p className="mt-1" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
+                    {profile.role}
+                  </p>
+                )}
+                {profile.location && (
+                  <p className="flex items-center justify-center sm:justify-start gap-1 mt-1" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    <MapPin size={14} />
+                    {profile.location}
+                  </p>
+                )}
                 {profile.available ? (
                   <p className="flex items-center justify-center sm:justify-start gap-2 mt-2" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
                     <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent-green, #22c55e)" }} />
                     {profile.availableText}
                   </p>
-                ) : (
+                ) : profile.currentJobTitle || profile.currentCompany ? (
                   <span style={{ color: "var(--text-secondary)" }}>
                     {profile.currentJobTitle}
                     {profile.currentCompany ? (
@@ -170,7 +172,7 @@ export function PortfolioHome() {
                       </>
                     ) : ""}
                   </span>
-                )}
+                ) : null}
               </motion.div>
 
               {/* Right links */}
@@ -180,26 +182,30 @@ export function PortfolioHome() {
                 transition={{ duration: 0.5, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
                 className="flex flex-col items-center sm:items-end gap-2"
               >
-                <a
-                  href={siteSettings.templateUrl || "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 underline underline-offset-2 transition-colors"
-                  style={{ fontSize: "16px", color: "var(--text-primary)", textDecorationColor: "var(--border-primary)" }}
-                >
-                  <ExternalLink size={16} />
-                  {t("getTemplate")}
-                </a>
-                <a
-                  href={siteSettings.resumeUrl || "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 underline underline-offset-2 transition-colors"
-                  style={{ fontSize: "16px", color: "var(--text-primary)", textDecorationColor: "var(--border-primary)" }}
-                >
-                  <ExternalLink size={16} />
-                  {t("downloadCV")}
-                </a>
+                {hasExternalUrl(siteSettings.templateUrl) && (
+                  <a
+                    href={siteSettings.templateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 underline underline-offset-2 transition-colors"
+                    style={{ fontSize: "16px", color: "var(--text-primary)", textDecorationColor: "var(--border-primary)" }}
+                  >
+                    <ExternalLink size={16} />
+                    {t("getTemplate")}
+                  </a>
+                )}
+                {hasExternalUrl(siteSettings.resumeUrl) && (
+                  <a
+                    href={siteSettings.resumeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 underline underline-offset-2 transition-colors"
+                    style={{ fontSize: "16px", color: "var(--text-primary)", textDecorationColor: "var(--border-primary)" }}
+                  >
+                    <ExternalLink size={16} />
+                    {t("downloadCV")}
+                  </a>
+                )}
               </motion.div>
             </div>
           </div>
@@ -213,24 +219,26 @@ export function PortfolioHome() {
           className="flex flex-col items-center sm:flex-row sm:items-center sm:justify-between gap-3 mt-6 pt-4"
           style={{ borderTop: "1px solid var(--border-primary)" }}
         >
-          <button
-            onClick={copyEmail}
-            className="flex items-center gap-2 bg-transparent border-none cursor-pointer transition-colors"
-            style={{ fontSize: "16px", color: "var(--text-secondary)" }}
-          >
-            {emailCopied ? <Check size={16} style={{ color: "var(--accent-green)" }} /> : <Copy size={16} />}
-            <span>{emailCopied ? t("emailCopied") : profile.email}</span>
-          </button>
-          <div className="flex items-center gap-4">
-            <a href={profile.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition-colors" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
-              <ExternalLink size={14} />
-              Twitter
-            </a>
-            <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition-colors" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
-              <ExternalLink size={14} />
-              LinkedIn
-            </a>
-          </div>
+          {profile.email ? (
+            <button
+              onClick={copyEmail}
+              className="flex items-center gap-2 bg-transparent border-none cursor-pointer transition-colors"
+              style={{ fontSize: "16px", color: "var(--text-secondary)" }}
+            >
+              {emailCopied ? <Check size={16} style={{ color: "var(--accent-green)" }} /> : <Copy size={16} />}
+              <span>{emailCopied ? t("emailCopied") : profile.email}</span>
+            </button>
+          ) : <span />}
+          {socialLinks.length > 0 && (
+            <div className="flex items-center gap-4">
+              {socialLinks.map((link) => (
+                <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition-colors" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
+                  <ExternalLink size={14} />
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          )}
         </motion.div>
       </header>
 
@@ -258,56 +266,16 @@ export function PortfolioHome() {
         <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {displayedProjects.map((project, i) => (
             <StaggerItem key={project.id}>
-              <Link
-                to={`/projects/${project.slug || project.id}`}
-                className="block rounded-lg overflow-hidden cursor-pointer group"
-                style={{
-                  backgroundColor: "var(--bg-secondary)",
-                  border: "1px solid var(--border-primary)",
-                }}
-              >
-                <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-                  <div className="relative overflow-hidden" style={{ aspectRatio: "700/525" }}>
-                    <ImageWithFallback
-                      src={project.image || PROJECT_IMAGES[i % PROJECT_IMAGES.length]}
-                      alt={project.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                      style={{ objectPosition: (project as any).imagePosition || "50% 50%" }}
-                    />
-                    {(project as any).password && (project as any).password.trim() !== "" && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center"
-                          style={{
-                            backgroundColor: "rgba(0, 0, 0, 0.6)",
-                            backdropFilter: "blur(4px)",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
-                          }}
-                        >
-                          <Lock size={16} style={{ color: "rgba(255, 255, 255, 0.8)" }} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className="px-4 py-3"
-                    style={{ borderTop: "1px solid var(--border-secondary)" }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="flex items-center gap-1.5" style={{ fontSize: "16px", color: "var(--text-primary)" }}>
-                        {(project as any).password && (project as any).password.trim() !== "" && (
-                          <Lock size={13} style={{ color: "#ffa500", opacity: 0.7 }} />
-                        )}
-                        {project.title}
-                      </p>
-                      <ArrowUpRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--text-secondary)" }} />
-                    </div>
-                    <p className="mt-1" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                      {project.category}
-                    </p>
-                  </div>
-                </motion.div>
-              </Link>
+              <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
+                <ProjectPreviewCard
+                  href={`/projects/${project.slug || project.id}`}
+                  title={project.title}
+                  category={project.category}
+                  image={project.image}
+                  imagePosition={(project as any).imagePosition || "50% 50%"}
+                  locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                />
+              </motion.div>
             </StaggerItem>
           ))}
         </StaggerChildren>
@@ -526,45 +494,19 @@ export function PortfolioHome() {
         </div>
         <div className="space-y-10">
           {displayedBlogPosts.map((post, i) => (
-            <Link key={post.id} to={`/blog/${post.slug || post.id}`} className="flex flex-col sm:flex-row gap-4 group">
-              <div
-                className="w-full sm:w-[280px] shrink-0 aspect-[3/2] rounded-lg overflow-hidden"
-                style={{ border: "1px solid var(--border-secondary)" }}
-              >
-                <ImageWithFallback
-                  src={post.image || BLOG_IMAGES[i % BLOG_IMAGES.length]}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  style={{ objectPosition: (post as any).imagePosition || "50% 50%" }}
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="flex items-center gap-1.5" style={{ fontSize: "16px", color: "var(--text-primary)" }}>
-                  {(post as any).password && (post as any).password.trim() !== "" && (
-                    <Lock size={13} style={{ color: "#ffa500", opacity: 0.7 }} />
-                  )}
-                  {post.title}
-                </h3>
-                <p className="mt-2" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                  {post.publisher}, {post.date}
-                  {(post as any).category && <> / {(post as any).category}</>}
-                </p>
-                {(post as any).subtitle && (
-                  <p className="mt-1" style={{ fontSize: "14px", color: "var(--text-secondary)", opacity: 0.8 }}>
-                    {(post as any).subtitle}
-                  </p>
-                )}
-                <p className="mt-3 line-clamp-3" style={{ fontSize: "15px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>
-                  {post.description}
-                </p>
-                <span
-                  className="underline underline-offset-4 inline-flex items-center gap-1 mt-3"
-                  style={{ fontSize: "16px", color: "var(--text-primary)", textDecorationColor: "var(--border-primary)" }}
-                >
-                  {t("readArticle")} <ExternalLink size={14} />
-                </span>
-              </div>
-            </Link>
+            <ArticlePreviewCard
+              key={post.id}
+              href={`/blog/${post.slug || post.id}`}
+              title={post.title}
+              description={post.description}
+              image={post.image}
+              imagePosition={(post as any).imagePosition || "50% 50%"}
+              publisher={post.publisher}
+              date={post.date}
+              category={(post as any).category}
+              locked={Boolean((post as any).password && (post as any).password.trim() !== "")}
+              ctaLabel={t("readArticle")}
+            />
           ))}
         </div>
       </ScrollReveal>

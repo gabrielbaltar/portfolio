@@ -17,41 +17,57 @@ const now = new Date().toISOString();
 
 export const defaultSiteSettings: SiteSettings = {
   id: "main",
-  siteTitle: "Gabriel Baltar",
-  siteDescription: "Portfólio de UX Designer e Product Designer.",
-  templateUrl: "#",
-  resumeUrl: "#",
+  siteTitle: "",
+  siteDescription: "",
+  templateUrl: "",
+  resumeUrl: "",
   defaultLanguage: "pt",
   defaultTheme: "dark",
-  footerCredit: "Projetado no Figma por Gabriel Baltar",
-  footerCopyright: "Todos os direitos reservados",
-  seoTitle: "Gabriel Baltar | UX Designer",
-  seoDescription: "Portfólio de UX Designer e Product Designer com projetos, artigos e experiência.",
+  footerCredit: "",
+  footerCopyright: "",
+  seoTitle: "",
+  seoDescription: "",
+  projectOrder: [],
+  blogPostOrder: [],
   createdAt: now,
   updatedAt: now,
 };
 
+function applyExplicitOrder<T extends { id: string }>(items: T[], order: string[]) {
+  if (!order.length || items.length < 2) return items;
+
+  const rank = new Map(order.map((id, index) => [id, index]));
+
+  return [...items].sort((left, right) => {
+    const leftRank = rank.get(left.id);
+    const rightRank = rank.get(right.id);
+
+    if (leftRank === undefined && rightRank === undefined) return 0;
+    if (leftRank === undefined) return 1;
+    if (rightRank === undefined) return -1;
+    return leftRank - rightRank;
+  });
+}
+
 export const defaultProfile: ProfileData = {
   id: "main",
-  name: "Gabriel Baltar Pereira",
-  role: "UX Designer",
-  location: "Rio de Janeiro, Brasil",
-  available: true,
-  availableText: "Disponivel para trabalho",
-  currentJobTitle: "Senior Web Designer",
-  currentCompany: "Digital Innovations Agency",
-  currentCompanyUrl: "https://www.digitalinnovationsagency.com/",
-  email: "gabriel.baltar21@hotmail.com",
-  phone: "(21) 99999-9999",
+  name: "",
+  role: "",
+  location: "",
+  available: false,
+  availableText: "",
+  currentJobTitle: "",
+  currentCompany: "",
+  currentCompanyUrl: "",
+  email: "",
+  phone: "",
   photo: "",
-  twitter: "https://x.com/",
-  instagram: "https://www.instagram.com/",
-  linkedin: "https://linkedin.com/",
-  aboutTitle: "Sobre mim",
-  aboutParagraph1:
-    "Ola, eu sou o Gabriel Baltar, um UX/UI Designer e Product Designer com mais de 5 anos de experiencia criando experiencias digitais visualmente impressionantes e centradas no usuario.",
-  aboutParagraph2:
-    "Minha jornada no design comecou com a curiosidade de como as interfaces digitais funcionam e o desejo de criar algo significativo. Ao longo dos anos, aprimorei minhas habilidades em design de interfaces, pesquisa de usuario e otimizacao de experiencia.",
+  twitter: "",
+  instagram: "",
+  linkedin: "",
+  aboutTitle: "",
+  aboutParagraph1: "",
+  aboutParagraph2: "",
   createdAt: now,
   updatedAt: now,
 };
@@ -115,19 +131,23 @@ export function createEmptyCMSData(): CMSData {
 
 export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMSData {
   const empty = createEmptyCMSData();
+  const siteSettings = { ...empty.siteSettings, ...(data?.siteSettings ?? {}) };
+  const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder);
+  const blogPosts = applyExplicitOrder(data?.blogPosts ?? empty.blogPosts, siteSettings.blogPostOrder);
+
   return {
     ...empty,
     ...data,
-    siteSettings: { ...empty.siteSettings, ...(data?.siteSettings ?? {}) },
+    siteSettings,
     profile: { ...empty.profile, ...(data?.profile ?? {}) },
-    projects: data?.projects ?? empty.projects,
+    projects,
     experiences: data?.experiences ?? empty.experiences,
     education: data?.education ?? empty.education,
     certifications: data?.certifications ?? empty.certifications,
     stack: data?.stack ?? empty.stack,
     awards: data?.awards ?? empty.awards,
     recommendations: data?.recommendations ?? empty.recommendations,
-    blogPosts: data?.blogPosts ?? empty.blogPosts,
+    blogPosts,
     pages: data?.pages ?? empty.pages,
     media: data?.media ?? empty.media,
   };

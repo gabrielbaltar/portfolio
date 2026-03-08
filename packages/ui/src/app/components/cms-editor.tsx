@@ -1,24 +1,99 @@
 import { BlockEditor } from "./block-editor";
 import { toast } from "sonner";
 import { VersionHistoryPanel, saveVersion, getVersions } from "./version-history";
-import { compressImage } from "./image-utils";
 import { ImagePositionEditor, ImagePositionEditorCompact } from "./image-position-editor";
 import { VideoPlayer } from "./video-player";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ensureUniqueSlug, isReservedPageSlug, slugify } from "@portfolio/core";
 import { useParams, useNavigate, Link } from "react-router";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   ArrowLeft, Save, Eye, Send,
   PanelLeft, Columns, Monitor, Smartphone,
   ChevronDown, ChevronUp, Hash, Globe,
-  Plus, Upload, X, History, Lock, LockOpen, Video, Code,
+  Plus, Upload, X, History, Lock, LockOpen, Video, Code, GripVertical, RotateCcw,
 } from "lucide-react";
 import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page } from "./cms-data";
 import { dataProvider } from "./data-provider";
+import {
+  clampBlockLineHeight,
+  CODE_LANGUAGE_OPTIONS,
+  getBlockLineHeight,
+  getCodeLanguageLabel,
+  isAdjustableLineHeightBlock,
+} from "./content-block-utils";
+import { LineHeightControl } from "./line-height-control";
+import { CodeHighlight } from "./code-highlight";
+import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
+import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
 type ContentType = "projects" | "articles" | "pages";
+type EditorSection = {
+  key: string;
+  title: string;
+  defaultOpen?: boolean;
+  content: React.ReactNode;
+};
+
+const FORM_SECTION_DND_TYPE = "EDITOR_FORM_SECTION";
+const SECTION_ORDER_STORAGE_PREFIX = "cms-editor-section-order:";
+const DEFAULT_SECTION_ORDER: Record<ContentType, string[]> = {
+  projects: ["basics", "images", "content", "organization", "protection", "seo"],
+  articles: ["basics", "images", "content", "organization", "protection", "seo"],
+  pages: ["basics", "content", "seo"],
+};
+
+type SectionDragItem = {
+  index: number;
+  type: string;
+};
+
+function normalizeSectionOrder(stored: string[], available: string[]) {
+  return [
+    ...stored.filter((key) => available.includes(key)),
+    ...available.filter((key) => !stored.includes(key)),
+  ];
+}
+
+function readSectionOrder(contentType: ContentType) {
+  const fallback = DEFAULT_SECTION_ORDER[contentType];
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const raw = window.localStorage.getItem(`${SECTION_ORDER_STORAGE_PREFIX}${contentType}`);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return fallback;
+    return normalizeSectionOrder(parsed.filter((item): item is string => typeof item === "string"), fallback);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeSectionOrder(contentType: ContentType, order: string[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(`${SECTION_ORDER_STORAGE_PREFIX}${contentType}`, JSON.stringify(order));
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target?.result as string);
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
+  return Math.max(24, Math.min(160, block.spacing ?? 72));
+}
+
+function getImageFiles(files: FileList | File[]) {
+  return Array.from(files).filter((file) => file.type.startsWith("image/"));
+}
 
 // Reusable form components
 function Input({ label, value, onChange, placeholder = "" }: {
@@ -153,8 +228,8 @@ function StatusSelector({ status, onChange }: { status: ContentStatus; onChange:
   );
 }
 
-function FormSection({ title, children, defaultOpen = true }: {
-  title: string; children: React.ReactNode; defaultOpen?: boolean;
+function FormSection({ title, children, defaultOpen = true, headerPrefix, headerSuffix }: {
+  title: string; children: React.ReactNode; defaultOpen?: boolean; headerPrefix?: React.ReactNode; headerSuffix?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -163,10 +238,97 @@ function FormSection({ title, children, defaultOpen = true }: {
         onClick={() => setOpen(!open)}
         className="flex h-[43.5px] w-full items-center justify-between px-4 cursor-pointer transition-colors hover:bg-[#141414]"
       >
-        <span className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19.5px" }}>{title}</span>
-        {open ? <ChevronUp size={14} className="text-[#555]" /> : <ChevronDown size={14} className="text-[#555]" />}
+        <div className="flex min-w-0 items-center gap-2">
+          {headerPrefix}
+          <span className="truncate text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19.5px" }}>{title}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {headerSuffix}
+          {open ? <ChevronUp size={14} className="text-[#555]" /> : <ChevronDown size={14} className="text-[#555]" />}
+        </div>
       </button>
       {open && <div className="space-y-4 px-4 pb-4">{children}</div>}
+    </div>
+  );
+}
+
+function DraggableFormSection({
+  section,
+  index,
+  moveSection,
+}: {
+  section: EditorSection;
+  index: number;
+  moveSection: (dragIndex: number, hoverIndex: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLSpanElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: FORM_SECTION_DND_TYPE,
+    item: (): SectionDragItem => ({ index, type: FORM_SECTION_DND_TYPE }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver, canDrop }, drop] = useDrop<SectionDragItem, void, { isOver: boolean; canDrop: boolean }>({
+    accept: FORM_SECTION_DND_TYPE,
+    hover(item, monitor) {
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverRect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverRect.bottom - hoverRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      const hoverClientY = clientOffset.y - hoverRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      moveSection(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  drag(handleRef);
+  drop(ref);
+
+  return (
+    <div
+      ref={ref}
+      className={`rounded-[16px] transition-all ${
+        isDragging
+          ? "opacity-50 scale-[0.99]"
+          : isOver && canDrop
+          ? "shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+          : ""
+      }`}
+    >
+      <FormSection
+        title={section.title}
+        defaultOpen={section.defaultOpen}
+        headerPrefix={(
+          <span
+            ref={handleRef}
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex cursor-grab items-center justify-center rounded-md p-1 text-[#555] transition-colors hover:text-[#aaa] active:cursor-grabbing"
+            title="Arrastar para reordenar"
+          >
+            <GripVertical size={13} />
+          </span>
+        )}
+      >
+        {section.content}
+      </FormSection>
     </div>
   );
 }
@@ -185,12 +347,10 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     onUpdate(field, newText);
   };
 
-  const handleBlockTextEdit = (index: number, field: string, e: React.FocusEvent<HTMLElement>) => {
-    if (readOnly) return;
-    const newText = e.currentTarget.textContent || "";
+  const updateBlock = (index: number, updater: (block: ContentBlock) => ContentBlock) => {
     const blocks = [...(item.contentBlocks || [])];
     if (blocks[index]) {
-      blocks[index] = { ...blocks[index], [field]: newText };
+      blocks[index] = updater(blocks[index]);
       onUpdate("contentBlocks", blocks);
     }
   };
@@ -223,30 +383,49 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     );
   };
 
-  const renderBlockText = (
-    Tag: keyof React.JSX.IntrinsicElements,
+  const renderBlockRichText = (
     index: number,
     field: string,
     text: string,
-    className: string,
-    style: React.CSSProperties
+    placeholder: string,
+    wrapperClassName: string,
+    wrapperStyle: React.CSSProperties,
+    multiline = true,
   ) => {
     if (readOnly) {
-      const El = Tag as any;
-      return <El key={index} className={className} style={style}>{text || <span className="opacity-30">...</span>}</El>;
+      return (
+        <div key={index} className={wrapperClassName} style={wrapperStyle}>
+          <RichTextContent value={text} placeholder={placeholder} />
+        </div>
+      );
     }
-    const El = Tag as any;
+
     return (
-      <El
+      <RichTextEditor
         key={index}
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e: any) => handleBlockTextEdit(index, field, e)}
-        className={`${className} outline-none focus:ring-1 focus:ring-[#333] rounded px-1 -mx-1 cursor-text`}
-        style={style}
-      >
-        {text}
-      </El>
+        value={text}
+        onChange={(nextValue) => updateBlock(index, (block) => ({ ...block, [field]: nextValue } as ContentBlock))}
+        placeholder={placeholder}
+        multiline={multiline}
+        compact
+        containerClassName="space-y-1"
+        editorClassName={`${wrapperClassName} rounded px-1 -mx-1`}
+        editorStyle={wrapperStyle}
+      />
+    );
+  };
+
+  const renderPreviewLineHeightControl = (index: number, block: ContentBlock) => {
+    if (readOnly || !isAdjustableLineHeightBlock(block)) return null;
+
+    return (
+      <LineHeightControl
+        compact
+        value={getBlockLineHeight(block)}
+        onChange={(value) =>
+          updateBlock(index, (currentBlock) => ({ ...currentBlock, lineHeight: clampBlockLineHeight(value) } as ContentBlock))
+        }
+      />
     );
   };
 
@@ -359,34 +538,151 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
         )}
 
         {/* Content blocks */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {(item.contentBlocks || []).map((block: ContentBlock, i: number) => {
+            if (isShowcaseBlock(block)) {
+              return <ShowcaseBlockView key={i} block={block} variant="preview" />;
+            }
+
             switch (block.type) {
               case "heading1":
-                return renderBlockText("h2", i, "text", block.text, "text-[#fafafa]", { fontSize: "22px", lineHeight: "30px" });
+                return (
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    {renderBlockRichText(i, "text", block.text, "Titulo H1...", "text-[#fafafa]", { fontSize: "22px", lineHeight: `${getBlockLineHeight(block)}px`, fontWeight: 500 })}
+                  </div>
+                );
               case "heading2":
-                return renderBlockText("h3", i, "text", block.text, "text-[#fafafa]", { fontSize: "18px", lineHeight: "26px" });
+                return (
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    {renderBlockRichText(i, "text", block.text, "Titulo H2...", "text-[#fafafa]", { fontSize: "18px", lineHeight: `${getBlockLineHeight(block)}px`, fontWeight: 500 })}
+                  </div>
+                );
               case "heading3":
-                return renderBlockText("h4", i, "text", block.text, "text-[#fafafa]", { fontSize: "16px", lineHeight: "24px" });
+                return (
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    {renderBlockRichText(i, "text", block.text, "Titulo H3...", "text-[#fafafa]", { fontSize: "16px", lineHeight: `${getBlockLineHeight(block)}px`, fontWeight: 500 })}
+                  </div>
+                );
               case "paragraph":
-                return renderBlockText("p", i, "text", block.text, "text-[#999]", { fontSize: "14px", lineHeight: "24px" });
+                return (
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    {renderBlockRichText(i, "text", block.text, "Escreva seu texto aqui...", "text-[#999]", { fontSize: "14px", lineHeight: `${getBlockLineHeight(block)}px` })}
+                  </div>
+                );
               case "unordered-list":
               case "ordered-list": {
                 const ListTag = block.type === "ordered-list" ? "ol" : "ul";
                 return (
-                  <ListTag key={i} className="pl-5 space-y-1" style={{ listStyleType: block.type === "ordered-list" ? "decimal" : "disc" }}>
-                    {block.items.map((listItem: string, j: number) => (
-                      <li key={j} className="text-[#999]" style={{ fontSize: "14px", lineHeight: "22px" }}>{listItem}</li>
-                    ))}
-                  </ListTag>
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    <ListTag className="pl-5 space-y-1" style={{ listStyleType: block.type === "ordered-list" ? "decimal" : "disc" }}>
+                      {block.items.map((listItem: string, j: number) => (
+                        <li key={j} className="text-[#999]" style={{ fontSize: "14px", lineHeight: `${getBlockLineHeight(block)}px` }}>
+                          {readOnly ? (
+                            <RichTextContent value={listItem} placeholder="Item..." />
+                          ) : (
+                            <RichTextEditor
+                              value={listItem}
+                              onChange={(nextValue) =>
+                                updateBlock(i, (currentBlock) => {
+                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                                  const nextItems = [...listBlock.items];
+                                  nextItems[j] = nextValue;
+                                  return { ...listBlock, items: nextItems };
+                                })
+                              }
+                              onEnter={() =>
+                                updateBlock(i, (currentBlock) => {
+                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                                  const nextItems = [...listBlock.items];
+                                  nextItems.splice(j + 1, 0, "");
+                                  return { ...listBlock, items: nextItems };
+                                })
+                              }
+                              onBackspaceEmpty={() =>
+                                updateBlock(i, (currentBlock) => {
+                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                                  if (listBlock.items.length <= 1) return listBlock;
+                                  return { ...listBlock, items: listBlock.items.filter((_, itemIndex: number) => itemIndex !== j) };
+                                })
+                              }
+                              multiline={false}
+                              compact
+                              placeholder="Item..."
+                              editorClassName="text-[#999] rounded px-1 -mx-1"
+                              editorStyle={{ fontSize: "14px", lineHeight: `${getBlockLineHeight(block)}px` }}
+                            />
+                          )}
+                        </li>
+                      ))}
+                    </ListTag>
+                  </div>
                 );
               }
+              case "code":
+                return (
+                  <div
+                    key={i}
+                    className="overflow-hidden rounded-xl"
+                    style={{ backgroundColor: "#111", border: "1px solid #1e1e1e" }}
+                  >
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
+                      style={{ borderBottom: "1px solid #1e1e1e" }}
+                    >
+                      {readOnly ? (
+                        <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          {getCodeLanguageLabel(block.language)}
+                        </span>
+                      ) : (
+                        <select
+                          value={block.language}
+                          onChange={(event) => updateBlock(i, (currentBlock) => ({ ...currentBlock, language: event.target.value } as ContentBlock))}
+                          className="h-[30px] rounded border px-2 text-[#fafafa] focus:outline-none"
+                          style={{ backgroundColor: "#141414", borderColor: "#2a2a2a", fontSize: "12px" }}
+                        >
+                          {CODE_LANGUAGE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    {readOnly ? (
+                      <CodeHighlight code={block.code} language={block.language} variant="editor" />
+                    ) : (
+                      <CodeHighlight
+                        code={block.code}
+                        language={block.language}
+                        variant="editor"
+                        editable
+                        minHeight={180}
+                        placeholder="// cole seu codigo aqui"
+                        onChange={(nextCode) =>
+                          updateBlock(i, (currentBlock) => ({ ...currentBlock, code: nextCode } as ContentBlock))
+                        }
+                      />
+                    )}
+                    {block.caption && (
+                      <div className="border-t px-4 py-2 text-[#666]" style={{ borderColor: "#1e1e1e", fontSize: "12px" }}>
+                        <RichTextContent value={block.caption} />
+                      </div>
+                    )}
+                  </div>
+                );
               case "image":
                 return block.url ? (
-                  <figure key={i} className="my-4">
-                    <img src={block.url} alt={block.caption} className="w-full rounded-lg object-cover max-h-[300px]" />
+                  <figure key={i} className="my-6">
+                    <img src={block.url} alt={richTextToPlainText(block.caption) || ""} className="w-full rounded-lg object-cover max-h-[300px]" />
                     {block.caption && (
-                      <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>{block.caption}</figcaption>
+                      <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>
+                        <RichTextContent value={block.caption} />
+                      </figcaption>
                     )}
                   </figure>
                 ) : (
@@ -397,13 +693,15 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               case "video": {
                 const vBlock = block as any;
                 return vBlock.url ? (
-                  <figure key={i} className="my-4">
+                  <figure key={i} className="my-6">
                     <VideoPlayer
                       src={vBlock.url}
                       poster={vBlock.poster || undefined}
                       autoPlay={vBlock.autoplay || false}
                       loop={vBlock.loop || false}
                       muted={vBlock.muted || vBlock.autoplay || false}
+                      previewStart={vBlock.previewStart || 0}
+                      previewDuration={vBlock.previewDuration ?? 4}
                       height={300}
                     />
                     {vBlock.caption && (
@@ -419,22 +717,50 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               }
               case "quote":
                 return (
-                  <blockquote key={i} className="border-l-2 pl-4 py-2 my-4" style={{ borderColor: "#333" }}>
-                    <p className="text-[#ccc] italic" style={{ fontSize: "15px", lineHeight: "24px" }}>{(block as any).text}</p>
-                    {(block as any).author && (
-                      <cite className="text-[#666] not-italic block mt-2" style={{ fontSize: "12px" }}>— {(block as any).author}</cite>
-                    )}
-                  </blockquote>
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    <blockquote className="border-l-2 pl-4 py-2 my-6" style={{ borderColor: "#333" }}>
+                      {renderBlockRichText(i, "text", (block as any).text, "Texto da citacao...", "text-[#ccc] italic", { fontSize: "15px", lineHeight: `${getBlockLineHeight(block)}px` })}
+                      {(block as any).author && (
+                        <cite className="text-[#666] not-italic block mt-2" style={{ fontSize: "12px" }}>— {(block as any).author}</cite>
+                      )}
+                    </blockquote>
+                  </div>
                 );
               case "divider":
-                return <hr key={i} className="my-6" style={{ borderColor: "#1e1e1e" }} />;
+                return (
+                  <hr
+                    key={i}
+                    style={{
+                      borderColor: "#1e1e1e",
+                      marginTop: `${getDividerSpacing(block)}px`,
+                      marginBottom: `${getDividerSpacing(block)}px`,
+                    }}
+                  />
+                );
               case "cta":
                 return (
-                  <div key={i} className="rounded-xl p-6 text-center my-4" style={{ backgroundColor: "#141414", border: "1px solid #1e1e1e" }}>
-                    <p className="text-[#ccc] mb-3" style={{ fontSize: "15px" }}>{(block as any).text}</p>
-                    <span className="inline-block px-4 py-2 rounded-lg text-[#111] cursor-pointer" style={{ backgroundColor: "#fafafa", fontSize: "13px" }}>
-                      {(block as any).buttonText || "Botao"}
-                    </span>
+                  <div key={i} className="space-y-2">
+                    {renderPreviewLineHeightControl(i, block)}
+                    <div className="rounded-xl p-6 text-center my-6" style={{ backgroundColor: "#141414", border: "1px solid #1e1e1e" }}>
+                      {renderBlockRichText(i, "text", (block as any).text, "Texto do CTA...", "text-[#ccc] mb-3", { fontSize: "15px", lineHeight: `${getBlockLineHeight(block)}px` })}
+                      {readOnly ? (
+                        <span className="inline-block rounded-lg bg-[#fafafa] px-4 py-2 text-[#111] cursor-pointer" style={{ fontSize: "13px" }}>
+                          <RichTextContent value={(block as any).buttonText || "Botao"} />
+                        </span>
+                      ) : (
+                        <RichTextEditor
+                          value={(block as any).buttonText || ""}
+                          onChange={(nextValue) => updateBlock(i, (currentBlock) => ({ ...currentBlock, buttonText: nextValue } as ContentBlock))}
+                          placeholder="Texto do botao"
+                          multiline={false}
+                          compact
+                          allowLinks={false}
+                          editorClassName="mx-auto inline-block rounded-lg bg-[#fafafa] px-4 py-2 text-[#111]"
+                          editorStyle={{ fontSize: "13px", minHeight: "38px" }}
+                        />
+                      )}
+                    </div>
                   </div>
                 );
               case "embed":
@@ -474,22 +800,158 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
   );
 }
 
+function ImageUrlField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const { addMediaItem } = useCMS();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+
+    setUploading(true);
+    try {
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      addMediaItem(uploaded);
+      onChange(uploaded.url);
+      toast.success("Imagem enviada em qualidade original.");
+    } catch {
+      try {
+        const originalDataUrl = await readFileAsDataUrl(file);
+        onChange(originalDataUrl);
+        toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
+      } catch {
+        toast.error("Nao foi possivel carregar a imagem.");
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+    const file = getImageFiles(event.dataTransfer.files)[0];
+    if (file) void handleUpload(file);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        {label}
+      </label>
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className="rounded-[12px] border p-2 transition-colors"
+        style={{
+          borderColor: dragOver ? "#3b82f6" : "#1e1e1e",
+          backgroundColor: dragOver ? "#111827" : "transparent",
+          borderStyle: dragOver ? "solid" : "dashed",
+        }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            className="h-[37.5px] min-w-0 flex-1 rounded-[10px] px-3 text-[#fafafa] placeholder:text-[#ababab] focus:outline-none transition-colors"
+            style={{ fontSize: "13px", lineHeight: "19.5px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="inline-flex h-[37.5px] items-center gap-1.5 rounded-[10px] px-3 text-[#ddd] transition-colors hover:bg-[#1a1a1a]"
+            style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+          >
+            <Upload size={12} />
+            {uploading ? "Enviando..." : "Upload original"}
+          </button>
+          {value && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="inline-flex h-[37.5px] items-center gap-1.5 rounded-[10px] px-3 text-[#999] transition-colors hover:text-red-400"
+              style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+            >
+              <X size={12} />
+              Limpar
+            </button>
+          )}
+        </div>
+        <p className="mt-2 px-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          {dragOver
+            ? "Solte a imagem para enviar em qualidade original."
+            : "Arraste uma imagem para este campo ou use o botao de upload."}
+        </p>
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) void handleUpload(file);
+          event.currentTarget.value = "";
+        }}
+      />
+      <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+        Use este upload para manter a qualidade original da capa no projeto ou artigo.
+      </p>
+    </div>
+  );
+}
+
 // Gallery Images Editor
 function GalleryEditor({ images, onChange, positions, onPositionsChange }: { images: string[]; onChange: (imgs: string[]) => void; positions?: string[]; onPositionsChange?: (positions: string[]) => void }) {
+  const { addMediaItem } = useCMS();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
-  const handleUpload = (file: File) => {
-    compressImage(file)
-      .then((dataUrl) => {
-        onChange([...images, dataUrl]);
-      })
-      .catch(() => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          onChange([...images, e.target?.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+  const handleUpload = async (files: FileList | File[]) => {
+    const imageFiles = getImageFiles(files);
+    if (!imageFiles.length) return;
+    setUploading(true);
+    const nextImages = [...images];
+
+    try {
+      for (const file of imageFiles) {
+        try {
+          const uploaded = await dataProvider.uploadMedia(file, "public");
+          addMediaItem(uploaded);
+          nextImages.push(uploaded.url);
+        } catch {
+          try {
+            const originalDataUrl = await readFileAsDataUrl(file);
+            nextImages.push(originalDataUrl);
+            toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
+          } catch {
+            toast.error("Nao foi possivel carregar a imagem.");
+          }
+        }
+      }
+
+      onChange(nextImages);
+      toast.success(imageFiles.length === 1 ? "Imagem adicionada em qualidade original." : `${imageFiles.length} imagens adicionadas.`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleRemove = (index: number) => {
@@ -510,6 +972,14 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
     onPositionsChange(newPositions);
   };
 
+  const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setDragOver(false);
+    if (event.dataTransfer.files.length) {
+      void handleUpload(event.dataTransfer.files);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
@@ -525,22 +995,39 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           />
         ))}
         <button
+          type="button"
           onClick={() => fileRef.current?.click()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
           className="rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors hover:bg-[#1a1a1a]"
-          style={{ height: "160px", border: "1px dashed #2a2a2a" }}
+          style={{
+            height: "160px",
+            border: `1px dashed ${dragOver ? "#3b82f6" : "#2a2a2a"}`,
+            backgroundColor: dragOver ? "#111827" : "transparent",
+          }}
         >
           <Upload size={14} className="text-[#555]" />
-          <span className="text-[#555]" style={{ fontSize: "11px" }}>Upload</span>
+          <span className="text-[#555]" style={{ fontSize: "11px" }}>
+            {uploading ? "Enviando..." : dragOver ? "Solte para adicionar" : "Upload original"}
+          </span>
+          <span className="text-[#444]" style={{ fontSize: "10px" }}>
+            Clique ou arraste imagens
+          </span>
         </button>
       </div>
       <input
         ref={fileRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleUpload(file);
+          if (e.target.files?.length) void handleUpload(e.target.files);
+          e.currentTarget.value = "";
         }}
       />
     </div>
@@ -726,10 +1213,83 @@ export function CMSEditor() {
     { key: "visual", label: "Visual", icon: Eye },
   ];
 
+  const [sectionOrder, setSectionOrder] = useState<string[]>(() => readSectionOrder(contentType));
+
+  useEffect(() => {
+    setSectionOrder(readSectionOrder(contentType));
+  }, [contentType]);
+
+  useEffect(() => {
+    writeSectionOrder(contentType, normalizeSectionOrder(sectionOrder, DEFAULT_SECTION_ORDER[contentType]));
+  }, [contentType, sectionOrder]);
+
+  const moveSection = useCallback((dragIndex: number, hoverIndex: number) => {
+    setSectionOrder((current) => {
+      const normalized = normalizeSectionOrder(current, DEFAULT_SECTION_ORDER[contentType]);
+      const next = [...normalized];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(hoverIndex, 0, moved);
+      return next;
+    });
+  }, [contentType]);
+
+  const renderSectionList = (sections: EditorSection[]) => {
+    const availableKeys = sections.map((section) => section.key);
+    const normalizedOrder = normalizeSectionOrder(sectionOrder, availableKeys);
+    const sectionMap = new Map(sections.map((section) => [section.key, section]));
+    const orderedSections = normalizedOrder
+      .map((key) => sectionMap.get(key))
+      .filter((section): section is EditorSection => Boolean(section));
+
+    return (
+      <div className="space-y-4">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] px-4 py-3"
+          style={{ backgroundColor: "#111", border: "1px solid #1e1e1e" }}
+        >
+          <div>
+            <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19.5px" }}>
+              Estrutura do editor
+            </p>
+            <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16.5px" }}>
+              Arraste os paineis para mudar a ordem desta tela.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSectionOrder(DEFAULT_SECTION_ORDER[contentType])}
+            className="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-[#888] transition-colors hover:text-[#fafafa]"
+            style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+          >
+            <RotateCcw size={12} />
+            Resetar ordem
+          </button>
+        </div>
+
+        <DndProvider backend={HTML5Backend}>
+          <div className="space-y-4">
+            {orderedSections.map((section, index) => (
+              <DraggableFormSection
+                key={section.key}
+                section={section}
+                index={index}
+                moveSection={moveSection}
+              />
+            ))}
+          </div>
+        </DndProvider>
+      </div>
+    );
+  };
+
   // Form for projects
   const renderProjectForm = () => (
-    <div className="space-y-4">
-      <FormSection title="Informacoes basicas">
+    renderSectionList([
+      {
+        key: "basics",
+        title: "Informacoes basicas",
+        content: (
+          <>
         <Input label="Titulo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Nome do projeto" />
         <Input label="Subtitulo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Descricao curta" />
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
@@ -743,10 +1303,16 @@ export function CMSEditor() {
         <Input label="Servicos" value={item.services || ""} onChange={(v) => updateField("services", v)} placeholder="UI Design, Frontend" />
         <Input label="Link externo" value={item.link} onChange={(v) => updateField("link", v)} placeholder="https://..." />
         <TextArea label="Descricao" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
-      </FormSection>
-
-      <FormSection title="Imagens" defaultOpen={false}>
-        <Input label="Imagem de capa" value={item.image} onChange={(v) => updateField("image", v)} placeholder="URL ou upload" />
+          </>
+        ),
+      },
+      {
+        key: "images",
+        title: "Imagens",
+        defaultOpen: false,
+        content: (
+          <>
+        <ImageUrlField label="Imagem de capa" value={item.image} onChange={(value) => updateField("image", value)} placeholder="Cole a URL ou envie do computador" />
         {item.image && (
           <ImagePositionEditor
             src={item.image}
@@ -794,13 +1360,24 @@ export function CMSEditor() {
           positions={item.galleryPositions || []}
           onPositionsChange={(positions) => updateField("galleryPositions", positions)}
         />
-      </FormSection>
-
-      <FormSection title="Conteudo" defaultOpen={true}>
+          </>
+        ),
+      },
+      {
+        key: "content",
+        title: "Conteudo",
+        content: (
+          <>
         <BlockEditor blocks={item.contentBlocks || []} onChange={(blocks) => updateField("contentBlocks", blocks)} />
-      </FormSection>
-
-      <FormSection title="Organizacao" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "organization",
+        title: "Organizacao",
+        defaultOpen: false,
+        content: (
+          <>
         <TagsInput tags={item.tags || []} onChange={(tags) => updateField("tags", tags)} />
         <div className="flex items-center gap-2">
           <input
@@ -811,9 +1388,15 @@ export function CMSEditor() {
           />
           <label className="text-[#aaa]" style={{ fontSize: "13px" }}>Destacar projeto</label>
         </div>
-      </FormSection>
-
-      <FormSection title="Protecao por senha" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "protection",
+        title: "Protecao por senha",
+        defaultOpen: false,
+        content: (
+          <>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             {item.password ? (
@@ -852,19 +1435,31 @@ export function CMSEditor() {
             </p>
           </div>
         </div>
-      </FormSection>
-
-      <FormSection title="SEO" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "seo",
+        title: "SEO",
+        defaultOpen: false,
+        content: (
+          <>
         <Input label="Titulo SEO" value={item.seoTitle || ""} onChange={(v) => updateField("seoTitle", v)} placeholder="Deixe vazio para usar o titulo" />
         <TextArea label="Descricao SEO" value={item.seoDescription || ""} onChange={(v) => updateField("seoDescription", v)} rows={2} placeholder="Descricao para mecanismos de busca" />
-      </FormSection>
-    </div>
+          </>
+        ),
+      },
+    ])
   );
 
   // Form for articles
   const renderArticleForm = () => (
-    <div className="space-y-4">
-      <FormSection title="Informacoes basicas">
+    renderSectionList([
+      {
+        key: "basics",
+        title: "Informacoes basicas",
+        content: (
+          <>
         <Input label="Titulo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo do artigo" />
         <Input label="Subtitulo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Descricao curta" />
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
@@ -882,10 +1477,16 @@ export function CMSEditor() {
         <Input label="Servicos / Topicos" value={item.services || ""} onChange={(v) => updateField("services", v)} placeholder="UX Research, UI Design..." />
         <Input label="Link externo" value={item.link || ""} onChange={(v) => updateField("link", v)} placeholder="https://..." />
         <TextArea label="Descricao" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
-      </FormSection>
-
-      <FormSection title="Imagens" defaultOpen={false}>
-        <Input label="Imagem de capa" value={item.image || ""} onChange={(v) => updateField("image", v)} placeholder="URL da imagem" />
+          </>
+        ),
+      },
+      {
+        key: "images",
+        title: "Imagens",
+        defaultOpen: false,
+        content: (
+          <>
+        <ImageUrlField label="Imagem de capa" value={item.image || ""} onChange={(value) => updateField("image", value)} placeholder="Cole a URL ou envie do computador" />
         {item.image && (
           <ImagePositionEditor
             src={item.image}
@@ -933,13 +1534,24 @@ export function CMSEditor() {
           positions={item.galleryPositions || []}
           onPositionsChange={(positions) => updateField("galleryPositions", positions)}
         />
-      </FormSection>
-
-      <FormSection title="Conteudo" defaultOpen={true}>
+          </>
+        ),
+      },
+      {
+        key: "content",
+        title: "Conteudo",
+        content: (
+          <>
         <BlockEditor blocks={item.contentBlocks || []} onChange={(blocks) => updateField("contentBlocks", blocks)} />
-      </FormSection>
-
-      <FormSection title="Organizacao" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "organization",
+        title: "Organizacao",
+        defaultOpen: false,
+        content: (
+          <>
         <TagsInput tags={item.tags || []} onChange={(tags) => updateField("tags", tags)} />
         <div className="flex items-center gap-2">
           <input
@@ -950,9 +1562,15 @@ export function CMSEditor() {
           />
           <label className="text-[#aaa]" style={{ fontSize: "13px" }}>Destacar artigo</label>
         </div>
-      </FormSection>
-
-      <FormSection title="Protecao por senha" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "protection",
+        title: "Protecao por senha",
+        defaultOpen: false,
+        content: (
+          <>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             {item.password ? (
@@ -991,33 +1609,58 @@ export function CMSEditor() {
             </p>
           </div>
         </div>
-      </FormSection>
-
-      <FormSection title="SEO" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "seo",
+        title: "SEO",
+        defaultOpen: false,
+        content: (
+          <>
         <Input label="Titulo SEO" value={item.seoTitle || ""} onChange={(v) => updateField("seoTitle", v)} />
         <TextArea label="Descricao SEO" value={item.seoDescription || ""} onChange={(v) => updateField("seoDescription", v)} rows={2} />
-      </FormSection>
-    </div>
+          </>
+        ),
+      },
+    ])
   );
 
   // Form for pages
   const renderPageForm = () => (
-    <div className="space-y-4">
-      <FormSection title="Informacoes basicas">
+    renderSectionList([
+      {
+        key: "basics",
+        title: "Informacoes basicas",
+        content: (
+          <>
         <Input label="Titulo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo da pagina" />
         <Input label="Slug (URL)" value={item.slug || ""} onChange={(v) => updateField("slug", slugify(v))} placeholder="minha-pagina" />
         <TextArea label="Descricao" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
-      </FormSection>
-
-      <FormSection title="Conteudo" defaultOpen={true}>
+          </>
+        ),
+      },
+      {
+        key: "content",
+        title: "Conteudo",
+        content: (
+          <>
         <BlockEditor blocks={item.contentBlocks || []} onChange={(blocks) => updateField("contentBlocks", blocks)} />
-      </FormSection>
-
-      <FormSection title="SEO" defaultOpen={false}>
+          </>
+        ),
+      },
+      {
+        key: "seo",
+        title: "SEO",
+        defaultOpen: false,
+        content: (
+          <>
         <Input label="Titulo SEO" value={item.seoTitle || ""} onChange={(v) => updateField("seoTitle", v)} />
         <TextArea label="Descricao SEO" value={item.seoDescription || ""} onChange={(v) => updateField("seoDescription", v)} rows={2} />
-      </FormSection>
-    </div>
+          </>
+        ),
+      },
+    ])
   );
 
   const renderForm = () => {

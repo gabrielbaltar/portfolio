@@ -14,18 +14,67 @@ export type ContentEntityType =
 
 export type MediaVisibility = "public" | "private";
 
+export interface StyleGuidePrinciple {
+  title: string;
+  description: string;
+}
+
+export interface ColorPaletteItem {
+  name: string;
+  token?: string;
+  hex: string;
+  role: string;
+  usage: string;
+}
+
+export interface TypographyItem {
+  label: string;
+  token?: string;
+  family: string;
+  weight: string;
+  size: string;
+  lineHeight: string;
+  sample: string;
+}
+
+export interface IconGridItem {
+  name: string;
+  token?: string;
+  url: string;
+  notes: string;
+}
+
+export interface UserFlowStep {
+  title: string;
+  description: string;
+  outcome: string;
+}
+
+export interface SitemapSection {
+  title: string;
+  description: string;
+  children: string[];
+}
+
 export type ContentBlock =
-  | { type: "paragraph"; text: string }
-  | { type: "heading1"; text: string }
-  | { type: "heading2"; text: string }
-  | { type: "heading3"; text: string }
-  | { type: "unordered-list"; items: string[] }
-  | { type: "ordered-list"; items: string[] }
+  | { type: "paragraph"; text: string; lineHeight?: number }
+  | { type: "heading1"; text: string; lineHeight?: number }
+  | { type: "heading2"; text: string; lineHeight?: number }
+  | { type: "heading3"; text: string; lineHeight?: number }
+  | { type: "unordered-list"; items: string[]; lineHeight?: number }
+  | { type: "ordered-list"; items: string[]; lineHeight?: number }
+  | { type: "style-guide"; title: string; summary: string; principles: StyleGuidePrinciple[] }
+  | { type: "color-palette"; title: string; colors: ColorPaletteItem[] }
+  | { type: "typography"; title: string; fonts: TypographyItem[] }
+  | { type: "icon-grid"; title: string; icons: IconGridItem[] }
+  | { type: "user-flow"; title: string; steps: UserFlowStep[] }
+  | { type: "sitemap"; title: string; sections: SitemapSection[] }
+  | { type: "code"; code: string; language: string; caption?: string }
   | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number }
-  | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; borderRadius?: number }
-  | { type: "divider" }
-  | { type: "quote"; text: string; author: string }
-  | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean }
+  | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; borderRadius?: number }
+  | { type: "divider"; spacing?: number }
+  | { type: "quote"; text: string; author: string; lineHeight?: number }
+  | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
   | { type: "embed"; url: string; caption: string };
 
 export interface TimestampedEntity {
@@ -49,6 +98,8 @@ export interface SiteSettings extends TimestampedEntity {
   footerCopyright: string;
   seoTitle: string;
   seoDescription: string;
+  projectOrder: string[];
+  blogPostOrder: string[];
 }
 
 export interface ProfileData extends TimestampedEntity {

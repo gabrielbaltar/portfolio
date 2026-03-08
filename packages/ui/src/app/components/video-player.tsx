@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Hls, { type Level } from "hls.js";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, Loader2,
 } from "lucide-react";
+import { resolveVideoSource } from "./video-source";
 
 interface VideoPlayerProps {
   src: string;
@@ -11,15 +13,103 @@ interface VideoPlayerProps {
   autoPlay?: boolean;
   loop?: boolean;
   muted?: boolean;
+  previewStart?: number;
+  previewDuration?: number;
   height?: number;
   borderRadius?: number;
 }
+
+interface QualityOption {
+  index: number;
+  label: string;
+  description: string;
+}
+
+type PlayButtonTone = "light" | "dark";
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatBitrate(bitrate: number) {
+  if (!bitrate) return "";
+  if (bitrate >= 1_000_000) return `${(bitrate / 1_000_000).toFixed(1)} Mbps`;
+  return `${Math.round(bitrate / 1000)} kbps`;
+}
+
+function formatQualityLabel(level: Level) {
+  if (level.height >= 2160) return "4K";
+  if (level.height >= 1440) return "1440p";
+  if (level.height >= 1080) return "1080p";
+  if (level.height >= 720) return "720p";
+  if (level.height >= 480) return "480p";
+  if (level.height > 0) return `${level.height}p`;
+  return formatBitrate(level.bitrate) || level.name || "Stream";
+}
+
+function buildQualityOptions(levels: Level[]): QualityOption[] {
+  return levels.map((level, index) => {
+    const resolution = level.width && level.height ? `${level.width}x${level.height}` : "";
+    const bitrate = formatBitrate(level.bitrate);
+    const description = [resolution, bitrate].filter(Boolean).join(" • ") || "Stream adaptativo";
+
+    return {
+      index,
+      label: formatQualityLabel(level),
+      description,
+    };
+  });
+}
+
+function sampleAverageLuminance(image: CanvasImageSource, sourceWidth: number, sourceHeight: number) {
+  if (!sourceWidth || !sourceHeight || typeof document === "undefined") return null;
+
+  const targetWidth = 48;
+  const targetHeight = 48;
+  const centerWidth = Math.max(1, Math.floor(sourceWidth * 0.28));
+  const centerHeight = Math.max(1, Math.floor(sourceHeight * 0.28));
+  const sx = Math.max(0, Math.floor((sourceWidth - centerWidth) / 2));
+  const sy = Math.max(0, Math.floor((sourceHeight - centerHeight) / 2));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+
+  try {
+    context.drawImage(image, sx, sy, centerWidth, centerHeight, 0, 0, targetWidth, targetHeight);
+    const { data } = context.getImageData(0, 0, targetWidth, targetHeight);
+    let luminanceTotal = 0;
+    let sampleCount = 0;
+
+    for (let index = 0; index < data.length; index += 16) {
+      const alpha = data[index + 3];
+      if (alpha < 24) continue;
+
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+      luminanceTotal += 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      sampleCount += 1;
+    }
+
+    if (!sampleCount) return null;
+    return luminanceTotal / sampleCount;
+  } catch {
+    return null;
+  }
+}
+
+function getToneFromLuminance(luminance: number | null, previousTone: PlayButtonTone) {
+  if (luminance == null) return previousTone;
+  if (luminance >= 172) return "dark";
+  if (luminance <= 142) return "light";
+  return previousTone;
 }
 
 export function VideoPlayer({
@@ -29,10 +119,14 @@ export function VideoPlayer({
   autoPlay = false,
   loop = false,
   muted = false,
+  previewStart = 0,
+  previewDuration = 4,
   height = 525,
   borderRadius = 0,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const previewLoopingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -45,27 +139,70 @@ export function VideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [qualityOptions, setQualityOptions] = useState<QualityOption[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState<number>(-1);
+  const [playButtonTone, setPlayButtonTone] = useState<PlayButtonTone>("light");
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
-  const [hasStarted, setHasStarted] = useState(autoPlay);
+  const [fullPlaybackStarted, setFullPlaybackStarted] = useState(autoPlay);
+  const [isPreviewLooping, setIsPreviewLooping] = useState(false);
 
   const prevVolume = useRef(1);
+  const normalizedPreviewStart = Math.max(0, previewStart || 0);
+  const normalizedPreviewDuration = Math.max(0, previewDuration || 0);
+  const teaserEnabled = !autoPlay && normalizedPreviewDuration > 0;
+  const isPreviewMode = teaserEnabled && !fullPlaybackStarted;
+  const interactivePlaying = playing && !isPreviewLooping;
+  const resolvedSource = resolveVideoSource(src, poster, normalizedPreviewStart);
+  const selectedQualityOption = qualityOptions.find((option) => option.index === selectedQuality);
+  const qualityButtonLabel = selectedQualityOption?.label || (qualityOptions.length > 0 ? "Auto" : null);
+
+  const destroyHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
 
   // Play / Pause
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
+    if (isPreviewMode) {
+      previewLoopingRef.current = false;
+      setIsPreviewLooping(false);
+      setFullPlaybackStarted(true);
+      v.pause();
+      v.currentTime = 0;
+      v.loop = loop;
+      v.defaultMuted = muted;
+      v.muted = muted;
+      void v.play().then(() => {
+        setPlaying(true);
+        setError(false);
+      }).catch(() => {
+        setPlaying(false);
+        setError(true);
+        setFullPlaybackStarted(false);
+      });
+      return;
+    }
     if (v.paused) {
-      v.play();
-      setPlaying(true);
-      setHasStarted(true);
+      void v.play().then(() => {
+        setPlaying(true);
+        setError(false);
+      }).catch(() => {
+        setPlaying(false);
+        setError(true);
+      });
     } else {
       v.pause();
       setPlaying(false);
     }
-  }, []);
+  }, [isPreviewMode, loop, muted]);
 
   // Volume
   const toggleMute = useCallback(() => {
@@ -135,14 +272,27 @@ export function VideoPlayer({
     setPlaybackRate(next);
   }, [playbackRate]);
 
+  const applyQuality = useCallback((levelIndex: number) => {
+    const hls = hlsRef.current;
+    if (!hls) return;
+
+    setSelectedQuality(levelIndex);
+    hls.loadLevel = levelIndex;
+    hls.nextLevel = levelIndex;
+
+    if (videoRef.current?.paused) {
+      hls.currentLevel = levelIndex;
+    }
+  }, []);
+
   // Auto-hide controls
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-    if (playing) {
+    if (interactivePlaying) {
       controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
     }
-  }, [playing]);
+  }, [interactivePlaying]);
 
   // Hover time preview on progress bar
   const handleProgressHover = useCallback((e: React.MouseEvent) => {
@@ -206,12 +356,22 @@ export function VideoPlayer({
         setBuffered(v.buffered.end(v.buffered.length - 1));
       }
     };
-    const onPlay = () => { setPlaying(true); setHasStarted(true); };
+    const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onEnded = () => { setPlaying(false); if (!loop) setHasStarted(false); };
-    const onLoadedData = () => setLoading(false);
+    const onEnded = () => {
+      setPlaying(false);
+      if (!loop && !previewLoopingRef.current && teaserEnabled) {
+        setFullPlaybackStarted(false);
+      }
+    };
+    const onLoadedData = () => { setLoading(false); setError(false); };
     const onWaiting = () => setLoading(true);
-    const onCanPlay = () => setLoading(false);
+    const onCanPlay = () => { setLoading(false); setError(false); };
+    const onError = () => {
+      setLoading(false);
+      setPlaying(false);
+      setError(true);
+    };
 
     v.addEventListener("timeupdate", onTimeUpdate);
     v.addEventListener("durationchange", onDurationChange);
@@ -222,6 +382,7 @@ export function VideoPlayer({
     v.addEventListener("loadeddata", onLoadedData);
     v.addEventListener("waiting", onWaiting);
     v.addEventListener("canplay", onCanPlay);
+    v.addEventListener("error", onError);
 
     return () => {
       v.removeEventListener("timeupdate", onTimeUpdate);
@@ -233,8 +394,214 @@ export function VideoPlayer({
       v.removeEventListener("loadeddata", onLoadedData);
       v.removeEventListener("waiting", onWaiting);
       v.removeEventListener("canplay", onCanPlay);
+      v.removeEventListener("error", onError);
     };
-  }, [loop]);
+  }, [loop, teaserEnabled]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    destroyHls();
+    v.pause();
+    v.removeAttribute("src");
+    v.load();
+    setQualityOptions([]);
+    setSelectedQuality(-1);
+
+    if (!resolvedSource.src) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+
+    setLoading(true);
+    setError(false);
+
+    if (!resolvedSource.isHls) {
+      v.src = resolvedSource.src;
+      v.load();
+      return;
+    }
+
+    if (v.canPlayType("application/vnd.apple.mpegurl")) {
+      v.src = resolvedSource.src;
+      v.load();
+      return;
+    }
+
+    if (!Hls.isSupported()) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+
+    const hls = new Hls({
+      enableWorker: true,
+      backBufferLength: 90,
+    });
+
+    hlsRef.current = hls;
+    hls.attachMedia(v);
+    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+      hls.loadSource(resolvedSource.src);
+    });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      const options = buildQualityOptions(hls.levels);
+      setQualityOptions(options);
+      if (options.length > 0) {
+        const highestLevel = options[options.length - 1].index;
+        hls.loadLevel = highestLevel;
+        hls.nextLevel = highestLevel;
+        setSelectedQuality(highestLevel);
+      }
+      setLoading(false);
+      setError(false);
+    });
+    hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+      if (hls.autoLevelEnabled) return;
+      setSelectedQuality(data.level);
+    });
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (!data.fatal) return;
+
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        hls.startLoad();
+        return;
+      }
+
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        hls.recoverMediaError();
+        return;
+      }
+
+      setQualityOptions([]);
+      setSelectedQuality(-1);
+      setLoading(false);
+      setPlaying(false);
+      setError(true);
+      destroyHls();
+    });
+
+    return () => {
+      destroyHls();
+    };
+  }, [destroyHls, resolvedSource.isHls, resolvedSource.src]);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+    setFullPlaybackStarted(autoPlay);
+    setPlaying(false);
+    setCurrentTime(0);
+    setBuffered(0);
+    previewLoopingRef.current = false;
+    setIsPreviewLooping(false);
+    setPlayButtonTone("light");
+  }, [autoPlay, previewDuration, previewStart, resolvedSource.src]);
+
+  useEffect(() => {
+    const posterUrl = resolvedSource.poster?.trim();
+    if (!posterUrl || typeof Image === "undefined") return;
+
+    let cancelled = false;
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      if (cancelled) return;
+      const luminance = sampleAverageLuminance(image, image.naturalWidth, image.naturalHeight);
+      setPlayButtonTone((previousTone) => getToneFromLuminance(luminance, previousTone));
+    };
+    image.src = posterUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolvedSource.poster]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isPreviewMode) return;
+
+    const updateToneFromFrame = () => {
+      if (!video.videoWidth || !video.videoHeight) return;
+      const luminance = sampleAverageLuminance(video, video.videoWidth, video.videoHeight);
+      setPlayButtonTone((previousTone) => getToneFromLuminance(luminance, previousTone));
+    };
+
+    const handleFrameReady = () => {
+      updateToneFromFrame();
+    };
+
+    const intervalId = window.setInterval(updateToneFromFrame, 1400);
+    video.addEventListener("loadeddata", handleFrameReady);
+    video.addEventListener("seeked", handleFrameReady);
+
+    return () => {
+      window.clearInterval(intervalId);
+      video.removeEventListener("loadeddata", handleFrameReady);
+      video.removeEventListener("seeked", handleFrameReady);
+    };
+  }, [isPreviewMode, resolvedSource.src]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isPreviewMode) return;
+
+    const startPreviewLoop = async () => {
+      const duration = Number.isFinite(v.duration) ? v.duration : 0;
+      const safeStart = duration > 0
+        ? Math.min(normalizedPreviewStart, Math.max(duration - 0.15, 0))
+        : normalizedPreviewStart;
+      v.pause();
+      v.currentTime = safeStart;
+      v.defaultMuted = true;
+      v.muted = true;
+      v.loop = false;
+      previewLoopingRef.current = true;
+      setIsPreviewLooping(true);
+      try {
+        await v.play();
+      } catch {
+        previewLoopingRef.current = false;
+        setIsPreviewLooping(false);
+      }
+    };
+
+    const handleCanPlay = () => {
+      void startPreviewLoop();
+    };
+
+    if (v.readyState >= 2) {
+      void startPreviewLoop();
+      return;
+    }
+
+    v.addEventListener("canplay", handleCanPlay);
+    v.addEventListener("loadedmetadata", handleCanPlay);
+    return () => {
+      v.removeEventListener("canplay", handleCanPlay);
+      v.removeEventListener("loadedmetadata", handleCanPlay);
+    };
+  }, [isPreviewMode, normalizedPreviewDuration, normalizedPreviewStart]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !isPreviewLooping || !normalizedPreviewDuration) return;
+    const previewEnd = normalizedPreviewStart + normalizedPreviewDuration;
+
+    const enforcePreviewLoop = () => {
+      if (v.currentTime >= previewEnd) {
+        v.currentTime = normalizedPreviewStart;
+      }
+    };
+
+    v.addEventListener("timeupdate", enforcePreviewLoop);
+    return () => {
+      previewLoopingRef.current = false;
+      v.removeEventListener("timeupdate", enforcePreviewLoop);
+    };
+  }, [isPreviewLooping, normalizedPreviewDuration, normalizedPreviewStart]);
 
   // Fullscreen change listener
   useEffect(() => {
@@ -245,13 +612,13 @@ export function VideoPlayer({
 
   // Auto-hide controls when playing
   useEffect(() => {
-    if (playing) {
+    if (interactivePlaying) {
       controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
     } else {
       setShowControls(true);
     }
     return () => { if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current); };
-  }, [playing]);
+  }, [interactivePlaying]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
@@ -268,7 +635,7 @@ export function VideoPlayer({
           borderRadius: isFullscreen ? 0 : `${borderRadius}px`,
         }}
         onMouseMove={showControlsTemporarily}
-        onMouseLeave={() => { if (playing) setShowControls(false); setShowSettings(false); }}
+        onMouseLeave={() => { if (interactivePlaying) setShowControls(false); setShowSettings(false); }}
         tabIndex={0}
         onClick={(e) => {
           // Don't toggle on control clicks
@@ -279,35 +646,54 @@ export function VideoPlayer({
         {/* Video element */}
         <video
           ref={videoRef}
-          src={src}
-          poster={poster || undefined}
+          poster={resolvedSource.poster || undefined}
           autoPlay={autoPlay}
           loop={loop}
-          muted={muted}
+          muted={muted || isPreviewMode}
           playsInline
-          preload="metadata"
-          className="w-full h-full object-cover"
+          preload="auto"
+          crossOrigin="anonymous"
+          className="h-full w-full object-contain"
         />
 
         {/* Large center play button (before first play) */}
-        {!hasStarted && !playing && (
+        {!error && isPreviewMode && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-md transition-transform hover:scale-110"
               style={{
-                backgroundColor: "rgba(250,250,250,0.15)",
-                border: "1px solid rgba(255,255,255,0.2)",
+                backgroundColor: playButtonTone === "dark" ? "rgba(8,8,8,0.55)" : "rgba(250,250,250,0.15)",
+                border: playButtonTone === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.2)",
+                boxShadow: playButtonTone === "dark" ? "0 12px 30px rgba(0,0,0,0.28)" : "0 10px 24px rgba(0,0,0,0.18)",
               }}
             >
-              <Play size={28} fill="white" color="white" className="ml-1" />
+              <Play
+                size={28}
+                fill={playButtonTone === "dark" ? "#fafafa" : "white"}
+                color={playButtonTone === "dark" ? "#fafafa" : "white"}
+                className="ml-1"
+              />
             </div>
           </div>
         )}
 
         {/* Loading spinner */}
-        {loading && hasStarted && (
+        {loading && fullPlaybackStarted && (
           <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <Loader2 size={32} className="text-white/80 animate-spin" />
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/75 px-6 text-center text-white">
+            <div className="space-y-2">
+              <p style={{ fontSize: "14px", lineHeight: "21px", fontWeight: 500 }}>
+                Este navegador nao conseguiu reproduzir o video.
+              </p>
+              <p className="text-white/70" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                Para compatibilidade maxima, use MP4 H.264, WebM ou um playback HLS do Mux.
+              </p>
+            </div>
           </div>
         )}
 
@@ -433,9 +819,9 @@ export function VideoPlayer({
                 onClick={() => setShowSettings(!showSettings)}
                 className="h-7 px-2 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer font-['Inter',sans-serif]"
                 style={{ fontSize: "11px" }}
-                title="Velocidade"
+                title="Configuracoes"
               >
-                {playbackRate !== 1 ? `${playbackRate}x` : <Settings size={14} />}
+                {qualityButtonLabel || (playbackRate !== 1 ? `${playbackRate}x` : <Settings size={14} />)}
               </button>
               {showSettings && (
                 <div
@@ -443,9 +829,35 @@ export function VideoPlayer({
                   style={{
                     backgroundColor: "rgba(20,20,20,0.95)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    minWidth: "120px",
+                    minWidth: "170px",
                   }}
                 >
+                  {qualityOptions.length > 0 && (
+                    <>
+                      <p className="text-white/40 px-3 pt-2 pb-1 font-['Inter',sans-serif]" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        Qualidade
+                      </p>
+                      {qualityOptions.map((option) => (
+                        <button
+                          key={option.index}
+                          onClick={() => {
+                            applyQuality(option.index);
+                            setShowSettings(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 font-['Inter',sans-serif] transition-colors cursor-pointer ${
+                            option.index === selectedQuality ? "text-[var(--accent-green,#00ff3c)] bg-white/5" : "text-white/78 hover:bg-white/10"
+                          }`}
+                        >
+                          <span className="block" style={{ fontSize: "12px", lineHeight: "16px" }}>
+                            {option.label}
+                          </span>
+                          <span className="block text-white/35" style={{ fontSize: "10px", lineHeight: "14px" }}>
+                            {option.description}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
                   <p className="text-white/40 px-3 pt-2 pb-1 font-['Inter',sans-serif]" style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     Velocidade
                   </p>

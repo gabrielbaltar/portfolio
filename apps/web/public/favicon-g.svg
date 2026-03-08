@@ -1,0 +1,19 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="18" y1="14" x2="114" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A" />
+      <stop offset="0.5" stop-color="#111827" />
+      <stop offset="1" stop-color="#0B1220" />
+    </linearGradient>
+    <linearGradient id="accent" x1="26" y1="24" x2="104" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="1" stop-color="#14B8A6" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#bg)" />
+  <path
+    d="M64 28C47.4315 28 34 41.4315 34 58C34 74.5685 47.4315 88 64 88C75.8814 88 86.1512 81.0923 91.0088 71.0769H72.3077C69.2192 71.0769 66.6923 68.55 66.6923 65.4615C66.6923 62.3731 69.2192 59.8462 72.3077 59.8462H96C96.0227 59.2308 96.0385 58.6154 96.0385 58C96.0385 40.8308 82.1692 28 64 28ZM64 39.2308C73.6846 39.2308 81.7308 45.4077 84.3269 53.9231H72.3077C69.2192 53.9231 66.6923 56.45 66.6923 59.5385C66.6923 62.6269 69.2192 65.1538 72.3077 65.1538H84.1462C80.9692 72.1577 73.9308 76.7692 64 76.7692C53.5923 76.7692 45.2308 68.4077 45.2308 58C45.2308 47.5923 53.5923 39.2308 64 39.2308Z"
+    fill="#F8FAFC"
+  />
+  <circle cx="95" cy="33" r="7" fill="url(#accent)" />
+</svg>

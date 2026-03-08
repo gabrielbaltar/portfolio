@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
 import { translateBatch } from "./translation-service";
+import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
@@ -63,16 +64,81 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
   blocks?.forEach((block, index) => {
     const blockPath = `${basePath}.${index}`;
 
+    if (block.type === "style-guide") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addText(`${blockPath}.summary`, richTextToPlainText(block.summary));
+      block.principles.forEach((principle, principleIndex) => {
+        addText(`${blockPath}.principles.${principleIndex}.title`, principle.title);
+        addText(`${blockPath}.principles.${principleIndex}.description`, principle.description);
+      });
+      return;
+    }
+
+    if (block.type === "color-palette") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      block.colors.forEach((color, colorIndex) => {
+        addText(`${blockPath}.colors.${colorIndex}.name`, color.name);
+        addText(`${blockPath}.colors.${colorIndex}.role`, color.role);
+        addText(`${blockPath}.colors.${colorIndex}.usage`, color.usage);
+      });
+      return;
+    }
+
+    if (block.type === "typography") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      block.fonts.forEach((font, fontIndex) => {
+        addText(`${blockPath}.fonts.${fontIndex}.label`, font.label);
+        addText(`${blockPath}.fonts.${fontIndex}.sample`, richTextToPlainText(font.sample));
+      });
+      return;
+    }
+
+    if (block.type === "icon-grid") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      block.icons.forEach((icon, iconIndex) => {
+        addText(`${blockPath}.icons.${iconIndex}.name`, icon.name);
+        addText(`${blockPath}.icons.${iconIndex}.notes`, icon.notes);
+      });
+      return;
+    }
+
+    if (block.type === "user-flow") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      block.steps.forEach((step, stepIndex) => {
+        addText(`${blockPath}.steps.${stepIndex}.title`, step.title);
+        addText(`${blockPath}.steps.${stepIndex}.description`, step.description);
+        addText(`${blockPath}.steps.${stepIndex}.outcome`, step.outcome);
+      });
+      return;
+    }
+
+    if (block.type === "sitemap") {
+      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      block.sections.forEach((section, sectionIndex) => {
+        addText(`${blockPath}.sections.${sectionIndex}.title`, section.title);
+        addText(`${blockPath}.sections.${sectionIndex}.description`, section.description);
+        section.children.forEach((child, childIndex) => addText(`${blockPath}.sections.${sectionIndex}.children.${childIndex}`, child));
+      });
+      return;
+    }
+
+    if (block.type === "code") {
+      if (typeof block.caption === "string") {
+        addText(`${blockPath}.caption`, richTextToPlainText(block.caption));
+      }
+      return;
+    }
+
     if ("text" in block && typeof block.text === "string") {
-      addText(`${blockPath}.text`, block.text);
+      addText(`${blockPath}.text`, richTextToPlainText(block.text));
     }
 
     if ("items" in block && Array.isArray(block.items)) {
-      block.items.forEach((item, itemIndex) => addText(`${blockPath}.items.${itemIndex}`, item));
+      block.items.forEach((item, itemIndex) => addText(`${blockPath}.items.${itemIndex}`, richTextToPlainText(item)));
     }
 
     if ("caption" in block && typeof block.caption === "string") {
-      addText(`${blockPath}.caption`, block.caption);
+      addText(`${blockPath}.caption`, richTextToPlainText(block.caption));
     }
 
     if ("author" in block && typeof block.author === "string") {
@@ -80,7 +146,7 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if ("buttonText" in block && typeof block.buttonText === "string") {
-      addText(`${blockPath}.buttonText`, block.buttonText);
+      addText(`${blockPath}.buttonText`, richTextToPlainText(block.buttonText));
     }
   });
 }

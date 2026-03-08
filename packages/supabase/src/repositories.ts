@@ -100,6 +100,56 @@ function sanitizeFileName(fileName: string): string {
     .toLowerCase();
 }
 
+function isMaximumObjectSizeError(error: Error | null | undefined) {
+  return /maximum allowed size|exceeded the maximum allowed size/i.test(error?.message || "");
+}
+
+async function uploadObject(
+  client: SupabaseClient,
+  bucket: string,
+  path: string,
+  file: File,
+  visibility: MediaVisibility,
+) {
+  return client.storage.from(bucket).upload(path, file, {
+    cacheControl: visibility === "public" ? "31536000" : "3600",
+    upsert: false,
+    contentType: file.type,
+  });
+}
+
+async function maybeIncreaseBucketLimitForFile(
+  client: SupabaseClient,
+  bucket: string,
+  file: File,
+): Promise<boolean> {
+  const bucketResult = await client.storage.getBucket(bucket);
+  if (bucketResult.error || !bucketResult.data) {
+    throw new Error(`Nao foi possivel ler a configuracao do bucket ${bucket}.`);
+  }
+
+  const currentLimit = typeof bucketResult.data.file_size_limit === "number"
+    ? bucketResult.data.file_size_limit
+    : Number(bucketResult.data.file_size_limit || 0);
+
+  if (currentLimit && currentLimit >= file.size) {
+    return false;
+  }
+
+  const nextLimit = file.size + 1024 * 1024;
+  const updateResult = await client.storage.updateBucket(bucket, {
+    public: bucketResult.data.public,
+    fileSizeLimit: nextLimit,
+    allowedMimeTypes: bucketResult.data.allowed_mime_types ?? null,
+  });
+
+  if (updateResult.error) {
+    throw new Error(`Nao foi possivel aumentar o limite do bucket ${bucket}.`);
+  }
+
+  return true;
+}
+
 function buildSignedOrPublicUrl(client: SupabaseClient, bucket: string, path: string, visibility: MediaVisibility): Promise<string> {
   if (visibility === "public") {
     const { data } = client.storage.from(bucket).getPublicUrl(path);
@@ -312,14 +362,21 @@ export async function uploadMedia(
   const path = `${new Date().getFullYear()}/${Date.now()}-${safeName}`;
   const kind: MediaItem["kind"] = isVideo(file.type) ? "video" : isImage(file.type) ? "image" : "file";
 
-  ensureSuccess(
-    await client.storage.from(bucket).upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type,
-    }),
-    "Erro ao enviar arquivo",
-  );
+  let uploadResult = await uploadObject(client, bucket, path, file, visibility);
+
+  if (uploadResult.error && isMaximumObjectSizeError(new Error(uploadResult.error.message))) {
+    const retried = await maybeIncreaseBucketLimitForFile(client, bucket, file).catch((error) => {
+      throw new Error(
+        `${uploadResult.error?.message}. Ajuste o limite do bucket ${bucket} no Supabase Storage para mais de ${Math.ceil(file.size / (1024 * 1024))} MB. ${error instanceof Error ? error.message : ""}`.trim(),
+      );
+    });
+
+    if (retried) {
+      uploadResult = await uploadObject(client, bucket, path, file, visibility);
+    }
+  }
+
+  ensureSuccess(uploadResult, "Erro ao enviar arquivo");
 
   const item: MediaItem = {
     id: crypto.randomUUID(),
@@ -335,7 +392,12 @@ export async function uploadMedia(
     updatedAt: new Date().toISOString(),
   };
 
-  ensureSuccess(await client.from(TABLES.media).insert(mapMediaToRow(item)), "Erro ao salvar metadados da midia");
+  try {
+    ensureSuccess(await client.from(TABLES.media).insert(mapMediaToRow(item)), "Erro ao salvar metadados da midia");
+  } catch (error) {
+    console.warn("Falha ao indexar midia na tabela public.media. O arquivo segue disponivel no storage.", error);
+  }
+
   return item;
 }
 

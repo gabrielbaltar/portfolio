@@ -1,0 +1,1036 @@
+import {
+  ArrowRight,
+  Bold,
+  Check,
+  Italic,
+  Link2,
+  Palette,
+  Sparkles,
+  Star,
+  Tags,
+  Underline,
+  Unlink,
+  Zap,
+} from "lucide-react";
+import {
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+export const INLINE_ICON_COMPONENTS = {
+  star: Star,
+  sparkles: Sparkles,
+  check: Check,
+  "arrow-right": ArrowRight,
+  zap: Zap,
+} as const;
+
+export type InlineIconName = keyof typeof INLINE_ICON_COMPONENTS;
+
+const INLINE_ICON_TEXT: Record<InlineIconName, string> = {
+  star: "★",
+  sparkles: "✦",
+  check: "✓",
+  "arrow-right": "→",
+  zap: "⚡",
+};
+
+const INLINE_ICON_LABELS: Record<InlineIconName, string> = {
+  star: "Estrela",
+  sparkles: "Sparkles",
+  check: "Check",
+  "arrow-right": "Seta",
+  zap: "Raio",
+};
+
+const INLINE_TEXT_COLORS = [
+  { label: "Padrao", value: "inherit", swatch: "linear-gradient(135deg, #fafafa 0%, #7a7a7a 100%)" },
+  { label: "Neutro", value: "#f5f5f5", swatch: "#f5f5f5" },
+  { label: "Verde", value: "#8CF5AE", swatch: "#8CF5AE" },
+  { label: "Turquesa", value: "#7EE7E5", swatch: "#7EE7E5" },
+  { label: "Azul", value: "#72B9FF", swatch: "#72B9FF" },
+  { label: "Lilás", value: "#B8A1FF", swatch: "#B8A1FF" },
+  { label: "Rosa", value: "#F0A6FF", swatch: "#F0A6FF" },
+  { label: "Pêssego", value: "#FFC38A", swatch: "#FFC38A" },
+  { label: "Amarelo", value: "#FFE480", swatch: "#FFE480" },
+  { label: "Vermelho", value: "#FF9E9E", swatch: "#FF9E9E" },
+] as const;
+
+const INLINE_FONT_SIZE_OPTIONS = [
+  { label: "Padrao", value: "inherit" },
+  { label: "13px", value: "13px" },
+  { label: "16px", value: "16px" },
+  { label: "18px", value: "18px" },
+  { label: "22px", value: "22px" },
+  { label: "28px", value: "28px" },
+  { label: "36px", value: "36px" },
+  { label: "48px", value: "48px" },
+  { label: "72px", value: "72px" },
+] as const;
+
+function normalizeInlineTagLabel(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function isBlockTag(tagName: string) {
+  return tagName === "div" || tagName === "p";
+}
+
+function isSafeUrl(value: string) {
+  if (!value) return false;
+  return /^(https?:|mailto:|tel:|\/|#)/i.test(value.trim());
+}
+
+function sanitizeInlineColor(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+  if (normalized === "inherit") return normalized;
+  if (/^#[\da-f]{6}$/i.test(normalized) || /^#[\da-f]{3}$/i.test(normalized)) return normalized;
+  if (/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i.test(normalized)) return normalized;
+  return null;
+}
+
+function sanitizeInlineFontSize(value?: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "inherit") return normalized;
+  if (!/^\d+px$/.test(normalized)) return null;
+  const size = Number.parseInt(normalized, 10);
+  if (Number.isNaN(size) || size < 10 || size > 96) return null;
+  return `${size}px`;
+}
+
+function appendNode(target: HTMLElement, node: Node) {
+  target.appendChild(node);
+}
+
+function appendChildren(source: Node, target: HTMLElement, doc: Document) {
+  const childNodes = Array.from(source.childNodes);
+  childNodes.forEach((child, index) => {
+    sanitizeNode(child, target, doc);
+    if (child instanceof HTMLElement && isBlockTag(child.tagName.toLowerCase()) && index < childNodes.length - 1) {
+      appendNode(target, doc.createElement("br"));
+    }
+  });
+}
+
+function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    appendNode(target, doc.createTextNode(node.textContent ?? ""));
+    return;
+  }
+
+  if (!(node instanceof HTMLElement)) return;
+
+  const tagName = node.tagName.toLowerCase();
+
+  if (tagName === "br") {
+    appendNode(target, doc.createElement("br"));
+    return;
+  }
+
+  if (isBlockTag(tagName)) {
+    appendChildren(node, target, doc);
+    return;
+  }
+
+  if (tagName === "strong" || tagName === "b" || tagName === "em" || tagName === "i" || tagName === "u") {
+    const el = doc.createElement(tagName === "b" ? "strong" : tagName === "i" ? "em" : tagName);
+    appendChildren(node, el, doc);
+    appendNode(target, el);
+    return;
+  }
+
+  if (tagName === "a") {
+    const href = node.getAttribute("href")?.trim() || "";
+    if (!isSafeUrl(href)) {
+      appendChildren(node, target, doc);
+      return;
+    }
+    const link = doc.createElement("a");
+    link.setAttribute("href", href);
+    if (/^https?:/i.test(href)) {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+    }
+    appendChildren(node, link, doc);
+    appendNode(target, link);
+    return;
+  }
+
+  if (tagName === "span") {
+    const inlineTagLabel = node.dataset.inlineTag
+      ? normalizeInlineTagLabel(node.dataset.inlineTagLabel || node.textContent || "")
+      : "";
+    if (inlineTagLabel) {
+      const span = doc.createElement("span");
+      span.setAttribute("data-inline-tag", "true");
+      span.setAttribute("data-inline-tag-label", inlineTagLabel);
+      span.setAttribute("contenteditable", "false");
+      span.textContent = inlineTagLabel;
+      appendNode(target, span);
+      return;
+    }
+
+    const iconName = node.dataset.inlineIcon as InlineIconName | undefined;
+    if (iconName && iconName in INLINE_ICON_COMPONENTS) {
+      const span = doc.createElement("span");
+      span.setAttribute("data-inline-icon", iconName);
+      span.setAttribute("contenteditable", "false");
+      span.textContent = INLINE_ICON_TEXT[iconName];
+      appendNode(target, span);
+      return;
+    }
+
+    const inlineColor = sanitizeInlineColor(node.style.color);
+    const inlineFontSize = sanitizeInlineFontSize(node.style.fontSize);
+    if (inlineColor || inlineFontSize) {
+      const span = doc.createElement("span");
+      if (inlineColor) span.style.color = inlineColor;
+      if (inlineFontSize) span.style.fontSize = inlineFontSize;
+      appendChildren(node, span, doc);
+      appendNode(target, span);
+      return;
+    }
+  }
+
+  appendChildren(node, target, doc);
+}
+
+function removeEdgeBreaks(value: string) {
+  return value
+    .replace(/^(<br\s*\/?>\s*)+/i, "")
+    .replace(/(<br\s*\/?>\s*)+$/i, "")
+    .replace(/(?:<br\s*\/?>\s*){3,}/gi, "<br><br>");
+}
+
+export function normalizeRichTextHtml(value?: string | null) {
+  if (!value) return "";
+  if (typeof window === "undefined") return value.trim();
+
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(value, "text/html");
+  const doc = document.implementation.createHTMLDocument("");
+  const container = doc.createElement("div");
+
+  appendChildren(parsed.body, container, doc);
+
+  return removeEdgeBreaks(container.innerHTML.replaceAll("&nbsp;", " ").trim());
+}
+
+export function richTextToPlainText(value?: string | null) {
+  const normalized = normalizeRichTextHtml(value);
+  if (!normalized) return normalized;
+  if (typeof window === "undefined") {
+    return normalized
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(normalized, "text/html");
+  parsed.body.querySelectorAll<HTMLElement>("[data-inline-icon]").forEach((icon) => {
+    const iconName = icon.dataset.inlineIcon as InlineIconName | undefined;
+    icon.textContent = iconName ? ` ${INLINE_ICON_LABELS[iconName]} ` : "";
+  });
+  return parsed.body.textContent?.replace(/\s+/g, " ").trim() || "";
+}
+
+export function isRichTextEmpty(value?: string | null) {
+  const normalized = normalizeRichTextHtml(value);
+  if (!normalized) return true;
+  if (/\bdata-inline-icon=/.test(normalized)) return false;
+  return richTextToPlainText(normalized) === "";
+}
+
+function renderNode(node: Node, key: string): ReactNode {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
+  }
+
+  if (!(node instanceof HTMLElement)) return null;
+
+  const tagName = node.tagName.toLowerCase();
+  const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`));
+
+  if (tagName === "br") return <br key={key} />;
+  if (tagName === "strong" || tagName === "b") return <strong key={key}>{children}</strong>;
+  if (tagName === "em" || tagName === "i") return <em key={key}>{children}</em>;
+  if (tagName === "u") return <u key={key}>{children}</u>;
+  if (tagName === "a") {
+    const href = node.getAttribute("href") || "#";
+    const target = node.getAttribute("target") || undefined;
+    const rel = node.getAttribute("rel") || undefined;
+    return (
+      <a key={key} href={href} target={target} rel={rel} className="underline underline-offset-4">
+        {children}
+      </a>
+    );
+  }
+  if (tagName === "span" && node.dataset.inlineTag) {
+    const inlineTagLabel = normalizeInlineTagLabel(node.dataset.inlineTagLabel || node.textContent || "");
+    if (!inlineTagLabel) return null;
+    return (
+      <span
+        key={key}
+        data-inline-tag="true"
+        data-inline-tag-label={inlineTagLabel}
+        className="mx-[0.15em] inline-flex items-center rounded-full border px-2 py-0.5 align-middle text-[0.72em] font-medium leading-none"
+        style={{
+          borderColor: "var(--border-primary, #2A2A2A)",
+          backgroundColor: "var(--bg-tertiary, rgba(255,255,255,0.06))",
+          color: "var(--text-primary, #fafafa)",
+        }}
+      >
+        {inlineTagLabel}
+      </span>
+    );
+  }
+  if (tagName === "span" && node.dataset.inlineIcon) {
+    const iconName = node.dataset.inlineIcon as InlineIconName;
+    const Icon = INLINE_ICON_COMPONENTS[iconName];
+    if (!Icon) return null;
+    return (
+      <span
+        key={key}
+        data-inline-icon={iconName}
+        className="mx-[0.08em] inline-flex translate-y-[0.08em] align-baseline text-current"
+      >
+        <Icon size={14} strokeWidth={2.1} />
+      </span>
+    );
+  }
+  if (tagName === "span") {
+    const inlineColor = sanitizeInlineColor(node.style.color);
+    const inlineFontSize = sanitizeInlineFontSize(node.style.fontSize);
+    if (inlineColor || inlineFontSize) {
+      return (
+        <span
+          key={key}
+          style={{
+            color: inlineColor || undefined,
+            fontSize: inlineFontSize || undefined,
+          }}
+        >
+          {children}
+        </span>
+      );
+    }
+  }
+
+  return <span key={key}>{children}</span>;
+}
+
+export function RichTextContent({
+  value,
+  placeholder,
+}: {
+  value?: string | null;
+  placeholder?: string;
+}) {
+  const normalized = normalizeRichTextHtml(value);
+
+  if (!normalized) {
+    return placeholder ? <span className="opacity-35">{placeholder}</span> : null;
+  }
+
+  if (typeof window === "undefined") {
+    return normalized;
+  }
+
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(normalized, "text/html");
+
+  return <>{Array.from(parsed.body.childNodes).map((node, index) => renderNode(node, `rich-${index}`))}</>;
+}
+
+function insertHtmlAtSelection(html: string) {
+  if (document.queryCommandSupported?.("insertHTML")) {
+    document.execCommand("insertHTML", false, html);
+    return;
+  }
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const fragment = range.createContextualFragment(html);
+  range.insertNode(fragment);
+  selection.collapseToEnd();
+}
+
+function insertPlainTextAtSelection(text: string) {
+  const html = escapeHtml(text).replace(/\n/g, "<br>");
+  insertHtmlAtSelection(html);
+}
+
+function normalizeLinkInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (isSafeUrl(trimmed)) return trimmed;
+  if (/^[\w.-]+\.[a-z]{2,}(?:[/?#].*)?$/i.test(trimmed)) return `https://${trimmed}`;
+  return trimmed;
+}
+
+function getCurrentRange() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  return selection.getRangeAt(0).cloneRange();
+}
+
+function restoreRange(range: Range | null) {
+  if (!range) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function findInlineTagElement(node: Node | null, root?: HTMLElement | null) {
+  if (!node) return null;
+  const element =
+    node instanceof HTMLElement
+      ? (node.matches("[data-inline-tag='true']") ? node : node.closest("[data-inline-tag='true']"))
+      : node.parentElement?.closest("[data-inline-tag='true']");
+  if (!element || (root && !root.contains(element))) return null;
+  return element as HTMLElement;
+}
+
+function getSelectedInlineTag(selection: Selection | null, root?: HTMLElement | null) {
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+
+  const directMatch = findInlineTagElement(range.startContainer, root) ?? findInlineTagElement(range.endContainer, root);
+  if (directMatch) return directMatch;
+
+  const startContainer = range.startContainer;
+  const endContainer = range.endContainer;
+
+  if (startContainer instanceof Element) {
+    const startCandidate = startContainer.childNodes[range.startOffset] ?? startContainer.childNodes[range.startOffset - 1] ?? null;
+    const startTag = findInlineTagElement(startCandidate, root);
+    if (startTag) return startTag;
+  }
+
+  if (endContainer instanceof Element) {
+    const endCandidate = endContainer.childNodes[range.endOffset - 1] ?? endContainer.childNodes[range.endOffset] ?? null;
+    const endTag = findInlineTagElement(endCandidate, root);
+    if (endTag) return endTag;
+  }
+
+  return null;
+}
+
+interface RichTextEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  editorClassName?: string;
+  editorStyle?: CSSProperties;
+  containerClassName?: string;
+  placeholderClassName?: string;
+  multiline?: boolean;
+  onEnter?: () => void;
+  onBackspaceEmpty?: () => void;
+  compact?: boolean;
+  allowLinks?: boolean;
+}
+
+function ToolbarButton({
+  label,
+  onMouseDown,
+  children,
+}: {
+  label: string;
+  onMouseDown: (event: MouseEvent<HTMLButtonElement>) => void;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={onMouseDown}
+          className="rounded-md p-1 text-[#888] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa]"
+          aria-label={label}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={8}
+        className="border border-[#2a2a2a] bg-[#111111] px-2.5 py-1.5 text-[#f5f5f5]"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder = "",
+  editorClassName = "",
+  editorStyle,
+  containerClassName = "",
+  placeholderClassName = "",
+  multiline = true,
+  onEnter,
+  onBackspaceEmpty,
+  compact = false,
+  allowLinks = true,
+}: RichTextEditorProps) {
+  const id = useId();
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showIcons, setShowIcons] = useState(false);
+  const [showColors, setShowColors] = useState(false);
+  const [showFontSizes, setShowFontSizes] = useState(false);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [savedLinkRange, setSavedLinkRange] = useState<Range | null>(null);
+  const [savedStyleRange, setSavedStyleRange] = useState<Range | null>(null);
+  const [linkDraft, setLinkDraft] = useState("https://");
+  const [linkError, setLinkError] = useState("");
+  const normalizedValue = useMemo(() => normalizeRichTextHtml(value), [value]);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (editorRef.current.innerHTML !== normalizedValue && !isFocused) {
+      editorRef.current.innerHTML = normalizedValue;
+    }
+  }, [isFocused, normalizedValue]);
+
+  const commitValue = ({ syncDom = false }: { syncDom?: boolean } = {}) => {
+    if (!editorRef.current) return;
+    const nextValue = normalizeRichTextHtml(editorRef.current.innerHTML);
+    if (syncDom && editorRef.current.innerHTML !== nextValue) {
+      editorRef.current.innerHTML = nextValue;
+    }
+    onChange(nextValue);
+  };
+
+  const focusEditor = () => {
+    editorRef.current?.focus();
+  };
+
+  const runCommand = (command: string, commandValue?: string, range?: Range | null) => {
+    focusEditor();
+    if (range) {
+      restoreRange(range);
+    }
+    document.execCommand("styleWithCSS", false, "false");
+    document.execCommand(command, false, commandValue);
+    commitValue();
+  };
+
+  const insertIcon = (iconName: InlineIconName) => {
+    focusEditor();
+    insertHtmlAtSelection(
+      `<span data-inline-icon="${iconName}" contenteditable="false">${INLINE_ICON_TEXT[iconName]}</span>&nbsp;`,
+    );
+    setShowIcons(false);
+    commitValue();
+  };
+
+  const handleLink = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim() === "") return;
+    const range = getCurrentRange();
+    if (!range) return;
+    const currentUrl = selection.anchorNode?.parentElement?.closest("a")?.getAttribute("href") || "https://";
+    setSavedLinkRange(range);
+    setLinkDraft(currentUrl);
+    setLinkError("");
+    setShowIcons(false);
+    setShowLinkDialog(true);
+  };
+
+  const applyInlineStyle = (style: { color?: string; fontSize?: string }, range?: Range | null) => {
+    focusEditor();
+    if (range) {
+      restoreRange(range);
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const activeRange = selection.getRangeAt(0);
+    if (activeRange.collapsed) return;
+
+    const color = sanitizeInlineColor(style.color);
+    const fontSize = sanitizeInlineFontSize(style.fontSize);
+    if (!color && !fontSize) return;
+
+    const fragment = activeRange.extractContents();
+    if (!fragment.childNodes.length) return;
+
+    const span = document.createElement("span");
+    if (color) span.style.color = color;
+    if (fontSize) span.style.fontSize = fontSize;
+    span.appendChild(fragment);
+    activeRange.insertNode(span);
+
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(span);
+    nextRange.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+
+    commitValue({ syncDom: true });
+  };
+
+  const handleCreateTag = () => {
+    focusEditor();
+    const selection = window.getSelection();
+    const selectedText = normalizeInlineTagLabel(selection?.toString() || "");
+    if (!selection || selectedText === "") return;
+    insertHtmlAtSelection(
+      `<span data-inline-tag="true" data-inline-tag-label="${escapeHtml(selectedText)}" contenteditable="false">${escapeHtml(selectedText)}</span>`,
+    );
+    commitValue({ syncDom: true });
+  };
+
+  const handleRemoveTag = () => {
+    focusEditor();
+    const selection = window.getSelection();
+    const inlineTag = getSelectedInlineTag(selection, editorRef.current);
+    if (!selection || !inlineTag) return;
+
+    const textNode = document.createTextNode(inlineTag.dataset.inlineTagLabel || inlineTag.textContent || "");
+    inlineTag.replaceWith(textNode);
+
+    const nextRange = document.createRange();
+    nextRange.setStart(textNode, textNode.textContent?.length ?? 0);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+
+    commitValue({ syncDom: true });
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const pastedText = event.clipboardData.getData("text/plain");
+    insertPlainTextAtSelection(multiline ? pastedText : pastedText.replace(/\s*\n+\s*/g, " "));
+    commitValue();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter") {
+      if (onEnter && !multiline) {
+        event.preventDefault();
+        onEnter();
+        return;
+      }
+
+      if (multiline) {
+        event.preventDefault();
+        insertHtmlAtSelection("<br>");
+        commitValue();
+      }
+    }
+
+    if (event.key === "Backspace" && onBackspaceEmpty && isRichTextEmpty(editorRef.current?.innerHTML || "")) {
+      event.preventDefault();
+      onBackspaceEmpty();
+    }
+  };
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const root = editorRef.current;
+      if (!root) return;
+      const selectedTag = getSelectedInlineTag(window.getSelection(), root);
+      root.querySelectorAll<HTMLElement>("[data-inline-tag='true']").forEach((node) => {
+        if (node === selectedTag) {
+          node.setAttribute("data-inline-tag-selected", "true");
+        } else {
+          node.removeAttribute("data-inline-tag-selected");
+        }
+      });
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
+
+  const toolbarVisible = isFocused || !compact;
+
+  return (
+    <div className={`space-y-2 ${containerClassName}`}>
+      {toolbarVisible && (
+        <div
+          className="flex flex-wrap items-center gap-1 rounded-[10px] border px-2 py-1.5"
+          style={{ backgroundColor: "#0e0e0e", borderColor: "#1e1e1e" }}
+        >
+          <ToolbarButton
+            label="Adicionar negrito"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              runCommand("bold");
+            }}
+          >
+            <Bold size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Adicionar itálico"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              runCommand("italic");
+            }}
+          >
+            <Italic size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Adicionar sublinhado"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              runCommand("underline");
+            }}
+          >
+            <Underline size={14} />
+          </ToolbarButton>
+          {allowLinks && (
+            <>
+              <ToolbarButton
+                label="Adicionar link"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  handleLink();
+                }}
+              >
+                <Link2 size={14} />
+              </ToolbarButton>
+              <ToolbarButton
+                label="Remover link"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  runCommand("unlink");
+                }}
+              >
+                <Unlink size={14} />
+              </ToolbarButton>
+            </>
+          )}
+          <ToolbarButton
+            label="Transformar seleção em tag"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              handleCreateTag();
+            }}
+          >
+            <Tags size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Remover tag selecionada"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              handleRemoveTag();
+            }}
+          >
+            <span className="text-[10px] font-semibold leading-none">#×</span>
+          </ToolbarButton>
+          <div className="relative">
+            <ToolbarButton
+              label="Alterar cor do texto"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                const range = getCurrentRange();
+                if (!range || range.toString().trim() === "") return;
+                setSavedStyleRange(range);
+                setShowFontSizes(false);
+                setShowIcons(false);
+                setShowColors((current) => !current);
+              }}
+            >
+              <Palette size={14} />
+            </ToolbarButton>
+            {showColors && (
+              <div
+                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[220px] rounded-[12px] border p-2 shadow-xl"
+                style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
+              >
+                <div className="grid grid-cols-5 gap-1.5">
+                  {INLINE_TEXT_COLORS.map((colorOption) => (
+                    <Tooltip key={colorOption.value}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            applyInlineStyle({ color: colorOption.value }, savedStyleRange);
+                            setShowColors(false);
+                          }}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border transition-colors hover:border-[#565656]"
+                          style={{ borderColor: "#2a2a2a", backgroundColor: "#171717" }}
+                          aria-label={`Aplicar cor: ${colorOption.label}`}
+                        >
+                          <span
+                            className="h-5 w-5 rounded-full border"
+                            style={{
+                              background: colorOption.swatch,
+                              borderColor: colorOption.value === "inherit" ? "#6a6a6a" : "transparent",
+                            }}
+                          />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={8}
+                        className="border border-[#2a2a2a] bg-[#111111] px-2.5 py-1.5 text-[#f5f5f5]"
+                      >
+                        {`Aplicar cor: ${colorOption.label}`}
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <ToolbarButton
+              label="Alterar tamanho do texto"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                const range = getCurrentRange();
+                if (!range || range.toString().trim() === "") return;
+                setSavedStyleRange(range);
+                setShowColors(false);
+                setShowIcons(false);
+                setShowFontSizes((current) => !current);
+              }}
+            >
+              <span className="text-[10px] font-semibold leading-none">A+</span>
+            </ToolbarButton>
+            {showFontSizes && (
+              <div
+                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-[12px] border p-2 shadow-xl"
+                style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
+              >
+                <div className="grid grid-cols-2 gap-1.5">
+                  {INLINE_FONT_SIZE_OPTIONS.map((sizeOption) => (
+                    <button
+                      key={sizeOption.value}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        applyInlineStyle({ fontSize: sizeOption.value }, savedStyleRange);
+                        setShowFontSizes(false);
+                      }}
+                      className="rounded-md border px-2.5 py-2 text-left text-[#e8e8e8] transition-colors hover:border-[#565656] hover:bg-[#181818]"
+                      style={{ borderColor: "#2a2a2a", fontSize: "12px", lineHeight: "16px" }}
+                    >
+                      {sizeOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <ToolbarButton
+              label="Adicionar ícone"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                setShowColors(false);
+                setShowFontSizes(false);
+                setShowIcons((current) => !current);
+              }}
+            >
+              <Sparkles size={14} />
+            </ToolbarButton>
+            {showIcons && (
+              <div
+                className="absolute left-0 top-[calc(100%+6px)] z-20 flex items-center gap-1 rounded-[10px] border px-2 py-1.5 shadow-xl"
+                style={{ backgroundColor: "#111", borderColor: "#1e1e1e" }}
+              >
+                {(Object.keys(INLINE_ICON_COMPONENTS) as InlineIconName[]).map((iconName) => {
+                  const Icon = INLINE_ICON_COMPONENTS[iconName];
+                  return (
+                    <Tooltip key={iconName}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            insertIcon(iconName);
+                          }}
+                          className="rounded-md p-1 text-[#888] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa]"
+                          aria-label={INLINE_ICON_LABELS[iconName]}
+                        >
+                          <Icon size={14} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={8}
+                        className="border border-[#2a2a2a] bg-[#111111] px-2.5 py-1.5 text-[#f5f5f5]"
+                      >
+                        {`Inserir ícone: ${INLINE_ICON_LABELS[iconName]}`}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="relative">
+        {!isFocused && isRichTextEmpty(normalizedValue) && placeholder && (
+          <div
+            className={`pointer-events-none absolute left-0 top-0 text-[#555] ${placeholderClassName}`}
+            style={editorStyle}
+          >
+            {placeholder}
+          </div>
+        )}
+        <div
+          id={id}
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline={multiline}
+          aria-label={placeholder || "Editor de texto"}
+          spellCheck
+          onMouseDown={(event) => {
+            const inlineTag = (event.target as HTMLElement).closest("[data-inline-tag='true']");
+            if (!inlineTag || !editorRef.current?.contains(inlineTag)) return;
+            event.preventDefault();
+            focusEditor();
+            const selection = window.getSelection();
+            if (!selection) return;
+            const range = document.createRange();
+            range.selectNode(inlineTag);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            commitValue({ syncDom: true });
+            setIsFocused(false);
+            setShowIcons(false);
+            setShowColors(false);
+            setShowFontSizes(false);
+          }}
+          onInput={() => commitValue()}
+          onPaste={handlePaste}
+          onKeyDown={handleKeyDown}
+          className={`rich-text-editor outline-none ${editorClassName}`}
+          style={editorStyle}
+        />
+      </div>
+
+      <Dialog
+        open={showLinkDialog}
+        onOpenChange={(open) => {
+          setShowLinkDialog(open);
+          if (!open) {
+            setLinkError("");
+            setSavedLinkRange(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="border-[#2a2a2a] bg-[#111111] p-0 text-[#fafafa] shadow-2xl"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const normalizedUrl = normalizeLinkInput(linkDraft);
+              if (!normalizedUrl || !isSafeUrl(normalizedUrl)) {
+                setLinkError("Use uma URL valida, email, telefone, ancora ou caminho interno.");
+                return;
+              }
+              runCommand("createLink", normalizedUrl, savedLinkRange);
+              setShowLinkDialog(false);
+              setSavedLinkRange(null);
+              setLinkError("");
+              setLinkDraft("https://");
+            }}
+          >
+            <DialogHeader className="border-b border-[#1f1f1f] px-5 py-4 text-left">
+              <DialogTitle className="text-[#fafafa]" style={{ fontSize: "18px", lineHeight: "26px", fontWeight: 500 }}>
+                Adicionar link
+              </DialogTitle>
+              <DialogDescription className="text-[#8a8a8a]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                Cole a URL que deve ser aplicada ao texto selecionado.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 px-5 py-4">
+              <label className="block text-[#777]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                URL
+              </label>
+              <Input
+                autoFocus
+                value={linkDraft}
+                onChange={(event) => {
+                  setLinkDraft(event.target.value);
+                  if (linkError) setLinkError("");
+                }}
+                placeholder="https://exemplo.com"
+                className="border-[#2a2a2a] bg-[#161616] text-[#fafafa] placeholder:text-[#5f5f5f]"
+              />
+              {linkError && (
+                <p className="text-[#ff8d8d]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  {linkError}
+                </p>
+              )}
+            </div>
+            <DialogFooter className="border-t border-[#1f1f1f] px-5 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[#2a2a2a] bg-transparent text-[#d0d0d0] hover:bg-[#1a1a1a] hover:text-[#fafafa]"
+                onClick={() => {
+                  setShowLinkDialog(false);
+                  setSavedLinkRange(null);
+                  setLinkError("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-[#fafafa] text-[#111111] hover:bg-[#e9e9e9]">
+                Aplicar link
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

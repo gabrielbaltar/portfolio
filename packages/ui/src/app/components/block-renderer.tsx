@@ -1,6 +1,16 @@
+import { useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { type ContentBlock } from "./cms-data";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { VideoPlayer } from "./video-player";
+import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock } from "./content-block-utils";
+import { CodeHighlight } from "./code-highlight";
+import { RichTextContent, richTextToPlainText } from "./rich-text";
+import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
+
+function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
+  return Math.max(24, Math.min(160, block.spacing ?? 72));
+}
 
 /** Check if a URL points to an SVG */
 function isSvg(url: string): boolean {
@@ -14,41 +24,120 @@ function isGif(url: string): boolean {
   return url.toLowerCase().endsWith(".gif") || url.startsWith("data:image/gif");
 }
 
+function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" }> }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeoutId = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [copied]);
+
+  async function handleCopy() {
+    if (!block.code) return;
+
+    try {
+      await navigator.clipboard.writeText(block.code);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <figure className="my-8">
+      <div
+        className="overflow-hidden rounded-xl"
+        style={{
+          backgroundColor: "var(--bg-secondary, #0F1012)",
+          border: "1px solid var(--border-primary, #2A2A2A)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-2"
+          style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
+        >
+          <span
+            className="font-['Inter',sans-serif]"
+            style={{ fontSize: "11px", lineHeight: "16px", color: "var(--text-secondary, #6f6f6f)", textTransform: "uppercase", letterSpacing: "0.5px" }}
+          >
+            {getCodeLanguageLabel(block.language)}
+          </span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!block.code}
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition-opacity"
+            style={{
+              backgroundColor: "var(--bg-primary, #111111)",
+              border: "1px solid var(--border-primary, #2A2A2A)",
+              color: "var(--text-primary, #fafafa)",
+              opacity: block.code ? 1 : 0.45,
+              cursor: block.code ? "pointer" : "not-allowed",
+              fontSize: "12px",
+              lineHeight: "16px",
+            }}
+            aria-label={copied ? "Codigo copiado" : "Copiar codigo"}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            <span>{copied ? "Copiado" : "Copiar"}</span>
+          </button>
+        </div>
+        <CodeHighlight code={block.code} language={block.language} maxHeight={500} />
+      </div>
+      {block.caption && (
+        <figcaption
+          className="mt-2 text-center font-['Inter',sans-serif]"
+          style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
+        >
+          <RichTextContent value={block.caption} />
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
 export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
   if (!blocks || blocks.length === 0) return null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {blocks.map((block, i) => {
+        const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
+
+        if (isShowcaseBlock(block)) {
+          return <ShowcaseBlockView key={i} block={block} variant="public" />;
+        }
+
         switch (block.type) {
           case "heading1":
             return (
               <h1
                 key={i}
-                className="font-['Inter',sans-serif] mt-8 first:mt-0"
-                style={{ fontSize: "24px", lineHeight: "32px", color: "var(--text-primary, #fafafa)" }}
+                className="font-['Inter',sans-serif] mt-10 first:mt-0"
+                style={{ fontSize: "24px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "32px", color: "var(--text-primary, #fafafa)" }}
               >
-                {block.text}
+                <RichTextContent value={block.text} />
               </h1>
             );
           case "heading2":
             return (
               <h2
                 key={i}
-                className="font-['Inter',sans-serif] mt-6 first:mt-0"
-                style={{ fontSize: "20px", lineHeight: "28px", color: "var(--text-primary, #fafafa)" }}
+                className="font-['Inter',sans-serif] mt-8 first:mt-0"
+                style={{ fontSize: "20px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "28px", color: "var(--text-primary, #fafafa)" }}
               >
-                {block.text}
+                <RichTextContent value={block.text} />
               </h2>
             );
           case "heading3":
             return (
               <h3
                 key={i}
-                className="font-['Inter',sans-serif] mt-4 first:mt-0"
-                style={{ fontSize: "17px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+                className="font-['Inter',sans-serif] mt-6 first:mt-0"
+                style={{ fontSize: "17px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-primary, #fafafa)" }}
               >
-                {block.text}
+                <RichTextContent value={block.text} />
               </h3>
             );
           case "paragraph":
@@ -56,9 +145,9 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
               <p
                 key={i}
                 className="font-['Inter',sans-serif]"
-                style={{ fontSize: "15px", lineHeight: "26px", color: "var(--text-secondary, #a6a6a6)" }}
+                style={{ fontSize: "15px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "26px", color: "var(--text-secondary, #a6a6a6)" }}
               >
-                {block.text}
+                <RichTextContent value={block.text} />
               </p>
             );
           case "unordered-list":
@@ -68,9 +157,9 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                   <li
                     key={j}
                     className="font-['Inter',sans-serif]"
-                    style={{ fontSize: "15px", lineHeight: "24px", color: "var(--text-secondary, #a6a6a6)" }}
+                    style={{ fontSize: "15px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-secondary, #a6a6a6)" }}
                   >
-                    {item}
+                    <RichTextContent value={item} />
                   </li>
                 ))}
               </ul>
@@ -82,38 +171,40 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                   <li
                     key={j}
                     className="font-['Inter',sans-serif]"
-                    style={{ fontSize: "15px", lineHeight: "24px", color: "var(--text-secondary, #a6a6a6)" }}
+                    style={{ fontSize: "15px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-secondary, #a6a6a6)" }}
                   >
-                    {item}
+                    <RichTextContent value={item} />
                   </li>
                 ))}
               </ol>
             );
+          case "code":
+            return <CodeBlockView key={i} block={block} />;
           case "image": {
             if (!block.url) return null;
             const svg = isSvg(block.url);
             const gif = isGif(block.url);
             const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
             return (
-              <figure key={i} className="my-6">
+              <figure key={i} className="my-8">
                 {svg ? (
                   <img
                     src={block.url}
-                    alt={block.caption || ""}
+                    alt={richTextToPlainText(block.caption) || ""}
                     className="mx-auto"
                     style={{ maxHeight: "525px", maxWidth: "100%", objectFit: "contain", borderRadius: radius }}
                   />
                 ) : gif ? (
                   <img
                     src={block.url}
-                    alt={block.caption || ""}
+                    alt={richTextToPlainText(block.caption) || ""}
                     className="w-full object-cover"
                     style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
                   />
                 ) : (
                   <ImageWithFallback
                     src={block.url}
-                    alt={block.caption || ""}
+                    alt={richTextToPlainText(block.caption) || ""}
                     className="w-full object-cover"
                     style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
                   />
@@ -123,7 +214,7 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                     className="mt-2 text-center font-['Inter',sans-serif]"
                     style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
                   >
-                    {block.caption}
+                    <RichTextContent value={block.caption} />
                   </figcaption>
                 )}
               </figure>
@@ -133,7 +224,7 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
             if (!block.url) return null;
             const vRadius = block.borderRadius != null ? block.borderRadius : 0;
             return (
-              <figure key={i} className="my-6">
+              <figure key={i} className="my-8">
                 <div style={{ borderRadius: `${vRadius}px`, overflow: "hidden" }}>
                   <VideoPlayer
                     src={block.url}
@@ -142,6 +233,8 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                     autoPlay={block.autoplay || false}
                     loop={block.loop || false}
                     muted={block.muted || block.autoplay || false}
+                    previewStart={block.previewStart || 0}
+                    previewDuration={block.previewDuration ?? 4}
                     height={525}
                     borderRadius={vRadius}
                   />
@@ -153,22 +246,25 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
             return (
               <hr
                 key={i}
-                className="my-8"
-                style={{ borderColor: "var(--border-primary, #2A2A2A)" }}
+                style={{
+                  borderColor: "var(--border-primary, #2A2A2A)",
+                  marginTop: `${getDividerSpacing(block)}px`,
+                  marginBottom: `${getDividerSpacing(block)}px`,
+                }}
               />
             );
           case "quote":
             return (
               <blockquote
                 key={i}
-                className="border-l-2 pl-4 py-2 my-6"
+                className="border-l-2 pl-4 py-2 my-8"
                 style={{ borderColor: "var(--accent-green, #00ff3c)" }}
               >
                 <p
                   className="font-['Inter',sans-serif] italic"
-                  style={{ fontSize: "16px", lineHeight: "28px", color: "var(--text-primary, #fafafa)" }}
+                  style={{ fontSize: "16px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "28px", color: "var(--text-primary, #fafafa)" }}
                 >
-                  {(block as any).text}
+                  <RichTextContent value={(block as any).text} />
                 </p>
                 {(block as any).author && (
                   <cite
@@ -184,7 +280,7 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
             return (
               <div
                 key={i}
-                className="rounded-xl p-6 text-center my-6"
+                className="rounded-xl p-6 text-center my-8"
                 style={{
                   backgroundColor: "var(--bg-secondary, #0F1012)",
                   border: "1px solid var(--border-primary, #2A2A2A)",
@@ -192,9 +288,9 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
               >
                 <p
                   className="font-['Inter',sans-serif] mb-4"
-                  style={{ fontSize: "16px", lineHeight: "26px", color: "var(--text-primary, #fafafa)" }}
+                  style={{ fontSize: "16px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "26px", color: "var(--text-primary, #fafafa)" }}
                 >
-                  {(block as any).text}
+                  <RichTextContent value={(block as any).text} />
                 </p>
                 {(block as any).buttonUrl ? (
                   <a
@@ -208,7 +304,7 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                       color: "var(--btn-primary-text, #111)",
                     }}
                   >
-                    {(block as any).buttonText || "Saiba mais"}
+                    <RichTextContent value={(block as any).buttonText || "Saiba mais"} />
                   </a>
                 ) : (
                   <button
@@ -220,14 +316,14 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                       border: "none",
                     }}
                   >
-                    {(block as any).buttonText || "Saiba mais"}
+                    <RichTextContent value={(block as any).buttonText || "Saiba mais"} />
                   </button>
                 )}
               </div>
             );
           case "embed":
             return (
-              <figure key={i} className="my-6">
+              <figure key={i} className="my-8">
                 <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--bg-secondary, #0F1012)", border: "1px solid var(--border-primary, #2A2A2A)" }}>
                   <iframe
                     src={(block as any).url}
@@ -242,7 +338,7 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                     className="mt-2 text-center font-['Inter',sans-serif]"
                     style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
                   >
-                    {(block as any).caption}
+                    <RichTextContent value={(block as any).caption} />
                   </figcaption>
                 )}
               </figure>

@@ -78,6 +78,8 @@ async function persistCollection<K extends CMSCollectionName>(key: K, previous: 
   await dataProvider.saveCollection(key, previous, next);
 }
 
+const PUBLIC_REFRESH_INTERVAL_MS = 12000;
+
 export function CMSProvider({ children, mode = "public" }: { children: ReactNode; mode?: CMSMode }) {
   const [data, setData] = useState<CMSData>(createEmptyCMSData);
   const [loading, setLoading] = useState(true);
@@ -88,23 +90,58 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     dataRef.current = data;
   }, [data]);
 
-  const refresh = async () => {
-    setLoading(true);
-    setError(null);
+  const refreshData = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const nextData = await loadByMode(mode);
       setData(nextData);
+      if (!silent) {
+        setError(null);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro ao carregar dados do CMS.";
-      setError(message);
-      toast.error(message);
+      if (!silent) {
+        setError(message);
+        toast.error(message);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
+  const refresh = () => refreshData(false);
+
   useEffect(() => {
     void refresh();
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "public") return;
+
+    const refreshInBackground = () => {
+      void refreshData(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshInBackground();
+      }
+    };
+
+    window.addEventListener("focus", refreshInBackground);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    const intervalId = window.setInterval(refreshInBackground, PUBLIC_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("focus", refreshInBackground);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
   }, [mode]);
 
   const updateData = (newData: CMSData) => {
@@ -184,11 +221,11 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
         dataProvider.saveCollection("recommendations", previous.recommendations, nextData.recommendations),
         dataProvider.saveCollection("media", previous.media, nextData.media),
       ]);
-      toast.success("Seed legado restaurado.");
+      toast.success("Conteudo demo restaurado.");
     } catch (err) {
       setData(previous);
       dataRef.current = previous;
-      toast.error(err instanceof Error ? err.message : "Erro ao restaurar seed legado.");
+      toast.error(err instanceof Error ? err.message : "Erro ao restaurar conteudo demo.");
       throw err;
     }
   };

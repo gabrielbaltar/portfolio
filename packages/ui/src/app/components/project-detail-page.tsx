@@ -1,85 +1,34 @@
 import { toast } from "sonner";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useLocation } from "react-router";
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowUpRight, ExternalLink, Copy, Phone, Lock } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Phone, Lock } from "lucide-react";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { BlockRenderer } from "./block-renderer";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { ContentImage } from "./content-image";
+import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
-
-import projectImg1 from "figma:asset/41b8590575d31ccb2d14524e52ac80f769b0c27a.png";
-import projectImg2 from "figma:asset/6152ef9e71bb7cd6e66a5a401a0c518b8b77fde7.png";
-import projectImg3 from "figma:asset/f74e8c8e6ce6a8687ceb8511bee3d4fab9235e7a.png";
-import projectImg4 from "figma:asset/a8a2910330eef4e894aef9565ddca1a5ca0a0df0.png";
-import projectImg5 from "figma:asset/fdfa8c140757c8eb1cd3df086c85525d05145841.png";
-
-const PROJECT_IMAGES: Record<string, string> = {
-  "1": projectImg1,
-  "2": projectImg2,
-  "3": projectImg3,
-  "4": projectImg4,
-  "5": projectImg5,
-  "6": projectImg1,
-};
-
-const GALLERY_IMAGES = [
-  "https://images.unsplash.com/photo-1702479744062-1880502275b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWJzaXRlJTIwbGFuZGluZyUyMHBhZ2UlMjBzY3JlZW5zaG90JTIwZGFya3xlbnwxfHx8fDE3NzI1OTkwOTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-  "https://images.unsplash.com/photo-1704018731280-6617b0ca1dbe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJrZXRpbmclMjBhZ2VuY3klMjB3ZWJwYWdlJTIwZGFyayUyMG1vY2t1cHxlbnwxfHx8fDE3NzI1OTkwOTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
-  "https://images.unsplash.com/photo-1741346198346-f68e0ce3821b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXNpZ24lMjBwcm9qZWN0cyUyMGdhbGxlcnklMjBkYXJrfGVufDF8fHx8MTc3MjU5OTA5Nnww&ixlib=rb-4.1.0&q=80&w=1080",
-];
+import { getBackTarget } from "./navigation-state";
 
 function ImageCard({ src, alt, className = "", position = "50% 50%" }: { src: string; alt: string; className?: string; position?: string }) {
   return (
-    <ImageWithFallback
+    <ContentImage
       src={src}
       alt={alt}
+      emptyLabel="Sem imagem"
       className={`w-full rounded-2xl object-cover ${className}`}
-      style={{ height: "525px", maxHeight: "525px", objectPosition: position }}
+      position={position}
+      style={{ height: "525px", maxHeight: "525px" }}
     />
-  );
-}
-
-function ProjectCard({ project, imageSrc }: { project: { id: string; title: string; category: string; slug: string }; imageSrc: string }) {
-  return (
-    <Link
-      to={`/projects/${project.slug}`}
-      className="block rounded-lg overflow-hidden group transition-transform hover:-translate-y-1"
-      style={{
-        backgroundColor: "var(--bg-secondary, #121212)",
-        border: "1px solid var(--border-primary, #363636)",
-      }}
-    >
-      <div className="relative overflow-hidden" style={{ aspectRatio: "350/260" }}>
-        <ImageWithFallback
-          src={imageSrc}
-          alt={project.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-        />
-      </div>
-      <div
-        className="px-4 py-3"
-        style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
-      >
-        <div className="flex items-center justify-between">
-          <p className="font-['Inter',sans-serif]" style={{ fontSize: "15px", color: "var(--text-primary, #fafafa)" }}>
-            {project.title}
-          </p>
-          <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "var(--text-secondary)" }} />
-        </div>
-        <p className="font-['Inter',sans-serif] mt-0.5" style={{ fontSize: "13px", color: "var(--text-secondary, #ababab)" }}>
-          {project.category}
-        </p>
-      </div>
-    </Link>
   );
 }
 
 export function ProjectDetailPage() {
   const { slug } = useParams();
+  const location = useLocation();
   const { data } = useTranslatedCMS();
   const { locale, t } = useLanguage();
   const { profile, projects } = data;
@@ -93,6 +42,7 @@ export function ProjectDetailPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const backTo = getBackTarget(location.state, "/projects");
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -136,8 +86,8 @@ export function ProjectDetailPage() {
       <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif]" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="text-center">
           <h1 className="mb-4" style={{ fontSize: "26px", color: "var(--text-primary)" }}>{t("projectNotFound")}</h1>
-          <Link to="/projects" className="underline" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
-            {t("backToProjects")}
+          <Link to={backTo} className="underline" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
+            {t("back")}
           </Link>
         </div>
       </div>
@@ -200,28 +150,26 @@ export function ProjectDetailPage() {
             </button>
           </form>
           <Link
-            to="/projects"
+            to={backTo}
             className="inline-flex items-center gap-1.5 mt-6 transition-colors hover:opacity-80"
             style={{ fontSize: "13px", color: "var(--text-secondary, #666)" }}
           >
-            <ArrowLeft size={13} /> {t("backToProjects")}
+            <ArrowLeft size={13} /> {t("back")}
           </Link>
         </motion.div>
       </div>
     );
   }
 
-  const heroImage = project.image || PROJECT_IMAGES[project.id] || PROJECT_IMAGES["1"];
-  const gallery = project.galleryImages && project.galleryImages.length > 0
-    ? project.galleryImages
-    : GALLERY_IMAGES;
+  const heroImage = project.image || "";
+  const gallery = (project.galleryImages || []).filter(Boolean);
 
   // Metadata columns
   const meta = [
     { label: t("categoryLabel"), value: project.category },
-    { label: t("servicesLabel"), value: project.services || "Web Design" },
-    { label: t("clientLabel"), value: project.client || "Framer Template" },
-    { label: t("yearLabel"), value: project.year || "2024" },
+    { label: t("servicesLabel"), value: project.services || "Nao informado" },
+    { label: t("clientLabel"), value: project.client || "Nao informado" },
+    { label: t("yearLabel"), value: project.year || "Nao informado" },
   ];
 
   return (
@@ -236,12 +184,12 @@ export function ProjectDetailPage() {
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         >
           <Link
-            to="/projects"
+            to={backTo}
             className="flex items-center gap-1.5 transition-colors hover:opacity-80"
             style={{ fontSize: "14px", color: "var(--text-secondary, #7A7A7A)" }}
           >
             <ArrowLeft size={14} />
-            {t("projectsTitle")}
+            {t("back")}
           </Link>
         </motion.div>
 
@@ -317,13 +265,15 @@ export function ProjectDetailPage() {
       )}
 
       {/* Gallery */}
-      <div className="max-w-[700px] mx-auto px-5 mt-12 flex flex-col gap-8">
-        {gallery.map((img, i) => (
-          <ScrollReveal key={i}>
-            <ImageCard src={img} alt={`${project.title} gallery ${i + 1}`} position={project.galleryPositions?.[i] || "50% 50%"} />
-          </ScrollReveal>
-        ))}
-      </div>
+      {gallery.length > 0 && (
+        <div className="max-w-[700px] mx-auto px-5 mt-12 flex flex-col gap-8">
+          {gallery.map((img, i) => (
+            <ScrollReveal key={i}>
+              <ImageCard src={img} alt={`${project.title} gallery ${i + 1}`} position={project.galleryPositions?.[i] || "50% 50%"} />
+            </ScrollReveal>
+          ))}
+        </div>
+      )}
 
       {/* View more projects */}
       <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-20">
@@ -341,10 +291,14 @@ export function ProjectDetailPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {otherProjects.map((p) => (
-            <ProjectCard
+            <ProjectPreviewCard
               key={p.id}
-              project={p}
-              imageSrc={p.image || PROJECT_IMAGES[p.id] || PROJECT_IMAGES["1"]}
+              href={`/projects/${p.slug}`}
+              title={p.title}
+              category={p.category}
+              image={p.image || ""}
+              imagePosition={p.imagePosition || "50% 50%"}
+              locked={Boolean(p.password && p.password.trim() !== "")}
             />
           ))}
         </div>

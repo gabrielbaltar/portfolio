@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   History, X, Clock, ChevronRight, RotateCcw, Eye,
   ArrowLeft, Type, Heading1, Heading2, Heading3,
-  List, ListOrdered, ImageIcon, Quote, MousePointerClick, Code,
+  List, ListOrdered, ImageIcon, Quote, MousePointerClick, Code, Palette,
   FileText,
 } from "lucide-react";
 import type { ContentEntityType } from "@portfolio/core";
 import { type ContentBlock } from "./cms-data";
 import { dataProvider } from "./data-provider";
+import { richTextToPlainText } from "./rich-text";
+import { getShowcaseBlockSummary, isShowcaseBlock } from "./showcase-blocks";
 
 // --- Version types ---
 export interface ContentVersion {
@@ -65,18 +67,27 @@ function getBlockSummary(block: ContentBlock): string {
   const labels: Record<string, string> = {
     paragraph: "Paragrafo", heading1: "H1", heading2: "H2", heading3: "H3",
     "unordered-list": "Lista", "ordered-list": "Lista numerada",
-    image: "Imagem", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
+    "style-guide": "Style guide", "color-palette": "Paleta de cores", typography: "Tipografia",
+    "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
+    code: "Codigo", image: "Imagem", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
   };
   const label = labels[block.type] || block.type;
+  if (isShowcaseBlock(block)) {
+    return getShowcaseBlockSummary(block);
+  }
   if ("text" in block && block.text) {
-    const preview = (block as any).text.substring(0, 60);
-    return `${label}: ${preview}${(block as any).text.length > 60 ? "..." : ""}`;
+    const preview = richTextToPlainText((block as any).text).substring(0, 60);
+    return `${label}: ${preview}${preview.length >= 60 ? "..." : ""}`;
   }
   if ("items" in block) {
     return `${label}: ${(block as any).items.length} itens`;
   }
+  if ("code" in block && block.type === "code") {
+    const preview = block.code.substring(0, 60);
+    return `${label} (${block.language}): ${preview}${block.code.length > 60 ? "..." : ""}`;
+  }
   if ("url" in block && block.type === "image") {
-    return `${label}: ${(block as any).caption || "sem legenda"}`;
+    return `${label}: ${richTextToPlainText((block as any).caption) || "sem legenda"}`;
   }
   return label;
 }
@@ -138,6 +149,13 @@ function BlockIcon({ type }: { type: string }) {
     case "heading3": return <Heading3 size={size} />;
     case "unordered-list": return <List size={size} />;
     case "ordered-list": return <ListOrdered size={size} />;
+    case "style-guide": return <Palette size={size} />;
+    case "color-palette": return <Palette size={size} />;
+    case "typography": return <Type size={size} />;
+    case "icon-grid": return <ImageIcon size={size} />;
+    case "user-flow": return <ListOrdered size={size} />;
+    case "sitemap": return <List size={size} />;
+    case "code": return <Code size={size} />;
     case "image": return <ImageIcon size={size} />;
     case "quote": return <Quote size={size} />;
     case "cta": return <MousePointerClick size={size} />;
@@ -188,7 +206,11 @@ function renderValue(value: any, field: string): React.ReactNode {
     return <span style={{ fontSize: "12px" }}>{value.length} imagens</span>;
   }
   if (typeof value === "string" && value.length > 100) {
-    return <span style={{ fontSize: "12px" }} className="break-all">{value.substring(0, 100)}...</span>;
+    const plainValue = richTextToPlainText(value);
+    return <span style={{ fontSize: "12px" }} className="break-all">{plainValue.substring(0, 100)}...</span>;
+  }
+  if (typeof value === "string") {
+    return <span style={{ fontSize: "12px" }}>{richTextToPlainText(value)}</span>;
   }
   return <span style={{ fontSize: "12px" }}>{String(value)}</span>;
 }

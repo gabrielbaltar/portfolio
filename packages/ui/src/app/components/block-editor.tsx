@@ -1,13 +1,25 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { type ContentBlock } from "./cms-data";
+import { useCMS, type ContentBlock } from "./cms-data";
 import {
   Plus, Trash2, GripVertical, Type, Heading1, Heading2, Heading3,
   List, ListOrdered, ImageIcon, Minus, ChevronUp, ChevronDown,
-  Upload, X, Quote, MousePointerClick, Code, Video,
+  Upload, X, Quote, MousePointerClick, Code, Video, Palette,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { compressImage } from "./image-utils";
+import { toast } from "sonner";
+import { dataProvider } from "./data-provider";
+import {
+  clampBlockLineHeight,
+  CODE_LANGUAGE_OPTIONS,
+  getBlockLineHeight,
+  isAdjustableLineHeightBlock,
+} from "./content-block-utils";
+import { LineHeightControl } from "./line-height-control";
+import { RichTextEditor } from "./rich-text";
+import { ShowcaseBlockView } from "./showcase-blocks";
+import { VideoPlayer } from "./video-player";
+import { extractMuxPlaybackId, normalizeVideoInput } from "./video-source";
 
 const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.ReactNode }[] = [
   { type: "paragraph", label: "Paragrafo", icon: <Type size={14} /> },
@@ -16,8 +28,15 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "heading3", label: "Titulo H3", icon: <Heading3 size={14} /> },
   { type: "unordered-list", label: "Lista", icon: <List size={14} /> },
   { type: "ordered-list", label: "Lista numerada", icon: <ListOrdered size={14} /> },
+  { type: "style-guide", label: "Style guide", icon: <Palette size={14} /> },
+  { type: "color-palette", label: "Paleta de cores", icon: <Palette size={14} /> },
+  { type: "typography", label: "Tipografia", icon: <Type size={14} /> },
+  { type: "icon-grid", label: "Icones", icon: <ImageIcon size={14} /> },
+  { type: "user-flow", label: "Fluxo do usuario", icon: <ListOrdered size={14} /> },
+  { type: "sitemap", label: "Sitemap", icon: <List size={14} /> },
+  { type: "code", label: "Codigo", icon: <Code size={14} /> },
   { type: "image", label: "Imagem", icon: <ImageIcon size={14} /> },
-  { type: "video", label: "Video (4K)", icon: <Video size={14} /> },
+  { type: "video", label: "Video / Mux", icon: <Video size={14} /> },
   { type: "quote", label: "Citacao", icon: <Quote size={14} /> },
   { type: "cta", label: "CTA / Botao", icon: <MousePointerClick size={14} /> },
   { type: "embed", label: "Embed", icon: <Code size={14} /> },
@@ -27,7 +46,9 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
 const LABEL_MAP: Record<string, string> = {
   paragraph: "Paragrafo", heading1: "H1", heading2: "H2", heading3: "H3",
   "unordered-list": "Lista", "ordered-list": "Lista numerada",
-  image: "Imagem", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
+  "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
+  "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
+  code: "Codigo", image: "Imagem", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
 };
 
 const DND_ITEM_TYPE = "CONTENT_BLOCK";
@@ -45,12 +66,68 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
     case "heading3": return { type: "heading3", text: "" };
     case "unordered-list": return { type: "unordered-list", items: [""] };
     case "ordered-list": return { type: "ordered-list", items: [""] };
+    case "style-guide":
+      return {
+        type: "style-guide",
+        title: "Style guide",
+        summary: "",
+        principles: [
+          { title: "Clareza", description: "Explique a direcao visual e a regra principal desta interface." },
+          { title: "Consistencia", description: "Documente como a linguagem visual se repete ao longo do fluxo." },
+        ],
+      };
+    case "color-palette":
+      return {
+        type: "color-palette",
+        title: "Paleta de cores",
+        colors: [
+          { name: "Primary", token: "color.primary", hex: "#111827", role: "Primaria", usage: "Titulos, botoes e destaques" },
+          { name: "Accent", token: "color.accent", hex: "#38BDF8", role: "Acento", usage: "Estados ativos, links e sinais visuais" },
+        ],
+      };
+    case "typography":
+      return {
+        type: "typography",
+        title: "Tipografia",
+        fonts: [
+          { label: "Heading", token: "font.heading.lg", family: "Inter", weight: "600", size: "40px", lineHeight: "1.1", sample: "Build faster with better product thinking" },
+          { label: "Body", token: "font.body.md", family: "Inter", weight: "400", size: "16px", lineHeight: "1.6", sample: "Readable, calm and structured content for product storytelling." },
+        ],
+      };
+    case "icon-grid":
+      return {
+        type: "icon-grid",
+        title: "Iconografia",
+        icons: [
+          { name: "Navigation", token: "icon.navigation.default", url: "", notes: "Use SVG para manter nitidez em qualquer tamanho." },
+          { name: "Feedback", token: "icon.feedback.success", url: "", notes: "Agrupe icones por contexto de uso." },
+        ],
+      };
+    case "user-flow":
+      return {
+        type: "user-flow",
+        title: "Fluxo do usuario",
+        steps: [
+          { title: "Entrada", description: "Como o usuario chega na experiencia.", outcome: "Primeira impressao" },
+          { title: "Acao principal", description: "A etapa central do fluxo e a decisao mais importante.", outcome: "Conversao" },
+        ],
+      };
+    case "sitemap":
+      return {
+        type: "sitemap",
+        title: "Sitemap",
+        sections: [
+          { title: "Landing", description: "Entrada principal do produto ou case.", children: ["Hero", "Proposta de valor", "CTA"] },
+          { title: "Produto", description: "Navegacao das paginas internas.", children: ["Dashboard", "Detalhe", "Configuracoes"] },
+        ],
+      };
+    case "code": return { type: "code", code: "", language: "typescript", caption: "" };
     case "image": return { type: "image", url: "", caption: "" };
-    case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false };
+    case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false, previewStart: 0, previewDuration: 4 };
     case "quote": return { type: "quote", text: "", author: "" };
     case "cta": return { type: "cta", text: "", buttonText: "", buttonUrl: "", openInNewTab: true };
     case "embed": return { type: "embed", url: "", caption: "" };
-    case "divider": return { type: "divider" };
+    case "divider": return { type: "divider", spacing: 72 };
   }
 }
 
@@ -107,7 +184,30 @@ function BlockTypeSelector({ onSelect }: { onSelect: (type: ContentBlock["type"]
   );
 }
 
-function ListBlockEditor({ items, onChange, ordered }: { items: string[]; onChange: (items: string[]) => void; ordered: boolean }) {
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target?.result as string);
+    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function isUploadableVideoFile(file: File) {
+  return file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|ogv|ogg)$/i.test(file.name);
+}
+
+function ListBlockEditor({
+  items,
+  onChange,
+  ordered,
+  lineHeight,
+}: {
+  items: string[];
+  onChange: (items: string[]) => void;
+  ordered: boolean;
+  lineHeight: number;
+}) {
   return (
     <div className="space-y-1.5">
       {items.map((item, i) => (
@@ -115,16 +215,30 @@ function ListBlockEditor({ items, onChange, ordered }: { items: string[]; onChan
           <span className="text-[#555] w-5 text-right shrink-0" style={{ fontSize: "13px" }}>
             {ordered ? `${i + 1}.` : "\u2022"}
           </span>
-          <input
+          <RichTextEditor
             value={item}
-            onChange={(e) => { const n = [...items]; n[i] = e.target.value; onChange(n); }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); const n = [...items]; n.splice(i + 1, 0, ""); onChange(n); }
-              if (e.key === "Backspace" && item === "" && items.length > 1) { e.preventDefault(); onChange(items.filter((_, j) => j !== i)); }
+            onChange={(nextItem) => {
+              const nextItems = [...items];
+              nextItems[i] = nextItem;
+              onChange(nextItems);
             }}
-            className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#fafafa] focus:outline-none focus:border-[#555]"
-            style={{ fontSize: "14px" }}
+            onEnter={() => {
+              const nextItems = [...items];
+              nextItems.splice(i + 1, 0, "");
+              onChange(nextItems);
+            }}
+            onBackspaceEmpty={() => {
+              if (items.length > 1) {
+                onChange(items.filter((_, j) => j !== i));
+              }
+            }}
+            multiline={false}
+            compact
             placeholder="Item da lista..."
+            containerClassName="flex-1"
+            editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
+            editorStyle={{ fontSize: "14px", minHeight: "36px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", lineHeight: `${lineHeight}px` }}
+            placeholderClassName="px-2.5 py-1.5"
           />
           <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-[#555] hover:text-red-400 cursor-pointer shrink-0">
             <Trash2 size={12} />
@@ -138,6 +252,60 @@ function ListBlockEditor({ items, onChange, ordered }: { items: string[]; onChan
   );
 }
 
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      {children}
+    </span>
+  );
+}
+
+function MiniInput({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: React.HTMLInputTypeAttribute;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-[36px] w-full rounded border px-2.5 text-[#fafafa] focus:outline-none"
+      style={{ backgroundColor: "#1a1a1a", borderColor: "#2a2a2a", fontSize: "12px" }}
+      placeholder={placeholder}
+    />
+  );
+}
+
+function MiniTextarea({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <textarea
+      rows={rows}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-full resize-none rounded border px-2.5 py-2 text-[#fafafa] focus:outline-none"
+      style={{ backgroundColor: "#1a1a1a", borderColor: "#2a2a2a", fontSize: "12px", lineHeight: "18px" }}
+      placeholder={placeholder}
+    />
+  );
+}
+
 // Draggable block wrapper
 function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveBlock }: {
   block: ContentBlock; index: number; total: number;
@@ -145,6 +313,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   moveBlock: (dragIndex: number, hoverIndex: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { addMediaItem } = useCMS();
 
   const [{ isDragging }, drag, preview] = useDrag({
     type: DND_ITEM_TYPE,
@@ -186,30 +355,117 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
   const fontSizeMap: Record<string, string> = { heading1: "20px", heading2: "17px", heading3: "15px", paragraph: "14px" };
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const iconFileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [activeIconUploadIndex, setActiveIconUploadIndex] = useState<number | null>(null);
+  const [iconUploadingIndex, setIconUploadingIndex] = useState<number | null>(null);
+  const [dragOverIconIndex, setDragOverIconIndex] = useState<number | null>(null);
+  const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith("image/") && file.type !== "image/svg+xml") return;
     setUploading(true);
-    compressImage(file)
-      .then((dataUrl) => {
-        onChange({ ...block, url: dataUrl } as ContentBlock);
+    try {
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      addMediaItem(uploaded);
+      onChange({ ...block, url: uploaded.url } as ContentBlock);
+    } catch {
+      try {
+        const originalDataUrl = await readFileAsDataUrl(file);
+        onChange({ ...block, url: originalDataUrl } as ContentBlock);
+      } finally {
         setUploading(false);
-      })
-      .catch(() => {
-        // Fallback to uncompressed if compression fails
-        const reader = new FileReader();
-        reader.onload = (e) => { onChange({ ...block, url: e.target?.result as string } as ContentBlock); setUploading(false); };
-        reader.onerror = () => setUploading(false);
-        reader.readAsDataURL(file);
-      });
+      }
+      return;
+    }
+    setUploading(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleImageUpload(file);
+  };
+
+  const updateIconGridItem = (iconIndex: number, updates: { name?: string; url?: string; notes?: string }) => {
+    if (block.type !== "icon-grid") return;
+    const nextIcons = [...block.icons];
+    nextIcons[iconIndex] = { ...nextIcons[iconIndex], ...updates };
+    onChange({ ...block, icons: nextIcons } as ContentBlock);
+  };
+
+  const handleIconUpload = async (file: File, iconIndex: number) => {
+    if (!file.type.startsWith("image/") && file.type !== "image/svg+xml") return;
+
+    setIconUploadingIndex(iconIndex);
+    try {
+      try {
+        const uploaded = await dataProvider.uploadMedia(file, "public");
+        addMediaItem(uploaded);
+        updateIconGridItem(iconIndex, {
+          url: uploaded.url,
+          name: block.type === "icon-grid" && block.icons[iconIndex]?.name
+            ? block.icons[iconIndex]?.name
+            : file.name.replace(/\.[^.]+$/, ""),
+        });
+        toast.success("Icone enviado.");
+      } catch {
+        const originalDataUrl = await readFileAsDataUrl(file);
+        updateIconGridItem(iconIndex, {
+          url: originalDataUrl,
+          name: block.type === "icon-grid" && block.icons[iconIndex]?.name
+            ? block.icons[iconIndex]?.name
+            : file.name.replace(/\.[^.]+$/, ""),
+        });
+        toast.info("Upload externo indisponivel. O icone foi mantido localmente sem compressao.");
+      }
+    } catch {
+      toast.error("Nao foi possivel carregar o icone.");
+    } finally {
+      setIconUploadingIndex(null);
+      setDragOverIconIndex(null);
+      setActiveIconUploadIndex(null);
+    }
+  };
+
+  const handleVideoUpload = async (file: File, currentBlock: Extract<ContentBlock, { type: "video" }>) => {
+    if (!isUploadableVideoFile(file)) {
+      toast.error("Use um arquivo de video valido.");
+      return;
+    }
+
+    setUploading(true);
+    setDragOver(false);
+
+    try {
+      try {
+        const uploaded = await dataProvider.uploadMedia(file, "public");
+        addMediaItem(uploaded);
+        onChange({ ...currentBlock, url: uploaded.url } as ContentBlock);
+        toast.success("Video enviado sem compressao.");
+
+        if (file.type && typeof document !== "undefined") {
+          const canPlayType = document.createElement("video").canPlayType(file.type);
+          if (!canPlayType) {
+            toast.info("O video foi enviado em qualidade original, mas MP4 H.264 ou WebM continuam sendo os formatos mais compativeis para todos os navegadores.");
+          }
+        }
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Falha no upload do storage.";
+        const objectUrl = URL.createObjectURL(file);
+        onChange({ ...currentBlock, url: objectUrl } as ContentBlock);
+        if (/maximum allowed size|exceeded the maximum allowed size/i.test(reason)) {
+          toast.error(`O Supabase rejeitou o video por limite de tamanho. Preview local ativo nesta sessao. ${reason}`);
+        } else {
+          toast.warning(`O upload persistente falhou. Preview local ativo nesta sessao. Motivo: ${reason}`);
+        }
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar o video.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -259,20 +515,603 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
       {/* Block content */}
       <div className="p-3">
-        {block.type === "divider" && <hr className="border-[#363636]" />}
+        {block.type === "divider" && (
+          <div className="space-y-3">
+            <div className="px-1" style={{ paddingTop: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px`, paddingBottom: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px` }}>
+              <hr className="border-[#363636]" />
+            </div>
+            <div className="flex items-center gap-2 px-1">
+              <span className="text-[#666] shrink-0" style={{ fontSize: "11px" }}>Espacamento</span>
+              <input
+                type="range"
+                min={24}
+                max={160}
+                step={4}
+                value={(block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72}
+                onChange={(e) => onChange({ ...block, spacing: parseInt(e.target.value) } as ContentBlock)}
+                className="flex-1 h-1 cursor-pointer"
+                style={{ accentColor: "#00ff3c" }}
+              />
+              <span className="text-[#555] w-10 text-right tabular-nums" style={{ fontSize: "11px" }}>
+                {(block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72}px
+              </span>
+            </div>
+            <p className="px-1 text-[#555]" style={{ fontSize: "10px", lineHeight: "14px" }}>
+              Use o divisor para controlar o respiro entre secoes.
+            </p>
+          </div>
+        )}
 
         {(block.type === "paragraph" || block.type === "heading1" || block.type === "heading2" || block.type === "heading3") && (
-          <textarea
-            value={(block as any).text}
-            onChange={(e) => onChange({ ...block, text: e.target.value } as ContentBlock)}
-            className="w-full bg-transparent border-none text-[#fafafa] focus:outline-none resize-none"
-            style={{ fontSize: fontSizeMap[block.type] || "14px", minHeight: block.type === "paragraph" ? "60px" : "36px" }}
-            placeholder={block.type === "heading1" ? "Titulo principal..." : block.type === "heading2" ? "Subtitulo..." : block.type === "heading3" ? "Titulo da secao..." : "Escreva seu texto aqui..."}
-          />
+          <div className="space-y-2">
+            <RichTextEditor
+              value={(block as any).text}
+              onChange={(text) => onChange({ ...block, text } as ContentBlock)}
+              compact
+              multiline
+              editorClassName="w-full rounded px-1.5 py-1 text-[#fafafa]"
+              editorStyle={{
+                fontSize: fontSizeMap[block.type] || "14px",
+                minHeight: block.type === "paragraph" ? "92px" : "48px",
+                lineHeight: blockLineHeight ? `${blockLineHeight}px` : undefined,
+              }}
+              placeholder={block.type === "heading1" ? "Titulo principal..." : block.type === "heading2" ? "Subtitulo..." : block.type === "heading3" ? "Titulo da secao..." : "Escreva seu texto aqui..."}
+            />
+            {blockLineHeight && (
+              <LineHeightControl
+                value={blockLineHeight}
+                onChange={(value) => onChange({ ...block, lineHeight: clampBlockLineHeight(value) } as ContentBlock)}
+              />
+            )}
+          </div>
         )}
 
         {(block.type === "unordered-list" || block.type === "ordered-list") && (
-          <ListBlockEditor items={(block as any).items} onChange={(items) => onChange({ ...block, items } as ContentBlock)} ordered={block.type === "ordered-list"} />
+          <div className="space-y-2">
+            <ListBlockEditor items={(block as any).items} onChange={(items) => onChange({ ...block, items } as ContentBlock)} ordered={block.type === "ordered-list"} lineHeight={blockLineHeight || 22} />
+            {blockLineHeight && (
+              <LineHeightControl
+                value={blockLineHeight}
+                onChange={(value) => onChange({ ...block, lineHeight: clampBlockLineHeight(value) } as ContentBlock)}
+              />
+            )}
+          </div>
+        )}
+
+        {block.type === "style-guide" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2 min-[980px]:grid-cols-[220px_1fr]">
+              <label className="space-y-1">
+                <FieldLabel>Titulo</FieldLabel>
+                <MiniInput
+                  value={block.title}
+                  onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                  placeholder="Style guide"
+                />
+              </label>
+              <label className="space-y-1">
+                <FieldLabel>Resumo</FieldLabel>
+                <MiniTextarea
+                  rows={2}
+                  value={block.summary}
+                  onChange={(summary) => onChange({ ...block, summary } as ContentBlock)}
+                  placeholder="Explique a direcao visual, intencao da marca e regras gerais."
+                />
+              </label>
+            </div>
+            <div className="space-y-2">
+              <FieldLabel>Principios</FieldLabel>
+              {block.principles.map((principle, principleIndex) => (
+                <div key={principleIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Principio {principleIndex + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ ...block, principles: block.principles.filter((_, index) => index !== principleIndex) } as ContentBlock)}
+                      className="text-[#555] hover:text-red-400 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-2 min-[980px]:grid-cols-[220px_1fr]">
+                    <MiniInput
+                      value={principle.title}
+                      onChange={(title) => {
+                        const nextPrinciples = [...block.principles];
+                        nextPrinciples[principleIndex] = { ...principle, title };
+                        onChange({ ...block, principles: nextPrinciples } as ContentBlock);
+                      }}
+                      placeholder="Nome do principio"
+                    />
+                    <MiniTextarea
+                      rows={2}
+                      value={principle.description}
+                      onChange={(description) => {
+                        const nextPrinciples = [...block.principles];
+                        nextPrinciples[principleIndex] = { ...principle, description };
+                        onChange({ ...block, principles: nextPrinciples } as ContentBlock);
+                      }}
+                      placeholder="Como este principio aparece no produto."
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => onChange({ ...block, principles: [...block.principles, { title: "", description: "" }] } as ContentBlock)}
+                className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer"
+                style={{ fontSize: "12px" }}
+              >
+                <Plus size={12} /> Adicionar principio
+              </button>
+            </div>
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "color-palette" && (
+          <div className="space-y-3">
+            <label className="space-y-1">
+              <FieldLabel>Titulo</FieldLabel>
+              <MiniInput
+                value={block.title}
+                onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                placeholder="Paleta de cores"
+              />
+            </label>
+            <div className="space-y-2">
+              <FieldLabel>Cores</FieldLabel>
+              {block.colors.map((color, colorIndex) => (
+                <div key={colorIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Cor {colorIndex + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ ...block, colors: block.colors.filter((_, index) => index !== colorIndex) } as ContentBlock)}
+                      className="text-[#555] hover:text-red-400 cursor-pointer"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-2 min-[920px]:grid-cols-2 xl:grid-cols-[150px_190px_150px_1fr]">
+                    <MiniInput
+                      value={color.name}
+                      onChange={(name) => {
+                        const nextColors = [...block.colors];
+                        nextColors[colorIndex] = { ...color, name };
+                        onChange({ ...block, colors: nextColors } as ContentBlock);
+                      }}
+                      placeholder="Nome"
+                    />
+                    <MiniInput
+                      value={color.token || ""}
+                      onChange={(token) => {
+                        const nextColors = [...block.colors];
+                        nextColors[colorIndex] = { ...color, token };
+                        onChange({ ...block, colors: nextColors } as ContentBlock);
+                      }}
+                      placeholder="Token, ex. color.primary"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={color.hex || "#000000"}
+                        onChange={(event) => {
+                          const nextColors = [...block.colors];
+                          nextColors[colorIndex] = { ...color, hex: event.target.value };
+                          onChange({ ...block, colors: nextColors } as ContentBlock);
+                        }}
+                        className="h-[36px] w-[52px] rounded border bg-transparent p-1"
+                        style={{ borderColor: "#2a2a2a" }}
+                      />
+                      <MiniInput
+                        value={color.hex}
+                        onChange={(hex) => {
+                          const nextColors = [...block.colors];
+                          nextColors[colorIndex] = { ...color, hex };
+                          onChange({ ...block, colors: nextColors } as ContentBlock);
+                        }}
+                        placeholder="#111827"
+                      />
+                    </div>
+                    <MiniInput
+                      value={color.role}
+                      onChange={(role) => {
+                        const nextColors = [...block.colors];
+                        nextColors[colorIndex] = { ...color, role };
+                        onChange({ ...block, colors: nextColors } as ContentBlock);
+                      }}
+                      placeholder="Primaria, accent, background..."
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <MiniTextarea
+                      rows={2}
+                      value={color.usage}
+                      onChange={(usage) => {
+                        const nextColors = [...block.colors];
+                        nextColors[colorIndex] = { ...color, usage };
+                        onChange({ ...block, colors: nextColors } as ContentBlock);
+                      }}
+                      placeholder="Onde e como essa cor e usada."
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => onChange({ ...block, colors: [...block.colors, { name: "", token: "", hex: "#000000", role: "", usage: "" }] } as ContentBlock)} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
+                <Plus size={12} /> Adicionar cor
+              </button>
+            </div>
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "typography" && (
+          <div className="space-y-3">
+            <label className="space-y-1">
+              <FieldLabel>Titulo</FieldLabel>
+              <MiniInput
+                value={block.title}
+                onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                placeholder="Tipografia"
+              />
+            </label>
+            <div className="space-y-2">
+              <FieldLabel>Estilos tipograficos</FieldLabel>
+              {block.fonts.map((font, fontIndex) => (
+                <div key={fontIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Fonte {fontIndex + 1}</span>
+                    <button type="button" onClick={() => onChange({ ...block, fonts: block.fonts.filter((_, index) => index !== fontIndex) } as ContentBlock)} className="text-[#555] hover:text-red-400 cursor-pointer">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-2 min-[980px]:grid-cols-3">
+                    <MiniInput value={font.label} onChange={(label) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, label };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="Heading, Body, Caption..." />
+                    <MiniInput value={font.token || ""} onChange={(token) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, token };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="Token, ex. font.heading.lg" />
+                    <MiniInput value={font.family} onChange={(family) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, family };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="Inter, General Sans, Sora..." />
+                  </div>
+                  <div className="mt-2 grid gap-2 min-[980px]:grid-cols-3">
+                    <MiniInput value={font.weight} onChange={(weight) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, weight };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="400, 500, 700..." />
+                    <MiniInput value={font.size} onChange={(size) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, size };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="16px, 2rem..." />
+                    <MiniInput value={font.lineHeight} onChange={(lineHeight) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, lineHeight };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} placeholder="1.4, 24px..." />
+                  </div>
+                  <div className="mt-2">
+                    <MiniTextarea value={font.sample} onChange={(sample) => {
+                      const nextFonts = [...block.fonts];
+                      nextFonts[fontIndex] = { ...font, sample };
+                      onChange({ ...block, fonts: nextFonts } as ContentBlock);
+                    }} rows={2} placeholder="Texto de exemplo para mostrar este estilo." />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => onChange({ ...block, fonts: [...block.fonts, { label: "", token: "", family: "", weight: "", size: "", lineHeight: "", sample: "" }] } as ContentBlock)} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
+                <Plus size={12} /> Adicionar estilo tipografico
+              </button>
+            </div>
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "icon-grid" && (
+          <div className="space-y-3">
+            <label className="space-y-1">
+              <FieldLabel>Titulo</FieldLabel>
+              <MiniInput
+                value={block.title}
+                onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                placeholder="Iconografia"
+              />
+            </label>
+            <div className="space-y-2">
+              <FieldLabel>Icones</FieldLabel>
+              {block.icons.map((icon, iconIndex) => (
+                <div key={iconIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Icone {iconIndex + 1}</span>
+                    <button type="button" onClick={() => onChange({ ...block, icons: block.icons.filter((_, index) => index !== iconIndex) } as ContentBlock)} className="text-[#555] hover:text-red-400 cursor-pointer">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-3 min-[980px]:grid-cols-[112px_1fr]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveIconUploadIndex(iconIndex);
+                        iconFileInputRef.current?.click();
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        setDragOverIconIndex(iconIndex);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverIconIndex === iconIndex) setDragOverIconIndex(null);
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setDragOverIconIndex(null);
+                        const file = event.dataTransfer.files?.[0];
+                        if (file) void handleIconUpload(file, iconIndex);
+                      }}
+                      className="relative flex h-[112px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border transition-colors"
+                      style={{
+                        borderColor: dragOverIconIndex === iconIndex ? "#38bdf8" : "#2a2a2a",
+                        borderStyle: "dashed",
+                        backgroundColor: dragOverIconIndex === iconIndex ? "#0f1c2f" : "#111111",
+                      }}
+                    >
+                      {icon.url ? (
+                        <>
+                          <img src={icon.url} alt={icon.name || `Icone ${iconIndex + 1}`} className="max-h-14 max-w-14 object-contain" />
+                          <span className="mt-2 text-[#666]" style={{ fontSize: "10px", lineHeight: "14px" }}>
+                            {iconUploadingIndex === iconIndex ? "Enviando..." : dragOverIconIndex === iconIndex ? "Solte para trocar" : "Clique ou arraste"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={18} className="text-[#555]" />
+                          <span className="mt-2 text-[#777]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                            {iconUploadingIndex === iconIndex ? "Enviando..." : dragOverIconIndex === iconIndex ? "Solte o icone" : "Upload do icone"}
+                          </span>
+                          <span className="text-[#555]" style={{ fontSize: "10px", lineHeight: "14px" }}>
+                            SVG, PNG, WebP
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    <div className="space-y-2">
+                      <MiniInput value={icon.name} onChange={(name) => {
+                        const nextIcons = [...block.icons];
+                        nextIcons[iconIndex] = { ...icon, name };
+                        onChange({ ...block, icons: nextIcons } as ContentBlock);
+                      }} placeholder="Nome do icone" />
+                      <MiniInput value={icon.token || ""} onChange={(token) => {
+                        const nextIcons = [...block.icons];
+                        nextIcons[iconIndex] = { ...icon, token };
+                        onChange({ ...block, icons: nextIcons } as ContentBlock);
+                      }} placeholder="Token, ex. icon.navigation.default" />
+                      <MiniInput value={icon.url} onChange={(url) => {
+                        const nextIcons = [...block.icons];
+                        nextIcons[iconIndex] = { ...icon, url };
+                        onChange({ ...block, icons: nextIcons } as ContentBlock);
+                      }} placeholder="URL do SVG/PNG" />
+                      {icon.url && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveIconUploadIndex(iconIndex);
+                              iconFileInputRef.current?.click();
+                            }}
+                            className="inline-flex h-[32px] items-center gap-1.5 rounded-md px-2.5 text-[#ddd] transition-colors hover:bg-[#1a1a1a]"
+                            style={{ fontSize: "11px", border: "1px solid #2a2a2a" }}
+                          >
+                            <Upload size={11} />
+                            Trocar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateIconGridItem(iconIndex, { url: "" })}
+                            className="inline-flex h-[32px] items-center gap-1.5 rounded-md px-2.5 text-[#888] transition-colors hover:text-red-400"
+                            style={{ fontSize: "11px", border: "1px solid #2a2a2a" }}
+                          >
+                            <X size={11} />
+                            Limpar arquivo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <MiniTextarea value={icon.notes} onChange={(notes) => {
+                      const nextIcons = [...block.icons];
+                      nextIcons[iconIndex] = { ...icon, notes };
+                      onChange({ ...block, icons: nextIcons } as ContentBlock);
+                    }} rows={2} placeholder="Observacao, estado de uso, familia, etc." />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => onChange({ ...block, icons: [...block.icons, { name: "", token: "", url: "", notes: "" }] } as ContentBlock)} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
+                <Plus size={12} /> Adicionar icone
+              </button>
+            </div>
+            <input
+              ref={iconFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file && activeIconUploadIndex !== null) void handleIconUpload(file, activeIconUploadIndex);
+                event.currentTarget.value = "";
+              }}
+            />
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "user-flow" && (
+          <div className="space-y-3">
+            <label className="space-y-1">
+              <FieldLabel>Titulo</FieldLabel>
+              <MiniInput
+                value={block.title}
+                onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                placeholder="Fluxo do usuario"
+              />
+            </label>
+            <div className="space-y-2">
+              <FieldLabel>Etapas</FieldLabel>
+              {block.steps.map((step, stepIndex) => (
+                <div key={stepIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Etapa {stepIndex + 1}</span>
+                    <button type="button" onClick={() => onChange({ ...block, steps: block.steps.filter((_, index) => index !== stepIndex) } as ContentBlock)} className="text-[#555] hover:text-red-400 cursor-pointer">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-2 min-[980px]:grid-cols-[220px_1fr]">
+                    <MiniInput value={step.title} onChange={(title) => {
+                      const nextSteps = [...block.steps];
+                      nextSteps[stepIndex] = { ...step, title };
+                      onChange({ ...block, steps: nextSteps } as ContentBlock);
+                    }} placeholder="Nome da etapa" />
+                    <MiniInput value={step.outcome} onChange={(outcome) => {
+                      const nextSteps = [...block.steps];
+                      nextSteps[stepIndex] = { ...step, outcome };
+                      onChange({ ...block, steps: nextSteps } as ContentBlock);
+                    }} placeholder="Resultado esperado" />
+                  </div>
+                  <div className="mt-2">
+                    <MiniTextarea value={step.description} onChange={(description) => {
+                      const nextSteps = [...block.steps];
+                      nextSteps[stepIndex] = { ...step, description };
+                      onChange({ ...block, steps: nextSteps } as ContentBlock);
+                    }} rows={2} placeholder="Explique o que acontece nesta etapa do fluxo." />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => onChange({ ...block, steps: [...block.steps, { title: "", description: "", outcome: "" }] } as ContentBlock)} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
+                <Plus size={12} /> Adicionar etapa
+              </button>
+            </div>
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "sitemap" && (
+          <div className="space-y-3">
+            <label className="space-y-1">
+              <FieldLabel>Titulo</FieldLabel>
+              <MiniInput
+                value={block.title}
+                onChange={(title) => onChange({ ...block, title } as ContentBlock)}
+                placeholder="Sitemap"
+              />
+            </label>
+            <div className="space-y-2">
+              <FieldLabel>Secoes</FieldLabel>
+              {block.sections.map((section, sectionIndex) => (
+                <div key={sectionIndex} className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[#888]" style={{ fontSize: "11px" }}>Secao {sectionIndex + 1}</span>
+                    <button type="button" onClick={() => onChange({ ...block, sections: block.sections.filter((_, index) => index !== sectionIndex) } as ContentBlock)} className="text-[#555] hover:text-red-400 cursor-pointer">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div className="grid gap-2 min-[980px]:grid-cols-[220px_1fr]">
+                    <MiniInput value={section.title} onChange={(title) => {
+                      const nextSections = [...block.sections];
+                      nextSections[sectionIndex] = { ...section, title };
+                      onChange({ ...block, sections: nextSections } as ContentBlock);
+                    }} placeholder="Nome da secao" />
+                    <MiniTextarea value={section.description} onChange={(description) => {
+                      const nextSections = [...block.sections];
+                      nextSections[sectionIndex] = { ...section, description };
+                      onChange({ ...block, sections: nextSections } as ContentBlock);
+                    }} rows={2} placeholder="Contexto da secao no sitemap." />
+                  </div>
+                  <div className="mt-2">
+                    <MiniTextarea
+                      rows={4}
+                      value={section.children.join("\n")}
+                      onChange={(value) => {
+                        const nextSections = [...block.sections];
+                        nextSections[sectionIndex] = {
+                          ...section,
+                          children: value
+                            .split("\n")
+                            .map((entry) => entry.trim())
+                            .filter(Boolean),
+                        };
+                        onChange({ ...block, sections: nextSections } as ContentBlock);
+                      }}
+                      placeholder={"Uma pagina por linha\nHome\nPricing\nDashboard"}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => onChange({ ...block, sections: [...block.sections, { title: "", description: "", children: [] }] } as ContentBlock)} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
+                <Plus size={12} /> Adicionar secao
+              </button>
+            </div>
+            <ShowcaseBlockView block={block} variant="preview" />
+          </div>
+        )}
+
+        {block.type === "code" && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 min-[980px]:grid-cols-[180px_1fr]">
+              <label className="space-y-1">
+                <span className="block text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Linguagem
+                </span>
+                <select
+                  value={block.language}
+                  onChange={(event) => onChange({ ...block, language: event.target.value } as ContentBlock)}
+                  className="h-[36px] w-full rounded border px-2.5 text-[#fafafa] focus:outline-none"
+                  style={{ backgroundColor: "#1a1a1a", borderColor: "#2a2a2a", fontSize: "13px" }}
+                >
+                  {CODE_LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="block text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Legenda
+                </span>
+                <input
+                  value={block.caption || ""}
+                  onChange={(event) => onChange({ ...block, caption: event.target.value } as ContentBlock)}
+                  className="h-[36px] w-full rounded border px-2.5 text-[#fafafa] focus:outline-none"
+                  style={{ backgroundColor: "#1a1a1a", borderColor: "#2a2a2a", fontSize: "13px" }}
+                  placeholder="Legenda opcional..."
+                />
+              </label>
+            </div>
+            <textarea
+              value={block.code}
+              onChange={(event) => onChange({ ...block, code: event.target.value } as ContentBlock)}
+              className="w-full rounded-lg border px-3 py-3 text-[#e5e5e5] focus:outline-none"
+              style={{
+                minHeight: "220px",
+                backgroundColor: "#0d0d0d",
+                borderColor: "#2a2a2a",
+                fontSize: "13px",
+                lineHeight: "21px",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace",
+              }}
+              placeholder="// Cole ou escreva seu codigo aqui"
+              spellCheck={false}
+            />
+          </div>
         )}
 
         {block.type === "image" && (
@@ -300,9 +1139,19 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 )}
               </div>
             ) : (
-              <div className="relative group/img">
+              <div
+                className="relative group/img"
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+              >
                 <img src={(block as any).url} alt={(block as any).caption} className="w-full max-h-[240px] rounded-lg object-cover" />
-                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover/img:opacity-100">
+                <div className={`absolute inset-0 transition-colors rounded-lg flex items-center justify-center gap-2 ${dragOver ? "bg-black/55 opacity-100" : "bg-black/0 opacity-0 group-hover/img:bg-black/40 group-hover/img:opacity-100"}`}>
+                  {dragOver && (
+                    <span className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-white backdrop-blur-sm" style={{ fontSize: "11px" }}>
+                      Solte a imagem para substituir
+                    </span>
+                  )}
                   <button onClick={() => fileInputRef.current?.click()} className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-3 py-1.5 cursor-pointer flex items-center gap-1.5 backdrop-blur-sm" style={{ fontSize: "12px" }}>
                     <Upload size={12} /> Trocar
                   </button>
@@ -310,15 +1159,18 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     <X size={12} /> Remover
                   </button>
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); }} />
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); e.currentTarget.value = ""; }} />
               </div>
             )}
-            <input
+            <RichTextEditor
               value={(block as any).caption}
-              onChange={(e) => onChange({ ...block, caption: e.target.value } as ContentBlock)}
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
-              style={{ fontSize: "12px" }}
+              onChange={(caption) => onChange({ ...block, caption } as ContentBlock)}
+              multiline={false}
+              compact
               placeholder="Legenda (opcional)..."
+              editorClassName="w-full rounded px-2.5 py-1.5 text-[#aaa]"
+              editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+              placeholderClassName="px-2.5 py-1.5"
             />
             {/* Border radius control */}
             <div className="flex items-center gap-2 px-1">
@@ -339,13 +1191,12 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
         )}
 
         {block.type === "video" && (() => {
-          const vBlock = block as { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean };
-          const handleVideoFile = (file: File) => {
-            if (!file.type.startsWith("video/")) return;
-            // Use Object URL for local preview — when Supabase is connected, 
-            // this will upload to Storage and return a persistent URL
-            const objectUrl = URL.createObjectURL(file);
-            onChange({ ...vBlock, url: objectUrl } as ContentBlock);
+          const vBlock = block as { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number };
+          const muxPlaybackId = extractMuxPlaybackId(vBlock.url);
+          const applyVideoUrl = (url: string) => {
+            const trimmedUrl = normalizeVideoInput(url);
+            if (!trimmedUrl) return;
+            onChange({ ...vBlock, url: trimmedUrl } as ContentBlock);
           };
           return (
             <div className="space-y-3">
@@ -354,37 +1205,70 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   <div
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}
-                    onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleVideoFile(f); }}
+                    onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void handleVideoUpload(f, vBlock as Extract<ContentBlock, { type: "video" }>); }}
                     onClick={() => fileInputRef.current?.click()}
                     className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 px-4 cursor-pointer transition-colors ${dragOver ? "border-[#555] bg-[#1f1f1f]" : "border-[#2a2a2a] bg-[#141414] hover:border-[#444] hover:bg-[#1a1a1a]"}`}
                   >
-                    <input ref={fileInputRef} type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoFile(f); }} />
-                    <Video size={24} className="text-[#555]" />
-                    <span className="text-[#888]" style={{ fontSize: "13px" }}>Arraste um video ou clique para enviar</span>
-                    <span className="text-[#555]" style={{ fontSize: "11px" }}>MP4, WebM, MOV — suporta 4K sem perda de qualidade</span>
+                    <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleVideoUpload(f, vBlock as Extract<ContentBlock, { type: "video" }>); e.currentTarget.value = ""; }} />
+                    {uploading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#555] border-t-white" />
+                        <span className="text-[#888]" style={{ fontSize: "13px" }}>Enviando video original...</span>
+                        <span className="text-[#555]" style={{ fontSize: "11px" }}>Sem compressao automatica</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Video size={24} className="text-[#555]" />
+                        <span className="text-[#888]" style={{ fontSize: "13px" }}>Arraste um video ou clique para enviar</span>
+                        <span className="text-[#555]" style={{ fontSize: "11px" }}>Ou cole um Playback ID do Mux para manter seu player atual com stream HLS e thumbnail automatica</span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[#555] shrink-0" style={{ fontSize: "11px" }}>ou</span>
                     <input
-                      value=""
-                      onChange={(e) => { if (e.target.value) onChange({ ...vBlock, url: e.target.value } as ContentBlock); }}
+                      defaultValue=""
+                      onBlur={(e) => applyVideoUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applyVideoUrl(e.currentTarget.value);
+                        }
+                      }}
                       className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#fafafa] focus:outline-none focus:border-[#555]"
                       style={{ fontSize: "12px" }}
-                      placeholder="Cole a URL do video (Supabase Storage, S3, CDN...)"
+                      placeholder="Cole a URL do video ou o Playback ID do Mux"
                     />
                   </div>
                 </>
               ) : (
                 <div className="space-y-2">
-                  <div className="relative group/vid">
-                    <video
+                  <div
+                    className="relative group/vid"
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOver(false);
+                      const f = e.dataTransfer.files?.[0];
+                      if (f) void handleVideoUpload(f, vBlock as Extract<ContentBlock, { type: "video" }>);
+                    }}
+                  >
+                    <VideoPlayer
                       src={vBlock.url}
                       poster={vBlock.poster || undefined}
-                      controls
-                      className="w-full rounded-lg"
-                      style={{ maxHeight: "300px" }}
+                      autoPlay={vBlock.autoplay || false}
+                      loop={vBlock.loop || false}
+                      muted={vBlock.muted || vBlock.autoplay || false}
+                      previewStart={vBlock.previewStart || 0}
+                      previewDuration={vBlock.previewDuration ?? 4}
+                      height={300}
+                      borderRadius={(block as any).borderRadius || 0}
                     />
-                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover/vid:opacity-100 transition-opacity">
+                    <div
+                      className="pointer-events-none absolute inset-0 rounded-lg transition-colors"
+                    />
+                    <div className={`absolute top-2 right-2 flex gap-1.5 transition-opacity ${dragOver ? "opacity-100" : "opacity-0 group-hover/vid:opacity-100"}`}>
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-3 py-1.5 cursor-pointer flex items-center gap-1.5 backdrop-blur-sm"
@@ -400,14 +1284,42 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                         <X size={12} /> Remover
                       </button>
                     </div>
-                    <input ref={fileInputRef} type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoFile(f); }} />
+                    {dragOver && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/45">
+                        <span className="rounded-full bg-black/70 px-3 py-1 text-white backdrop-blur-sm" style={{ fontSize: "11px" }}>
+                          Solte o video para substituir
+                        </span>
+                      </div>
+                    )}
+                    {uploading && (
+                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/55">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-white" />
+                          <span className="rounded-full bg-black/60 px-3 py-1 text-white backdrop-blur-sm" style={{ fontSize: "11px" }}>
+                            Atualizando video original...
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleVideoUpload(f, vBlock as Extract<ContentBlock, { type: "video" }>); e.currentTarget.value = ""; }} />
                   </div>
+                  {muxPlaybackId && (
+                    <div className="flex items-center gap-2 rounded-md border border-[#2a2a2a] bg-[#141414] px-3 py-2">
+                      <span className="rounded-full border border-[#2f6f46] bg-[#112719] px-2 py-0.5 text-[#8ce0aa]" style={{ fontSize: "10px", lineHeight: "14px" }}>
+                        Mux HLS
+                      </span>
+                      <span className="text-[#777]" style={{ fontSize: "11px" }}>
+                        Playback ID: {muxPlaybackId}
+                      </span>
+                    </div>
+                  )}
                   <input
                     value={vBlock.url}
                     onChange={(e) => onChange({ ...vBlock, url: e.target.value } as ContentBlock)}
+                    onBlur={(e) => applyVideoUrl(e.target.value)}
                     className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
                     style={{ fontSize: "11px" }}
-                    placeholder="URL do video"
+                    placeholder="URL do video ou Playback ID do Mux"
                   />
                 </div>
               )}
@@ -426,12 +1338,32 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   <span className="text-[#888]" style={{ fontSize: "11px" }}>Mudo</span>
                 </label>
               </div>
+              <div className="grid gap-2 min-[980px]:grid-cols-2">
+                <label className="space-y-1">
+                  <FieldLabel>Inicio do preview</FieldLabel>
+                  <MiniInput
+                    type="number"
+                    value={String(vBlock.previewStart ?? 0)}
+                    onChange={(value) => onChange({ ...vBlock, previewStart: Math.max(0, Number(value) || 0) } as ContentBlock)}
+                    placeholder="0"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <FieldLabel>Duracao do preview</FieldLabel>
+                  <MiniInput
+                    type="number"
+                    value={String(vBlock.previewDuration ?? 4)}
+                    onChange={(value) => onChange({ ...vBlock, previewDuration: Math.max(0, Number(value) || 0) } as ContentBlock)}
+                    placeholder="4"
+                  />
+                </label>
+              </div>
               <input
                 value={vBlock.poster || ""}
                 onChange={(e) => onChange({ ...vBlock, poster: e.target.value } as ContentBlock)}
                 className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
                 style={{ fontSize: "12px" }}
-                placeholder="URL do poster/thumbnail (opcional)"
+                placeholder={muxPlaybackId ? "Poster manual (opcional, o Mux ja gera thumbnail automaticamente)" : "URL do poster/thumbnail (opcional)"}
               />
               <input
                 value={vBlock.caption}
@@ -441,7 +1373,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 placeholder="Legenda (opcional)..."
               />
               <p className="text-[#444] px-1" style={{ fontSize: "10px" }}>
-                Para videos 4K, recomenda-se hospedar no Supabase Storage ou CDN externo e colar a URL acima.
+                O preview em loop usa o trecho definido acima. Ao clicar em play, o video reinicia do zero. Se voce colar um Playback ID do Mux, o CMS monta o stream HLS e a thumbnail automaticamente.
               </p>
               {/* Border radius control */}
               <div className="flex items-center gap-2 px-1">
@@ -464,13 +1396,21 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
         {block.type === "quote" && (
           <div className="space-y-2">
-            <textarea
+            <RichTextEditor
               value={(block as any).text}
-              onChange={(e) => onChange({ ...block, text: e.target.value } as ContentBlock)}
-              className="w-full bg-transparent border-none text-[#fafafa] focus:outline-none resize-none italic"
-              style={{ fontSize: "14px", minHeight: "60px" }}
+              onChange={(text) => onChange({ ...block, text } as ContentBlock)}
+              compact
+              multiline
+              editorClassName="w-full rounded px-1.5 py-1 text-[#fafafa] italic"
+              editorStyle={{ fontSize: "14px", minHeight: "92px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : undefined }}
               placeholder="Texto da citacao..."
             />
+            {blockLineHeight && (
+              <LineHeightControl
+                value={blockLineHeight}
+                onChange={(value) => onChange({ ...block, lineHeight: clampBlockLineHeight(value) } as ContentBlock)}
+              />
+            )}
             <input
               value={(block as any).author}
               onChange={(e) => onChange({ ...block, author: e.target.value } as ContentBlock)}
@@ -483,20 +1423,32 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
         {block.type === "cta" && (
           <div className="space-y-2">
-            <textarea
+            <RichTextEditor
               value={(block as any).text}
-              onChange={(e) => onChange({ ...block, text: e.target.value } as ContentBlock)}
-              className="w-full bg-transparent border-none text-[#fafafa] focus:outline-none resize-none"
-              style={{ fontSize: "14px", minHeight: "40px" }}
+              onChange={(text) => onChange({ ...block, text } as ContentBlock)}
+              compact
+              multiline
+              editorClassName="w-full rounded px-1.5 py-1 text-[#fafafa]"
+              editorStyle={{ fontSize: "14px", minHeight: "72px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : undefined }}
               placeholder="Texto do CTA..."
             />
+            {blockLineHeight && (
+              <LineHeightControl
+                value={blockLineHeight}
+                onChange={(value) => onChange({ ...block, lineHeight: clampBlockLineHeight(value) } as ContentBlock)}
+              />
+            )}
             <div className="grid grid-cols-2 gap-2">
-              <input
+              <RichTextEditor
                 value={(block as any).buttonText}
-                onChange={(e) => onChange({ ...block, buttonText: e.target.value } as ContentBlock)}
-                className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
-                style={{ fontSize: "12px" }}
+                onChange={(buttonText) => onChange({ ...block, buttonText } as ContentBlock)}
+                multiline={false}
+                compact
+                allowLinks={false}
                 placeholder="Texto do botao..."
+                editorClassName="rounded px-2.5 py-1.5 text-[#aaa]"
+                editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+                placeholderClassName="px-2.5 py-1.5"
               />
               <input
                 value={(block as any).buttonUrl}
@@ -527,12 +1479,15 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
               style={{ fontSize: "13px" }}
               placeholder="URL do embed (YouTube, Vimeo, etc)..."
             />
-            <input
+            <RichTextEditor
               value={(block as any).caption}
-              onChange={(e) => onChange({ ...block, caption: e.target.value } as ContentBlock)}
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
-              style={{ fontSize: "12px" }}
+              onChange={(caption) => onChange({ ...block, caption } as ContentBlock)}
+              multiline={false}
+              compact
               placeholder="Legenda (opcional)..."
+              editorClassName="w-full rounded px-2.5 py-1.5 text-[#aaa]"
+              editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+              placeholderClassName="px-2.5 py-1.5"
             />
           </div>
         )}

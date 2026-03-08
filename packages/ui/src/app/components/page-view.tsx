@@ -1,14 +1,17 @@
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { BlockRenderer } from "./block-renderer";
+import { getBackTarget } from "./navigation-state";
 
 export function PageView() {
   const { slug = "" } = useParams();
+  const location = useLocation();
   const { data } = useTranslatedCMS();
   const { t } = useLanguage();
   const page = data.pages.find((item) => item.slug === slug && item.status === "published");
+  const backTo = getBackTarget(location.state, "/");
 
   if (!page) {
     return (
@@ -17,8 +20,8 @@ export function PageView() {
           <h1 className="mb-4" style={{ fontSize: "26px", color: "var(--text-primary, #fafafa)" }}>
             {t("pageNotFound")}
           </h1>
-          <Link to="/" className="underline" style={{ fontSize: "16px", color: "var(--text-secondary, #ababab)" }}>
-            {t("backToHome")}
+          <Link to={backTo} className="underline" style={{ fontSize: "16px", color: "var(--text-secondary, #ababab)" }}>
+            {t("back")}
           </Link>
         </div>
       </div>
@@ -29,7 +32,7 @@ export function PageView() {
     <div className="min-h-screen font-['Inter',sans-serif]" style={{ backgroundColor: "var(--bg-primary, #111111)" }}>
       <div className="max-w-[700px] mx-auto px-5 py-16">
         <Link
-          to="/"
+          to={backTo}
           className="flex items-center gap-2 mb-8 transition-colors"
           style={{ fontSize: "16px", color: "var(--text-secondary, #ababab)" }}
         >

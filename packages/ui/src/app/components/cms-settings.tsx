@@ -93,7 +93,7 @@ export function CMSSettings() {
       setResetting(true);
       await cms.resetData();
       setResetOpen(false);
-      toast.success("Dados resetados!");
+      toast.success("Conteudo demo restaurado!");
       window.location.reload();
     } finally {
       setResetting(false);
@@ -112,7 +112,7 @@ export function CMSSettings() {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-red-400 hover:text-red-300 cursor-pointer transition-colors"
           style={{ fontSize: "12px", border: "1px solid #2a2a2a" }}
         >
-          <RotateCcw size={12} /> Resetar tudo
+          <RotateCcw size={12} /> Restaurar demo
         </button>
       </div>
 
@@ -390,9 +390,9 @@ export function CMSSettings() {
         onOpenChange={(open) => {
           if (!resetting) setResetOpen(open);
         }}
-        title="Resetar dados do CMS?"
-        description="Esta acao restaura o conteudo padrao do sistema e descarta os dados atuais do painel."
-        confirmLabel="Resetar tudo"
+        title="Restaurar conteudo demo?"
+        description="Esta acao restaura o conteudo demo original do sistema e descarta os dados atuais do painel."
+        confirmLabel="Restaurar demo"
         cancelLabel="Cancelar"
         busy={resetting}
         onConfirm={() => void handleReset()}

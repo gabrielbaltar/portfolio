@@ -1,102 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
-import { ArrowUpRight, ArrowLeft, Copy, Phone, ExternalLink, Lock } from "lucide-react";
+import { ArrowLeft, Copy, Phone, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { ProjectPreviewCard } from "./content-preview-cards";
 import { copyToClipboard } from "./clipboard-utils";
 import { sendContactEmail } from "./email-service";
-
-import projectImg1 from "figma:asset/41b8590575d31ccb2d14524e52ac80f769b0c27a.png";
-
-const PROJECT_IMAGES: Record<string, string> = {
-  "1": projectImg1,
-  "2": projectImg1,
-  "3": projectImg1,
-  "4": projectImg1,
-  "5": projectImg1,
-  "6": projectImg1,
-};
-
-function ProjectCard({ project, index }: { project: { id: string; title: string; category: string; image: string; link: string; slug?: string }; index: number }) {
-  const imageSrc = project.image || PROJECT_IMAGES[project.id] || PROJECT_IMAGES["1"];
-
-  return (
-    <ScrollReveal>
-      <Link
-        to={`/projects/${(project as any).slug || project.id}`}
-        className="block rounded-lg overflow-hidden cursor-pointer group"
-        style={{
-          backgroundColor: "var(--bg-secondary, #121212)",
-          border: "1px solid var(--border-primary, #363636)",
-        }}
-      >
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.5, delay: index * 0.08 }}
-          whileHover={{ y: -4 }}
-        >
-          {/* Thumbnail */}
-          <div className="relative overflow-hidden" style={{ aspectRatio: "700/525" }}>
-            <ImageWithFallback
-              src={imageSrc}
-              alt={project.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-              style={{ objectPosition: (project as any).imagePosition || "50% 50%" }}
-            />
-            {(project as any).password && (project as any).password.trim() !== "" && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: "rgba(0, 0, 0, 0.6)",
-                    backdropFilter: "blur(4px)",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                  }}
-                >
-                  <Lock size={16} style={{ color: "rgba(255, 255, 255, 0.8)" }} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Content footer */}
-          <div
-            className="px-4 py-3"
-            style={{
-              backgroundColor: "var(--bg-secondary, #121212)",
-              borderTop: "1px solid var(--border-secondary, #242424)",
-              minHeight: "74px",
-            }}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <p
-                className="font-['Inter',sans-serif] flex items-center gap-1.5"
-                style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
-              >
-                {(project as any).password && (project as any).password.trim() !== "" && (
-                  <Lock size={13} style={{ color: "#ffa500", opacity: 0.7 }} />
-                )}
-                {project.title}
-              </p>
-            </div>
-            <p
-              className="font-['Inter',sans-serif] mt-1"
-              style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
-            >
-              {project.category}
-            </p>
-          </div>
-        </motion.div>
-      </Link>
-    </ScrollReveal>
-  );
-}
 
 export function ProjectsPage() {
   const { data } = useTranslatedCMS();
@@ -168,7 +80,23 @@ export function ProjectsPage() {
         </motion.h1>
         <div className="mt-10 grid grid-cols-1 min-[560px]:grid-cols-2 gap-6">
           {projects.map((project, i) => (
-            <ProjectCard key={project.id} project={project} index={i} />
+            <ScrollReveal key={project.id}>
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+              >
+                <ProjectPreviewCard
+                  href={`/projects/${(project as any).slug || project.id}`}
+                  title={project.title}
+                  category={project.category}
+                  image={project.image}
+                  imagePosition={(project as any).imagePosition || "50% 50%"}
+                  locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                />
+              </motion.div>
+            </ScrollReveal>
           ))}
         </div>
       </div>
