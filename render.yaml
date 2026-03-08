@@ -4,15 +4,11 @@ services:
     name: portfolio-web
     buildCommand: npm ci && npm run build:web
     staticPublishPath: ./dist/web
-    domains:
-      - example.com
     envVars:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
-      - key: VITE_CMS_URL
-        value: https://admin.example.com
       - key: VITE_PUBLIC_POSTHOG_KEY
         sync: false
       - key: VITE_PUBLIC_POSTHOG_HOST
@@ -50,15 +46,13 @@ services:
     name: portfolio-cms
     buildCommand: npm ci && npm run build:cms
     staticPublishPath: ./dist/cms
-    domains:
-      - admin.example.com
     envVars:
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: VITE_PUBLIC_SITE_URL
-        value: https://example.com
+        sync: false
       - key: VITE_PUBLIC_POSTHOG_KEY
         sync: false
       - key: VITE_PUBLIC_POSTHOG_HOST
@@ -84,3 +78,6 @@ services:
       - path: /*
         name: X-Frame-Options
         value: SAMEORIGIN
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
