@@ -80,11 +80,20 @@ export function ProjectPreviewCard({
       >
         <div className="flex items-start justify-between gap-3">
           <p
-            className="flex min-h-[48px] flex-1 items-start gap-1.5 line-clamp-2"
+            className="flex min-h-[48px] min-w-0 flex-1 items-start gap-1.5"
             style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
           >
             {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
-            <span>{title}</span>
+            <span
+              className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {title}
+            </span>
           </p>
           <ArrowUpRight
             size={16}
@@ -147,11 +156,20 @@ export function ArticlePreviewCard({
       <div className="flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4">
         <div>
           <h3
-            className="flex min-h-[48px] items-start gap-1.5"
+            className="flex min-h-[48px] min-w-0 items-start gap-1.5"
             style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
           >
             {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
-            <span className="line-clamp-2">{title}</span>
+            <span
+              className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {title}
+            </span>
           </h3>
 
           <div
