@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
 import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
+import { dataProvider } from "./data-provider";
 
 function Input({ label, value, onChange, placeholder = "" }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
@@ -71,6 +72,9 @@ export function CMSSettings() {
   const [recs, setRecs] = useState<Recommendation[]>(cms.data.recommendations.map(r => ({ ...r })));
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoDragOver, setPhotoDragOver] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "profile", label: "Perfil" },
@@ -97,6 +101,28 @@ export function CMSSettings() {
       window.location.reload();
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleProfilePhotoUpload = async (files: FileList | File[]) => {
+    const file = Array.from(files)[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem valida.");
+      return;
+    }
+
+    setPhotoUploading(true);
+    try {
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      cms.addMediaItem(uploaded);
+      setProfile((current) => ({ ...current, photo: uploaded.url }));
+      toast.success("Foto enviada na qualidade original.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar foto.");
+    } finally {
+      setPhotoUploading(false);
     }
   };
 
@@ -144,6 +170,69 @@ export function CMSSettings() {
                 <Input label="Email" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
                 <Input label="Telefone" value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
                 <Input label="Foto URL" value={profile.photo} onChange={(v) => setProfile({ ...profile, photo: v })} />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Upload da foto
+                </label>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    if (event.target.files?.length) {
+                      void handleProfilePhotoUpload(event.target.files);
+                    }
+                    event.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setPhotoDragOver(true);
+                  }}
+                  onDragLeave={() => setPhotoDragOver(false)}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setPhotoDragOver(false);
+                    if (event.dataTransfer.files.length) {
+                      void handleProfilePhotoUpload(event.dataTransfer.files);
+                    }
+                  }}
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex min-h-[148px] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors cursor-pointer"
+                  style={{
+                    backgroundColor: "#101010",
+                    borderColor: photoDragOver ? "#3a3a3a" : "#1f1f1f",
+                  }}
+                >
+                  {profile.photo ? (
+                    <img
+                      src={profile.photo}
+                      alt="Preview da foto de perfil"
+                      className="h-16 w-16 rounded-2xl object-cover"
+                      style={{ border: "1px solid #262626" }}
+                    />
+                  ) : (
+                    <div
+                      className="flex h-16 w-16 items-center justify-center rounded-2xl"
+                      style={{ backgroundColor: "#171717", border: "1px solid #262626" }}
+                    >
+                      <Upload size={18} className="text-[#666]" />
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p className="text-[#ddd]" style={{ fontSize: "13px" }}>
+                      {photoUploading ? "Enviando foto..." : photoDragOver ? "Solte para enviar a foto" : "Upload original da foto de perfil"}
+                    </p>
+                    <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                      O arquivo sobe sem compressao automatica para manter a qualidade original.
+                    </p>
+                  </div>
+                </button>
               </div>
             </Section>
 
