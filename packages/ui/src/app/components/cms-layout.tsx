@@ -15,17 +15,17 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: "Conteudo",
+    label: "Conteúdo",
     items: [
       { key: "projects", label: "Projetos", icon: Briefcase, path: "/content/projects" },
       { key: "articles", label: "Artigos", icon: BookOpen, path: "/content/articles" },
-      { key: "pages", label: "Paginas", icon: FileText, path: "/content/pages" },
+      { key: "pages", label: "Páginas", icon: FileText, path: "/content/pages" },
     ],
   },
   {
     label: "Recursos",
     items: [
-      { key: "media", label: "Midia", icon: Image, path: "/media" },
+      { key: "media", label: "Mídia", icon: Image, path: "/media" },
       { key: "profile", label: "Perfil & Site", icon: Settings, path: "/settings" },
     ],
   },
@@ -145,11 +145,11 @@ export function CMSLayout() {
             rel="noreferrer"
             className="mb-0.5 flex cursor-pointer rounded-[10px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-[#ccc]"
             style={{ fontSize: "13px", height: collapsed ? "32px" : "35.5px" }}
-            title={collapsed ? "Ver Portfolio" : undefined}
+            title={collapsed ? "Ver portfólio" : undefined}
           >
             <div className={`flex items-center gap-3 ${collapsed ? "w-full pl-3" : "w-full pl-3"}`}>
               <Globe size={16} className="shrink-0" />
-              {!collapsed && <span>Ver Portfolio</span>}
+              {!collapsed && <span>Ver portfólio</span>}
             </div>
           </a>
           <button

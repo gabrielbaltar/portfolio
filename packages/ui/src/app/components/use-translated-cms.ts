@@ -2,10 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
 import { translateBatch } from "./translation-service";
+import {
+  applyRichTextTranslation,
+  collectRichTextTranslation,
+  type RichTextTranslationEntry,
+} from "./rich-text-translation";
 import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v2";
+let translatedCacheHydrated = false;
 
 function dataHash(data: CMSData): string {
   const parts = [
@@ -44,6 +51,38 @@ type TranslationEntry = {
   index: number;
 };
 
+type RichTranslationEntry = {
+  path: string;
+  entry: RichTextTranslationEntry;
+};
+
+function hydrateTranslatedCache() {
+  if (translatedCacheHydrated || typeof window === "undefined") return;
+  translatedCacheHydrated = true;
+
+  try {
+    const raw = localStorage.getItem(TRANSLATED_DATA_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Record<string, CMSData>;
+    Object.entries(parsed).forEach(([key, value]) => {
+      translatedDataCache.set(key, value);
+    });
+  } catch {
+    translatedDataCache.clear();
+  }
+}
+
+function persistTranslatedCache() {
+  if (typeof window === "undefined") return;
+
+  try {
+    const snapshot = Object.fromEntries(Array.from(translatedDataCache.entries()).slice(-8));
+    localStorage.setItem(TRANSLATED_DATA_CACHE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function setPathValue(target: Record<string, any>, path: string, value: string) {
   const segments = path.split(".");
   let current: any = target;
@@ -60,13 +99,18 @@ function setPathValue(target: Record<string, any>, path: string, value: string) 
   current[key] = value;
 }
 
-function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string, addText: (path: string, text: string) => void) {
+function collectBlockTexts(
+  blocks: ContentBlock[] | undefined,
+  basePath: string,
+  addText: (path: string, text: string) => void,
+  addRichText: (path: string, text: string) => void,
+) {
   blocks?.forEach((block, index) => {
     const blockPath = `${basePath}.${index}`;
 
     if (block.type === "style-guide") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
-      addText(`${blockPath}.summary`, richTextToPlainText(block.summary));
+      addRichText(`${blockPath}.title`, block.title);
+      addRichText(`${blockPath}.summary`, block.summary);
       block.principles.forEach((principle, principleIndex) => {
         addText(`${blockPath}.principles.${principleIndex}.title`, principle.title);
         addText(`${blockPath}.principles.${principleIndex}.description`, principle.description);
@@ -75,7 +119,7 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if (block.type === "color-palette") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addRichText(`${blockPath}.title`, block.title);
       block.colors.forEach((color, colorIndex) => {
         addText(`${blockPath}.colors.${colorIndex}.name`, color.name);
         addText(`${blockPath}.colors.${colorIndex}.role`, color.role);
@@ -85,16 +129,16 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if (block.type === "typography") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addRichText(`${blockPath}.title`, block.title);
       block.fonts.forEach((font, fontIndex) => {
         addText(`${blockPath}.fonts.${fontIndex}.label`, font.label);
-        addText(`${blockPath}.fonts.${fontIndex}.sample`, richTextToPlainText(font.sample));
+        addRichText(`${blockPath}.fonts.${fontIndex}.sample`, font.sample);
       });
       return;
     }
 
     if (block.type === "icon-grid") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addRichText(`${blockPath}.title`, block.title);
       block.icons.forEach((icon, iconIndex) => {
         addText(`${blockPath}.icons.${iconIndex}.name`, icon.name);
         addText(`${blockPath}.icons.${iconIndex}.notes`, icon.notes);
@@ -103,7 +147,7 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if (block.type === "user-flow") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addRichText(`${blockPath}.title`, block.title);
       block.steps.forEach((step, stepIndex) => {
         addText(`${blockPath}.steps.${stepIndex}.title`, step.title);
         addText(`${blockPath}.steps.${stepIndex}.description`, step.description);
@@ -113,7 +157,7 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if (block.type === "sitemap") {
-      addText(`${blockPath}.title`, richTextToPlainText(block.title));
+      addRichText(`${blockPath}.title`, block.title);
       block.sections.forEach((section, sectionIndex) => {
         addText(`${blockPath}.sections.${sectionIndex}.title`, section.title);
         addText(`${blockPath}.sections.${sectionIndex}.description`, section.description);
@@ -124,21 +168,21 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
 
     if (block.type === "code") {
       if (typeof block.caption === "string") {
-        addText(`${blockPath}.caption`, richTextToPlainText(block.caption));
+        addRichText(`${blockPath}.caption`, block.caption);
       }
       return;
     }
 
     if ("text" in block && typeof block.text === "string") {
-      addText(`${blockPath}.text`, richTextToPlainText(block.text));
+      addRichText(`${blockPath}.text`, block.text);
     }
 
     if ("items" in block && Array.isArray(block.items)) {
-      block.items.forEach((item, itemIndex) => addText(`${blockPath}.items.${itemIndex}`, richTextToPlainText(item)));
+      block.items.forEach((item, itemIndex) => addRichText(`${blockPath}.items.${itemIndex}`, item));
     }
 
     if ("caption" in block && typeof block.caption === "string") {
-      addText(`${blockPath}.caption`, richTextToPlainText(block.caption));
+      addRichText(`${blockPath}.caption`, block.caption);
     }
 
     if ("author" in block && typeof block.author === "string") {
@@ -146,7 +190,7 @@ function collectBlockTexts(blocks: ContentBlock[] | undefined, basePath: string,
     }
 
     if ("buttonText" in block && typeof block.buttonText === "string") {
-      addText(`${blockPath}.buttonText`, richTextToPlainText(block.buttonText));
+      addRichText(`${blockPath}.buttonText`, block.buttonText);
     }
   });
 }
@@ -156,6 +200,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
 
   const texts: string[] = [];
   const map: TranslationEntry[] = [];
+  const richEntries: RichTranslationEntry[] = [];
   const textIndex = new Map<string, number>();
 
   const addText = (path: string, text: string) => {
@@ -170,6 +215,29 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     }
 
     map.push({ path, index });
+  };
+
+  const addTextValue = (text: string) => {
+    const normalized = text.trim();
+    if (!normalized) return -1;
+
+    let index = textIndex.get(normalized);
+    if (index === undefined) {
+      index = texts.length;
+      texts.push(normalized);
+      textIndex.set(normalized, index);
+    }
+
+    return index;
+  };
+
+  const addRichText = (path: string, value: string) => {
+    const entry = collectRichTextTranslation(value, addTextValue);
+    if (!entry) {
+      addText(path, richTextToPlainText(value));
+      return;
+    }
+    richEntries.push({ path, entry });
   };
 
   const siteSettingsFields: Array<keyof CMSData["siteSettings"]> = [
@@ -203,7 +271,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`projects.${projectIndex}.seoTitle`, project.seoTitle);
     addText(`projects.${projectIndex}.seoDescription`, project.seoDescription);
     project.tags.forEach((tag, tagIndex) => addText(`projects.${projectIndex}.tags.${tagIndex}`, tag));
-    collectBlockTexts(project.contentBlocks, `projects.${projectIndex}.contentBlocks`, addText);
+    collectBlockTexts(project.contentBlocks, `projects.${projectIndex}.contentBlocks`, addText, addRichText);
   });
 
   data.blogPosts.forEach((post, postIndex) => {
@@ -216,7 +284,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`blogPosts.${postIndex}.seoTitle`, post.seoTitle);
     addText(`blogPosts.${postIndex}.seoDescription`, post.seoDescription);
     post.tags.forEach((tag, tagIndex) => addText(`blogPosts.${postIndex}.tags.${tagIndex}`, tag));
-    collectBlockTexts(post.contentBlocks, `blogPosts.${postIndex}.contentBlocks`, addText);
+    collectBlockTexts(post.contentBlocks, `blogPosts.${postIndex}.contentBlocks`, addText, addRichText);
   });
 
   data.pages.forEach((page, pageIndex) => {
@@ -224,7 +292,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`pages.${pageIndex}.description`, page.description);
     addText(`pages.${pageIndex}.seoTitle`, page.seoTitle);
     addText(`pages.${pageIndex}.seoDescription`, page.seoDescription);
-    collectBlockTexts(page.contentBlocks, `pages.${pageIndex}.contentBlocks`, addText);
+    collectBlockTexts(page.contentBlocks, `pages.${pageIndex}.contentBlocks`, addText, addRichText);
   });
 
   data.experiences.forEach((experience, experienceIndex) => {
@@ -267,6 +335,14 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     setPathValue(translatedData as Record<string, any>, path, translatedValue);
   });
 
+  richEntries.forEach(({ path, entry }) => {
+    const translatedValue = applyRichTextTranslation(
+      entry,
+      (index, original) => translatedTexts[index] || original,
+    );
+    setPathValue(translatedData as Record<string, any>, path, translatedValue);
+  });
+
   return translatedData;
 }
 
@@ -274,6 +350,7 @@ function startPrefetch(sourceData: CMSData, hash: string, targetLang: Language) 
   if (targetLang === "pt") return Promise.resolve(sourceData);
 
   const cacheKey = getCacheKey(hash, targetLang);
+  hydrateTranslatedCache();
 
   if (translatedDataCache.has(cacheKey)) {
     return Promise.resolve(translatedDataCache.get(cacheKey)!);
@@ -285,7 +362,9 @@ function startPrefetch(sourceData: CMSData, hash: string, targetLang: Language) 
 
   const promise = translateCMSData(sourceData, targetLang)
     .then((result) => {
+      translatedDataCache.delete(cacheKey);
       translatedDataCache.set(cacheKey, result);
+      persistTranslatedCache();
       prefetchPromises.delete(cacheKey);
       return result;
     })
@@ -315,6 +394,7 @@ export function useTranslatedCMS() {
 
     const translationId = ++translationRef.current;
     const cacheKey = getCacheKey(currentHash, lang);
+    hydrateTranslatedCache();
     const cached = translatedDataCache.get(cacheKey);
 
     if (cached) {

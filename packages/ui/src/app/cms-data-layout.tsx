@@ -7,7 +7,7 @@ function CMSDataLayoutContent() {
   const { loading, error } = useCMS();
 
   if (loading) {
-    return <LoadingScreen label="Carregando conteudo do CMS..." />;
+    return <LoadingScreen label="Carregando conteúdo do CMS..." />;
   }
 
   if (error) {

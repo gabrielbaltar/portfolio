@@ -1,11 +1,34 @@
-// Translation service using free MyMemory API
-// Caches translations in localStorage to avoid redundant API calls
+// Translation service using free MyMemory API.
+// Caches translations in localStorage to avoid redundant API calls.
 
-const CACHE_KEY = "portfolio_translations_cache";
+const CACHE_KEY = "portfolio_translations_cache_v2";
 const API_URL = "https://api.mymemory.translated.net/get";
 
-// Separator for batch translations
 const BATCH_SEPARATOR = " ||| ";
+
+const EXACT_TRANSLATION_OVERRIDES: Record<string, Partial<Record<"pt" | "en", string>>> = {
+  "Disponível para trabalho": { en: "Available for work" },
+  "Disponivel para trabalho": { en: "Available for work" },
+  "Sobre mim": { en: "About me" },
+  "Sobre a Brandify": { en: "About Brandify" },
+  "Sobre Brandify": { en: "About Brandify" },
+  "Fluxo do usuário": { en: "User flow" },
+  "Fluxo do usuario": { en: "User flow" },
+  "Tipografia": { en: "Typography" },
+  "Paleta de cores": { en: "Color palette" },
+  "Iconografia": { en: "Iconography" },
+  "Estudo de caso": { en: "Case study" },
+  "Portal do Parceiro": { en: "Partner portal" },
+  "Gerenciamento de Conteúdo": { en: "Content management" },
+  "Gerenciamento de Conteudo": { en: "Content management" },
+  "Configurações": { en: "Settings" },
+  Configuracoes: { en: "Settings" },
+  "Design de Interface": { en: "Interface design" },
+  "Desenvolvimento Web": { en: "Web development" },
+  "Product Design": { pt: "Design de produto" },
+  "Agency Website": { pt: "Website institucional" },
+  "AI Agency": { pt: "Agência de IA" },
+};
 
 function getCache(): Record<string, string> {
   try {
@@ -28,7 +51,19 @@ function makeCacheKey(text: string, from: string, to: string): string {
   return `${from}>${to}:${text}`;
 }
 
-// Translate a single text string
+function getTranslationOverride(text: string, _from: string, to: string) {
+  const normalized = text.trim();
+  if (!normalized) return null;
+
+  const exact = EXACT_TRANSLATION_OVERRIDES[normalized];
+  if (exact && (to === "pt" || to === "en")) {
+    const value = exact[to];
+    if (value) return value;
+  }
+
+  return null;
+}
+
 async function translateSingle(
   text: string,
   from: string,
@@ -39,6 +74,13 @@ async function translateSingle(
   const cache = getCache();
   const key = makeCacheKey(text, from, to);
   if (cache[key]) return cache[key];
+
+  const override = getTranslationOverride(text, from, to);
+  if (override) {
+    cache[key] = override;
+    setCache(cache);
+    return override;
+  }
 
   try {
     const url = `${API_URL}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
@@ -87,6 +129,14 @@ export async function translateBatch(
       results[i] = text;
       continue;
     }
+
+    const override = getTranslationOverride(text, from, to);
+    if (override) {
+      results[i] = override;
+      cache[makeCacheKey(text, from, to)] = override;
+      continue;
+    }
+
     const key = makeCacheKey(text, from, to);
     if (cache[key]) {
       results[i] = cache[key];
@@ -152,12 +202,22 @@ export async function translateBatch(
             data.responseData?.translatedText
           ) {
             const translated = data.responseData.translatedText;
-            const parts = translated.split(/\s*\|\|\|\s*/);
+            const parts = translated.split(/\s*\|\|\|\s*/).map((part: string) => part.trim());
+
+            if (
+              parts.length !== batch.indices.length ||
+              parts.some((part: string) => part.length === 0)
+            ) {
+              for (let j = 0; j < batch.texts.length; j++) {
+                const t = await translateSingle(batch.texts[j], from, to);
+                results[batch.indices[j]] = t;
+              }
+              return;
+            }
 
             const updatedCache = getCache();
             for (let j = 0; j < batch.indices.length; j++) {
-              const translatedPart =
-                j < parts.length ? parts[j].trim() : batch.texts[j];
+              const translatedPart = parts[j];
               results[batch.indices[j]] = translatedPart;
               updatedCache[makeCacheKey(batch.texts[j], from, to)] =
                 translatedPart;

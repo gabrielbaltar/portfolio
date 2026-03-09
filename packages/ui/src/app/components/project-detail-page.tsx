@@ -194,9 +194,9 @@ export function ProjectDetailPage() {
   // Metadata columns
   const meta = [
     { label: t("categoryLabel"), value: project.category },
-    { label: t("servicesLabel"), value: project.services || "Nao informado" },
-    { label: t("clientLabel"), value: project.client || "Nao informado" },
-    { label: t("yearLabel"), value: project.year || "Nao informado" },
+    { label: t("servicesLabel"), value: project.services || "Não informado" },
+    { label: t("clientLabel"), value: project.client || "Não informado" },
+    { label: t("yearLabel"), value: project.year || "Não informado" },
   ];
 
   return (

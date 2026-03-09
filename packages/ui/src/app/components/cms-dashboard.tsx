@@ -54,7 +54,7 @@ function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; text: string; label: string }> = {
     published: { bg: "#00ff3c14", text: "#00ff3c", label: "Publicado" },
     draft: { bg: "#ffa50014", text: "#ffa500", label: "Rascunho" },
-    review: { bg: "#3b82f614", text: "#3b82f6", label: "Em revisao" },
+    review: { bg: "#3b82f614", text: "#3b82f6", label: "Em revisão" },
     archived: { bg: "#55555514", text: "#888", label: "Arquivado" },
   };
   const badge = colors[status] || colors.draft;
@@ -103,8 +103,8 @@ export function CMSDashboard() {
   const quickActions = [
     { label: "Novo Projeto", icon: Briefcase, path: "/content/projects?new=1" },
     { label: "Novo Artigo", icon: BookOpen, path: "/content/articles?new=1" },
-    { label: "Nova Pagina", icon: FileText, path: "/content/pages?new=1" },
-    { label: "Upload Midia", icon: Image, path: "/media" },
+    { label: "Nova página", icon: FileText, path: "/content/pages?new=1" },
+    { label: "Upload de mídia", icon: Image, path: "/media" },
   ];
 
   return (
@@ -114,7 +114,7 @@ export function CMSDashboard() {
           Dashboard
         </h1>
         <p style={{ fontSize: "13px", lineHeight: "19.5px", color: "#666" }}>
-          Visao geral do seu conteudo
+          Visão geral do seu conteúdo
         </p>
       </div>
 
@@ -122,13 +122,13 @@ export function CMSDashboard() {
         <StatCard icon={Briefcase} label="Projetos publicados" value={publishedProjects} color="#3b82f6" />
         <StatCard icon={BookOpen} label="Artigos publicados" value={publishedArticles} color="#8b5cf6" />
         <StatCard icon={Clock} label="Rascunhos pendentes" value={draftCount} color="#f59e0b" note="a fazer" />
-        <StatCard icon={Image} label="Arquivos de midia" value={totalMedia} color="#10b981" />
+        <StatCard icon={Image} label="Arquivos de mídia" value={totalMedia} color="#10b981" />
       </div>
 
       <div className="grid gap-6 min-[1320px]:grid-cols-[minmax(0,1.9fr)_minmax(320px,1fr)]">
         <div>
           <h2 className="mb-4 text-[#fafafa]" style={{ fontSize: "15px", lineHeight: "22.5px" }}>
-            Conteudo recente
+            Conteúdo recente
           </h2>
           <div
             className="overflow-hidden rounded-[14px] border"
@@ -139,7 +139,7 @@ export function CMSDashboard() {
                 className="flex items-center justify-center text-center"
                 style={{ height: "365px", fontSize: "13px", lineHeight: "19.5px", color: "#555" }}
               >
-                Nenhum conteudo ainda
+                Nenhum conteúdo ainda
               </div>
             ) : (
               recentItems.map((item, index) => {
@@ -167,7 +167,7 @@ export function CMSDashboard() {
                           className="truncate text-[#ddd]"
                           style={{ fontSize: "13px", lineHeight: "19.5px" }}
                         >
-                          {item.title || "Sem titulo"}
+                          {item.title || "Sem título"}
                         </div>
                         <div style={{ fontSize: "11px", lineHeight: "16.5px", color: "#555" }}>
                           {item.type === "project" ? "Projeto" : "Artigo"}
@@ -184,7 +184,7 @@ export function CMSDashboard() {
 
         <div>
           <h2 className="mb-4 text-[#fafafa]" style={{ fontSize: "15px", lineHeight: "22.5px" }}>
-            Acoes rapidas
+            Ações rápidas
           </h2>
           <div className="space-y-2">
             {quickActions.map((action) => (
