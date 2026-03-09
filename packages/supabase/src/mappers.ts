@@ -73,6 +73,47 @@ interface SortableRow {
   sort_order: number;
 }
 
+const STACK_VISUAL_PREFIX = "stack-meta:";
+
+function parseStackVisualField(value?: string | null) {
+  const raw = (value || "").trim();
+  if (!raw) {
+    return { color: "#555555", logo: "" };
+  }
+
+  if (!raw.startsWith(STACK_VISUAL_PREFIX)) {
+    return { color: raw, logo: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(raw.slice(STACK_VISUAL_PREFIX.length)) as {
+      color?: string;
+      logo?: string;
+    };
+
+    return {
+      color: parsed.color?.trim() || "#555555",
+      logo: parsed.logo?.trim() || "",
+    };
+  } catch {
+    return { color: "#555555", logo: "" };
+  }
+}
+
+function serializeStackVisualField(color: string, logo?: string) {
+  const normalizedColor = color.trim() || "#555555";
+  const normalizedLogo = logo?.trim() || "";
+
+  if (!normalizedLogo) {
+    return normalizedColor;
+  }
+
+  return `${STACK_VISUAL_PREFIX}${JSON.stringify({
+    color: normalizedColor,
+    logo: normalizedLogo,
+  })}`;
+}
+
 interface MediaRow {
   id: string;
   name: string;
@@ -356,11 +397,13 @@ export function mapCertificationToRow(item: Certification): SortableRow {
 }
 
 export function mapStackFromRow(row: SortableRow): StackItem {
+  const visual = parseStackVisualField(row.color);
   return {
     id: row.id,
     name: row.name ?? "",
     description: row.description ?? "",
-    color: row.color ?? "#555555",
+    color: visual.color,
+    logo: visual.logo,
     link: row.link ?? "",
     sortOrder: row.sort_order,
   };
@@ -371,7 +414,7 @@ export function mapStackToRow(item: StackItem): SortableRow {
     id: item.id,
     name: item.name,
     description: item.description,
-    color: item.color,
+    color: serializeStackVisualField(item.color, item.logo),
     link: item.link,
     sort_order: item.sortOrder,
   };

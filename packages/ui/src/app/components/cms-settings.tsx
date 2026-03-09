@@ -141,6 +141,27 @@ export function CMSSettings() {
     }
   };
 
+  const handleStackLogoUpload = async (stackId: string, files: FileList | File[]) => {
+    const file = Array.from(files)[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem valida para a logo.");
+      return;
+    }
+
+    try {
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      cms.addMediaItem(uploaded);
+      setStack((current) =>
+        current.map((item) => (item.id === stackId ? { ...item, logo: uploaded.url } : item)),
+      );
+      toast.success("Logo enviada na qualidade original.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar logo.");
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -438,13 +459,74 @@ export function CMSSettings() {
                 <Input label="Cor (hex)" value={item.color} onChange={(v) => setStack(stack.map(s => s.id === item.id ? { ...s, color: v } : s))} />
                 <Input label="Link" value={item.link} onChange={(v) => setStack(stack.map(s => s.id === item.id ? { ...s, link: v } : s))} />
               </div>
+              <div className="space-y-3">
+                <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Logo
+                </label>
+                <input
+                  id={`stack-logo-${item.id}`}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    if (event.target.files?.length) {
+                      void handleStackLogoUpload(item.id, event.target.files);
+                    }
+                    event.target.value = "";
+                  }}
+                />
+                <div className="flex flex-col gap-3 rounded-lg p-3" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: item.color || "#555555", border: "1px solid #1f1f1f" }}
+                    >
+                      {item.logo ? (
+                        <img src={item.logo} alt={item.name || "Logo da stack"} className="h-7 w-7 object-contain" draggable={false} />
+                      ) : (
+                        <span className="text-[#fafafa]" style={{ fontSize: "14px" }}>
+                          {(item.name || "?").charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[#ddd]" style={{ fontSize: "13px" }}>
+                        {item.logo ? "Logo atual carregada" : "Nenhuma logo enviada"}
+                      </p>
+                      <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                        O upload usa o arquivo original, sem compressao automatica.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById(`stack-logo-${item.id}`)?.click()}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90"
+                      style={{ fontSize: "12px", backgroundColor: "#fafafa" }}
+                    >
+                      <Upload size={12} /> {item.logo ? "Trocar logo" : "Enviar logo"}
+                    </button>
+                    {item.logo && (
+                      <button
+                        type="button"
+                        onClick={() => setStack(stack.map((s) => (s.id === item.id ? { ...s, logo: "" } : s)))}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 cursor-pointer hover:text-red-300"
+                        style={{ fontSize: "12px", border: "1px solid #2a2a2a" }}
+                      >
+                        <Trash2 size={12} /> Remover logo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <button onClick={() => setStack(stack.filter(s => s.id !== item.id))} className="text-red-400 flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
             <button onClick={() => { cms.updateStack(stack); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>

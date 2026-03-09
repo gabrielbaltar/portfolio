@@ -415,9 +415,18 @@ export function PortfolioHome() {
                   className="w-8 h-8 rounded-md shrink-0 flex items-center justify-center"
                   style={{ backgroundColor: item.color || "var(--border-primary)" }}
                 >
-                  <span style={{ fontSize: "14px" }}>
-                    {item.name.charAt(0)}
-                  </span>
+                  {item.logo ? (
+                    <img
+                      src={item.logo}
+                      alt={item.name}
+                      className="h-5 w-5 object-contain"
+                      draggable={false}
+                    />
+                  ) : (
+                    <span style={{ fontSize: "14px" }}>
+                      {item.name.charAt(0)}
+                    </span>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p style={{ fontSize: "14px", color: "var(--text-primary)" }}>{item.name}</p>

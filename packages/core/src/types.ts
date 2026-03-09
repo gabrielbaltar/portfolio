@@ -223,6 +223,7 @@ export interface StackItem extends SortableEntity {
   name: string;
   description: string;
   color: string;
+  logo?: string;
   link: string;
 }
 
