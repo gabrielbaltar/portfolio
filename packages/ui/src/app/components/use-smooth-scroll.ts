@@ -5,6 +5,8 @@ import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 gsap.registerPlugin(ScrollToPlugin);
 
 const SMOOTH_SCROLL_MEDIA = "(min-width: 1024px) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const SMOOTH_SCROLL_DURATION = 0.42;
+const SMOOTH_SCROLL_DELTA_MULTIPLIER = 0.9;
 
 function normalizeWheelDelta(event: WheelEvent) {
   const multiplier = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 28 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight : 1;
@@ -70,8 +72,8 @@ export function useSmoothScroll() {
 
         tween?.kill();
         tween = gsap.to(window, {
-          duration: 0.9,
-          ease: "power3.out",
+          duration: SMOOTH_SCROLL_DURATION,
+          ease: "power2.out",
           overwrite: true,
           scrollTo: {
             y: targetY,
@@ -93,7 +95,7 @@ export function useSmoothScroll() {
         if (shouldPreserveNativeScroll(event.target, deltaY)) return;
 
         event.preventDefault();
-        targetY += deltaY * 1.08;
+        targetY += deltaY * SMOOTH_SCROLL_DELTA_MULTIPLIER;
         animateToTarget();
       };
 
