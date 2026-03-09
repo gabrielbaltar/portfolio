@@ -47,7 +47,7 @@ export function PublicRootLayout() {
 
   return (
     <CMSProvider mode="public">
-      <LanguageProvider>
+      <LanguageProvider detectFromVisitor>
         <ThemeProvider>
           <PasswordProvider>
             <PublicRootContent />

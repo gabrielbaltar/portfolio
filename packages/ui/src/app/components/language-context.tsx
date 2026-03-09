@@ -180,16 +180,85 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 
 const LANG_STORAGE_KEY = "portfolio_language";
 
-function getStoredLanguage(): Language {
+const BRAZIL_TIMEZONES = new Set([
+  "America/Sao_Paulo",
+  "America/Rio_Branco",
+  "America/Manaus",
+  "America/Cuiaba",
+  "America/Campo_Grande",
+  "America/Belem",
+  "America/Fortaleza",
+  "America/Recife",
+  "America/Maceio",
+  "America/Bahia",
+  "America/Araguaina",
+  "America/Boa_Vista",
+  "America/Porto_Velho",
+  "America/Eirunepe",
+  "America/Noronha",
+  "America/Santarem",
+]);
+
+function getForcedLanguage(): Language | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const forced = params.get("lang")?.trim().toLowerCase();
+    if (forced === "en" || forced === "pt") return forced;
+  } catch {}
+
+  return null;
+}
+
+function getStoredLanguage(): Language | null {
   try {
     const stored = localStorage.getItem(LANG_STORAGE_KEY);
     if (stored === "en" || stored === "pt") return stored;
   } catch {}
-  return "pt";
+  return null;
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>(getStoredLanguage);
+function isBrazilTimezone(timezone?: string) {
+  return Boolean(timezone && BRAZIL_TIMEZONES.has(timezone));
+}
+
+function detectVisitorLanguage(): Language {
+  if (typeof window === "undefined") return "pt";
+
+  const forced = getForcedLanguage();
+  if (forced) return forced;
+
+  const stored = getStoredLanguage();
+  if (stored) return stored;
+
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (isBrazilTimezone(timezone)) {
+    return "pt";
+  }
+
+  const locales = [navigator.language, ...(navigator.languages || [])]
+    .map((locale) => locale?.trim())
+    .filter(Boolean) as string[];
+
+  if (locales.some((locale) => locale.toLowerCase() === "pt-br")) {
+    return "pt";
+  }
+
+  return "en";
+}
+
+export function LanguageProvider({
+  children,
+  detectFromVisitor = false,
+}: {
+  children: ReactNode;
+  detectFromVisitor?: boolean;
+}) {
+  const [lang, setLangState] = useState<Language>(() => {
+    if (detectFromVisitor) return detectVisitorLanguage();
+    return getForcedLanguage() ?? getStoredLanguage() ?? "pt";
+  });
   const locale = lang === "en" ? "en-US" : "pt-BR";
 
   const setLang = useCallback((newLang: Language) => {
