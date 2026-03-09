@@ -415,6 +415,31 @@ function restoreRange(range: Range | null) {
   selection.addRange(range);
 }
 
+function isPlainStyleSpan(element: HTMLElement) {
+  if (element.tagName.toLowerCase() !== "span") return false;
+  if (element.dataset.inlineTag || element.dataset.inlineIcon) return false;
+  return !element.getAttribute("style");
+}
+
+function unwrapElement(element: HTMLElement) {
+  const parent = element.parentNode;
+  if (!parent) return;
+
+  while (element.firstChild) {
+    parent.insertBefore(element.firstChild, element);
+  }
+  parent.removeChild(element);
+}
+
+function rangeMatchesNodeContents(range: Range, node: Node) {
+  const comparisonRange = document.createRange();
+  comparisonRange.selectNodeContents(node);
+  return (
+    range.compareBoundaryPoints(Range.START_TO_START, comparisonRange) === 0 &&
+    range.compareBoundaryPoints(Range.END_TO_END, comparisonRange) === 0
+  );
+}
+
 function findInlineTagElement(node: Node | null, root?: HTMLElement | null) {
   if (!node) return null;
   const element =
@@ -448,6 +473,64 @@ function getSelectedInlineTag(selection: Selection | null, root?: HTMLElement | 
   }
 
   return null;
+}
+
+function findStyledSelectionContainer(
+  range: Range,
+  root: HTMLElement | null,
+  style: { clearColor: boolean; clearFontSize: boolean },
+) {
+  if (!root) return null;
+
+  const startElement =
+    range.startContainer instanceof HTMLElement
+      ? range.startContainer
+      : range.startContainer.parentElement;
+  const endElement =
+    range.endContainer instanceof HTMLElement
+      ? range.endContainer
+      : range.endContainer.parentElement;
+
+  if (!startElement || !endElement) return null;
+
+  let current: HTMLElement | null = startElement;
+  while (current && current !== root) {
+    if (
+      current.contains(endElement) &&
+      rangeMatchesNodeContents(range, current) &&
+      (
+        (style.clearColor && Boolean(current.style.color)) ||
+        (style.clearFontSize && Boolean(current.style.fontSize))
+      )
+    ) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+
+  return null;
+}
+
+function clearInlineStyleSelection(
+  range: Range,
+  root: HTMLElement | null,
+  style: { clearColor: boolean; clearFontSize: boolean },
+) {
+  const target = findStyledSelectionContainer(range, root, style);
+  if (!target) return false;
+
+  if (style.clearColor) {
+    target.style.removeProperty("color");
+  }
+  if (style.clearFontSize) {
+    target.style.removeProperty("font-size");
+  }
+
+  if (isPlainStyleSpan(target)) {
+    unwrapElement(target);
+  }
+
+  return true;
 }
 
 interface RichTextEditorProps {
@@ -590,7 +673,20 @@ export function RichTextEditor({
 
     const color = sanitizeInlineColor(style.color);
     const fontSize = sanitizeInlineFontSize(style.fontSize);
+    const clearColor = color === "inherit";
+    const clearFontSize = fontSize === "inherit";
     if (!color && !fontSize) return;
+
+    if (clearColor || clearFontSize) {
+      const cleared = clearInlineStyleSelection(activeRange, editorRef.current, {
+        clearColor,
+        clearFontSize,
+      });
+      if (cleared) {
+        commitValue({ syncDom: true });
+      }
+      return;
+    }
 
     const fragment = activeRange.extractContents();
     if (!fragment.childNodes.length) return;
