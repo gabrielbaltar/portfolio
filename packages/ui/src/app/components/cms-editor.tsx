@@ -133,39 +133,114 @@ function TextArea({ label, value, onChange, rows = 3, placeholder = "" }: {
 
 function TagsInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
   const [input, setInput] = useState("");
-  const add = () => {
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+
+  const resetEditor = () => {
+    setInput("");
+    setEditingTag(null);
+  };
+
+  const upsert = () => {
     const tag = input.trim().toLowerCase();
-    if (tag && !tags.includes(tag)) {
+    if (!tag) return;
+
+    const isDuplicate = tags.some((current) => current === tag && current !== editingTag);
+    if (isDuplicate) {
+      toast.error("Essa tag ja existe.");
+      return;
+    }
+
+    if (editingTag) {
+      onChange(tags.map((current) => (current === editingTag ? tag : current)));
+    } else {
       onChange([...tags, tag]);
     }
-    setInput("");
+
+    resetEditor();
+  };
+
+  const removeTag = (tag: string) => {
+    onChange(tags.filter((current) => current !== tag));
+    if (editingTag === tag) resetEditor();
+  };
+
+  const startEdit = (tag: string) => {
+    setInput(tag);
+    setEditingTag(tag);
   };
 
   return (
     <div className="space-y-1.5">
       <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tags</label>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md cursor-pointer hover:opacity-70"
-            style={{ fontSize: "11px", backgroundColor: "#1e1e1e", color: "#aaa" }}
-            onClick={() => onChange(tags.filter(t => t !== tag))}
-          >
-            <Hash size={10} />{tag} <X size={10} />
-          </span>
-        ))}
-      </div>
+      {tags.length > 0 ? (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {tags.map((tag) => (
+            <div
+              key={tag}
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{ fontSize: "11px", backgroundColor: "#1e1e1e", color: "#aaa" }}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Hash size={10} />
+                {tag}
+              </span>
+              <button
+                type="button"
+                onClick={() => startEdit(tag)}
+                className="rounded px-1 py-0.5 text-[#888] transition-colors hover:text-[#fafafa]"
+                title={`Editar tag ${tag}`}
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="inline-flex items-center rounded px-1 py-0.5 text-[#888] transition-colors hover:text-[#ff7b7b]"
+                title={`Excluir tag ${tag}`}
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[#555] mb-2" style={{ fontSize: "11px" }}>
+          Nenhuma tag criada ainda.
+        </p>
+      )}
       <div className="flex gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); upsert(); } }}
           placeholder="Adicionar tag..."
           className="flex-1 rounded-lg px-3 py-1.5 text-[#fafafa] placeholder-[#444] focus:outline-none"
           style={{ fontSize: "12px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
         />
+        <button
+          type="button"
+          onClick={upsert}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[#fafafa] transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          style={{ fontSize: "12px", backgroundColor: "#1e1e1e", border: "1px solid #2a2a2a" }}
+          disabled={!input.trim()}
+        >
+          <Plus size={12} />
+          {editingTag ? "Salvar tag" : "Criar tag"}
+        </button>
+        {editingTag && (
+          <button
+            type="button"
+            onClick={resetEditor}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[#999] transition-colors hover:text-[#fafafa]"
+            style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+          >
+            Cancelar
+          </button>
+        )}
       </div>
+      <p className="text-[#555]" style={{ fontSize: "11px" }}>
+        Use o botao para criar. Para editar uma tag existente, clique em <span className="text-[#888]">Editar</span>.
+      </p>
     </div>
   );
 }
