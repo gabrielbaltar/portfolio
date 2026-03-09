@@ -287,6 +287,18 @@ export function CMSSettings() {
               )}
             </Section>
 
+            <Section title="Links do topo">
+              <div className="space-y-3">
+                <p className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  Esses dois links aparecem no topo do perfil no portfolio, ao lado do seu nome.
+                </p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <Input label="Link do template" value={siteSettings.templateUrl} onChange={(v) => setSiteSettings({ ...siteSettings, templateUrl: v })} placeholder="https://..." />
+                  <Input label="Link do CV" value={siteSettings.resumeUrl} onChange={(v) => setSiteSettings({ ...siteSettings, resumeUrl: v })} placeholder="https://..." />
+                </div>
+              </div>
+            </Section>
+
             <Section title="Site & SEO" defaultOpen={false}>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 min-[1680px]:grid-cols-3">
                 <Input label="Titulo do site" value={siteSettings.siteTitle} onChange={(v) => setSiteSettings({ ...siteSettings, siteTitle: v })} />
@@ -294,8 +306,6 @@ export function CMSSettings() {
                 <div className="md:col-span-2 min-[1680px]:col-span-3">
                   <TextArea label="Descricao do site" value={siteSettings.siteDescription} onChange={(v) => setSiteSettings({ ...siteSettings, siteDescription: v })} rows={2} />
                 </div>
-                <Input label="URL do template" value={siteSettings.templateUrl} onChange={(v) => setSiteSettings({ ...siteSettings, templateUrl: v })} placeholder="https://..." />
-                <Input label="URL do CV" value={siteSettings.resumeUrl} onChange={(v) => setSiteSettings({ ...siteSettings, resumeUrl: v })} placeholder="https://..." />
                 <div className="md:col-span-2 min-[1680px]:col-span-3">
                   <Input label="SEO title" value={siteSettings.seoTitle} onChange={(v) => setSiteSettings({ ...siteSettings, seoTitle: v })} />
                 </div>
