@@ -2,8 +2,12 @@
 
 export type TranslationLanguage = "pt" | "en";
 
-const CACHE_KEY = "portfolio_translations_cache_v4";
-const LEGACY_CACHE_KEYS = ["portfolio_translations_cache_v3", "portfolio_translations_cache"];
+const CACHE_KEY = "portfolio_translations_cache_v5";
+const LEGACY_CACHE_KEYS = [
+  "portfolio_translations_cache_v4",
+  "portfolio_translations_cache_v3",
+  "portfolio_translations_cache",
+];
 const GOOGLE_API_URL = "https://translate.googleapis.com/translate_a/single";
 const MYMEMORY_API_URL = "https://api.mymemory.translated.net/get";
 const MAX_REQUEST_CHARS = 420;
@@ -95,6 +99,51 @@ const EXACT_TRANSLATION_OVERRIDES: Record<string, Partial<Record<"pt" | "en", st
   "AI Agency": { pt: "Agência de IA" },
 };
 
+type ProtectedTerm = {
+  placeholder: string;
+  value: string;
+};
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function restoreProtectedTerms(text: string, protectedTerms: ProtectedTerm[]) {
+  return protectedTerms.reduce((result, term) => {
+    return result.replace(new RegExp(escapeRegExp(term.placeholder), "g"), term.value);
+  }, text);
+}
+
+function prepareProtectedTerms(text: string) {
+  const protectedTerms: ProtectedTerm[] = [];
+  let counter = 0;
+
+  const makePlaceholder = (value: string) => {
+    const placeholder = `__PORTFOLIO_KEEP_${counter}__`;
+    counter += 1;
+    protectedTerms.push({ placeholder, value: value.trim() });
+    return placeholder;
+  };
+
+  let preparedText = text.replace(/-\[([^\]]+)\]/g, (_match, phrase: string) => {
+    const normalized = phrase.trim();
+    return normalized ? makePlaceholder(normalized) : phrase;
+  });
+
+  preparedText = preparedText.replace(/(^|[\s(])\-([A-Za-z0-9][A-Za-z0-9.+/#:_-]*)/g, (match, prefix: string, token: string) => {
+    const normalized = token.trim();
+    if (!normalized) return match;
+    return `${prefix}${makePlaceholder(normalized)}`;
+  });
+
+  const displayText = restoreProtectedTerms(preparedText, protectedTerms);
+  return {
+    preparedText,
+    displayText,
+    protectedTerms,
+  };
+}
+
 function getCache(): Record<string, string> {
   clearLegacyCache();
   try {
@@ -132,7 +181,7 @@ export function detectTextLanguage(
   text: string,
   fallback: TranslationLanguage = "pt",
 ): TranslationLanguage {
-  const normalized = text
+  const normalized = prepareProtectedTerms(text).displayText
     .trim()
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ");
@@ -161,7 +210,7 @@ export function detectTextLanguage(
 }
 
 function getTranslationOverride(text: string, _from: string, to: string) {
-  const normalized = text.trim();
+  const normalized = prepareProtectedTerms(text).displayText.trim();
   if (!normalized) return null;
 
   const exact = EXACT_TRANSLATION_OVERRIDES[normalized];
@@ -286,6 +335,10 @@ async function translateSingle(
 ): Promise<string> {
   if (!text || text.trim().length === 0) return text;
 
+  const protectedText = prepareProtectedTerms(text);
+  const sourceText = protectedText.preparedText;
+  const displayText = protectedText.displayText;
+
   const cache = getCache();
   const key = makeCacheKey(text, from, to);
   if (cache[key]) return cache[key];
@@ -297,9 +350,15 @@ async function translateSingle(
     return override;
   }
 
-  if (text.length > MAX_REQUEST_CHARS) {
+  if (sourceText.length > MAX_REQUEST_CHARS) {
     const translatedChunks = await Promise.all(
-      splitTextIntoChunks(text).map((chunk) => translateSingle(chunk, from, to)),
+      splitTextIntoChunks(sourceText).map((chunk) =>
+        translateSingle(
+          restoreProtectedTerms(chunk, protectedText.protectedTerms),
+          from,
+          to,
+        ),
+      ),
     );
     const combined = translatedChunks.join("");
     cache[key] = combined;
@@ -313,17 +372,19 @@ async function translateSingle(
 
   const request = (async () => {
     const translated =
-      (await translateWithGoogle(text, from, to)) ??
-      (await translateWithMyMemory(text, from, to));
+      (await translateWithGoogle(sourceText, from, to)) ??
+      (await translateWithMyMemory(sourceText, from, to));
 
     if (translated == null) {
-      return text;
+      return displayText;
     }
 
+    const finalValue = restoreProtectedTerms(translated, protectedText.protectedTerms);
+
     const nextCache = getCache();
-    nextCache[key] = translated;
+    nextCache[key] = finalValue;
     setCache(nextCache);
-    return translated;
+    return finalValue;
   })()
     .finally(() => {
       inFlightTranslations.delete(key);
@@ -338,7 +399,7 @@ export async function translateBatch(
   from: string = "pt",
   to: string = "en"
 ): Promise<string[]> {
-  if (from === to) return texts;
+  if (from === to) return texts.map((text) => prepareProtectedTerms(text).displayText);
 
   const cache = getCache();
   const results: string[] = new Array(texts.length);
@@ -412,7 +473,7 @@ export async function translateBatchToLanguage(
 
     const sourceLang = detectTextLanguage(normalized, fallbackSource);
     if (sourceLang === targetLang) {
-      results[index] = text;
+      results[index] = prepareProtectedTerms(text).displayText;
       return;
     }
 
