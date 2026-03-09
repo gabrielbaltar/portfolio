@@ -216,6 +216,7 @@ export interface Certification extends SortableEntity {
   title: string;
   issuer: string;
   link: string;
+  showLink?: boolean;
 }
 
 export interface StackItem extends SortableEntity {

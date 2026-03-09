@@ -431,14 +431,38 @@ export function CMSSettings() {
             <Section key={cert.id} title={cert.title || "Novo certificado"}>
               <Input label="Titulo" value={cert.title} onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, title: v } : c))} />
               <Input label="Emissor" value={cert.issuer} onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, issuer: v } : c))} />
-              <Input label="Link" value={cert.link} onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, link: v } : c))} />
+              <div className="space-y-3 rounded-lg p-3" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
+                <label className="flex items-center gap-2 text-[#ddd]" style={{ fontSize: "13px" }}>
+                  <input
+                    type="checkbox"
+                    checked={cert.showLink !== false}
+                    onChange={(event) =>
+                      setCerts(certs.map((c) => (
+                        c.id === cert.id
+                          ? { ...c, showLink: event.target.checked }
+                          : c
+                      )))
+                    }
+                    className="accent-[#fafafa]"
+                  />
+                  Mostrar botao de visita
+                </label>
+                {cert.showLink !== false && (
+                  <Input
+                    label="Link"
+                    value={cert.link}
+                    onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, link: v } : c))}
+                    placeholder="https://..."
+                  />
+                )}
+              </div>
               <button onClick={() => setCerts(certs.filter(c => c.id !== cert.id))} className="text-red-400 flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setCerts([...certs, { id: Date.now().toString(), title: "", issuer: "", link: "", sortOrder: certs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setCerts([...certs, { id: Date.now().toString(), title: "", issuer: "", link: "", showLink: false, sortOrder: certs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
             <button onClick={() => { cms.updateCertifications(certs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>

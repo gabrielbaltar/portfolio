@@ -379,7 +379,7 @@ export function PortfolioHome() {
                 <p className="break-words" style={{ fontSize: "16px", color: "var(--text-primary)" }}>{cert.title}</p>
                 <p className="mt-0.5" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>{cert.issuer}</p>
               </div>
-              {cert.link && (
+              {cert.showLink !== false && cert.link && cert.link !== "#" && (
                 <a
                   href={cert.link}
                   target="_blank"

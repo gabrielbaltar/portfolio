@@ -74,6 +74,7 @@ interface SortableRow {
 }
 
 const STACK_VISUAL_PREFIX = "stack-meta:";
+const CERTIFICATION_LINK_PREFIX = "cert-link-meta:";
 
 function parseStackVisualField(value?: string | null) {
   const raw = (value || "").trim();
@@ -111,6 +112,52 @@ function serializeStackVisualField(color: string, logo?: string) {
   return `${STACK_VISUAL_PREFIX}${JSON.stringify({
     color: normalizedColor,
     logo: normalizedLogo,
+  })}`;
+}
+
+function parseCertificationLinkField(value?: string | null) {
+  const raw = (value || "").trim();
+  if (!raw) {
+    return { link: "", showLink: false };
+  }
+
+  if (!raw.startsWith(CERTIFICATION_LINK_PREFIX)) {
+    return {
+      link: raw,
+      showLink: raw !== "#",
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw.slice(CERTIFICATION_LINK_PREFIX.length)) as {
+      link?: string;
+      showLink?: boolean;
+    };
+
+    const link = parsed.link?.trim() || "";
+    return {
+      link,
+      showLink: Boolean(parsed.showLink && link && link !== "#"),
+    };
+  } catch {
+    return { link: "", showLink: false };
+  }
+}
+
+function serializeCertificationLinkField(link: string, showLink?: boolean) {
+  const normalizedLink = link.trim();
+
+  if (!normalizedLink) {
+    return "";
+  }
+
+  if (showLink !== false) {
+    return normalizedLink;
+  }
+
+  return `${CERTIFICATION_LINK_PREFIX}${JSON.stringify({
+    link: normalizedLink,
+    showLink: false,
   })}`;
 }
 
@@ -377,11 +424,13 @@ export function mapEducationToRow(item: Education): SortableRow {
 }
 
 export function mapCertificationFromRow(row: SortableRow): Certification {
+  const linkMeta = parseCertificationLinkField(row.link);
   return {
     id: row.id,
     title: row.title ?? "",
     issuer: row.issuer ?? "",
-    link: row.link ?? "",
+    link: linkMeta.link,
+    showLink: linkMeta.showLink,
     sortOrder: row.sort_order,
   };
 }
@@ -391,7 +440,7 @@ export function mapCertificationToRow(item: Certification): SortableRow {
     id: item.id,
     title: item.title,
     issuer: item.issuer,
-    link: item.link,
+    link: serializeCertificationLinkField(item.link, item.showLink),
     sort_order: item.sortOrder,
   };
 }
