@@ -237,10 +237,13 @@ export function CMSSettings() {
             </Section>
 
             <Section title="Redes sociais">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 min-[1680px]:grid-cols-3">
-                <Input label="Twitter" value={profile.twitter} onChange={(v) => setProfile({ ...profile, twitter: v })} />
-                <Input label="Instagram" value={profile.instagram} onChange={(v) => setProfile({ ...profile, instagram: v })} />
-                <Input label="LinkedIn" value={profile.linkedin} onChange={(v) => setProfile({ ...profile, linkedin: v })} />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input label="Nome da rede 1" value={profile.twitterLabel} onChange={(v) => setProfile({ ...profile, twitterLabel: v })} placeholder="Twitter ou X" />
+                <Input label="Link da rede 1" value={profile.twitter} onChange={(v) => setProfile({ ...profile, twitter: v })} placeholder="https://..." />
+                <Input label="Nome da rede 2" value={profile.instagramLabel} onChange={(v) => setProfile({ ...profile, instagramLabel: v })} placeholder="Instagram ou Behance" />
+                <Input label="Link da rede 2" value={profile.instagram} onChange={(v) => setProfile({ ...profile, instagram: v })} placeholder="https://..." />
+                <Input label="Nome da rede 3" value={profile.linkedinLabel} onChange={(v) => setProfile({ ...profile, linkedinLabel: v })} placeholder="LinkedIn ou GitHub" />
+                <Input label="Link da rede 3" value={profile.linkedin} onChange={(v) => setProfile({ ...profile, linkedin: v })} placeholder="https://..." />
               </div>
             </Section>
 

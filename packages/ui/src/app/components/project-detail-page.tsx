@@ -13,6 +13,7 @@ import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
+import { getProfileSocialLinks } from "./profile-social-links";
 
 function ImageCard({
   src,
@@ -66,6 +67,7 @@ export function ProjectDetailPage() {
   const [passwordError, setPasswordError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const backTo = getBackTarget(location.state, "/projects");
+  const socialLinks = getProfileSocialLinks(profile);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -378,11 +380,7 @@ export function ProjectDetailPage() {
             <div>
               <p className="font-['Inter',sans-serif] mb-2" style={{ fontSize: "16px", color: "var(--text-primary, #fafafa)" }}>{t("socials")}</p>
               <div className="space-y-2">
-                {[
-                  { label: "Twitter", url: profile.twitter },
-                  { label: "Instagram", url: profile.instagram },
-                  { label: "LinkedIn", url: profile.linkedin },
-                ].map((s) => (
+                {socialLinks.map((s) => (
                   <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition-colors" style={{ fontSize: "16px", color: "var(--text-secondary, #ababab)" }}>
                     <ExternalLink size={14} /> {s.label}
                   </a>

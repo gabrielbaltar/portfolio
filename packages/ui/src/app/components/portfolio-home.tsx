@@ -11,6 +11,7 @@ import { ContentImage } from "./content-image";
 import { ArticlePreviewCard, ProjectPreviewCard } from "./content-preview-cards";
 import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
+import { getProfileSocialLinks } from "./profile-social-links";
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -83,10 +84,8 @@ export function PortfolioHome() {
   const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
   const avatarLabel = getInitials(displayName) || "Foto";
-  const socialLinks = [
-    { label: "Twitter", url: profile.twitter },
-    { label: "LinkedIn", url: profile.linkedin },
-  ].filter((item) => hasExternalUrl(item.url));
+  const socialLinks = getProfileSocialLinks(profile, ["twitter", "linkedin"]).filter((item) => hasExternalUrl(item.url));
+  const footerSocialLinks = getProfileSocialLinks(profile);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -539,11 +538,7 @@ export function PortfolioHome() {
             <div>
               <p className="mb-2" style={{ fontSize: "16px", color: "var(--text-primary)" }}>{t("socials")}</p>
               <div className="space-y-2">
-                {[
-                  { label: "Twitter", url: profile.twitter },
-                  { label: "Instagram", url: profile.instagram },
-                  { label: "LinkedIn", url: profile.linkedin },
-                ].map((s) => (
+                {footerSocialLinks.map((s) => (
                   <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 transition-colors" style={{ fontSize: "16px", color: "var(--text-secondary)" }}>
                     <ExternalLink size={14} /> {s.label}
                   </a>

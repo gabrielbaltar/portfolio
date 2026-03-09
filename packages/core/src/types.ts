@@ -116,8 +116,11 @@ export interface ProfileData extends TimestampedEntity {
   phone: string;
   photo: string;
   twitter: string;
+  twitterLabel: string;
   instagram: string;
+  instagramLabel: string;
   linkedin: string;
+  linkedinLabel: string;
   aboutTitle: string;
   aboutParagraph1: string;
   aboutParagraph2: string;

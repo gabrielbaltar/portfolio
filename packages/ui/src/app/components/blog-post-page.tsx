@@ -14,6 +14,7 @@ import { copyToClipboard } from "./clipboard-utils";
 import { getVisiblePublicTags } from "./public-tag-utils";
 import { ArticlePreviewCard } from "./content-preview-cards";
 import { getBackTarget } from "./navigation-state";
+import { getProfileSocialLinks } from "./profile-social-links";
 
 function ImageCard({ src, alt, className = "", position = "50% 50%" }: { src: string; alt: string; className?: string; position?: string }) {
   return (
@@ -48,6 +49,7 @@ export function BlogPostPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const backTo = getBackTarget(location.state, "/blog");
+  const socialLinks = getProfileSocialLinks(profile);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -536,11 +538,7 @@ export function BlogPostPage() {
                 {t("socials")}
               </p>
               <div className="space-y-2">
-                {[
-                  { label: "Twitter", url: profile.twitter },
-                  { label: "Instagram", url: profile.instagram },
-                  { label: "LinkedIn", url: profile.linkedin },
-                ].map((s) => (
+                {socialLinks.map((s) => (
                   <a
                     key={s.label}
                     href={s.url}
