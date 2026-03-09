@@ -8,6 +8,7 @@ import { PasswordProvider } from "./components/password-context";
 import { NavMenu } from "./components/nav-menu";
 import { initEmailService } from "./components/email-service";
 import { LoadingScreen } from "./components/loading-screen";
+import { useSmoothScroll } from "./components/use-smooth-scroll";
 
 function PublicRootContent() {
   const { loading, error } = useCMS();
@@ -37,6 +38,8 @@ function PublicRootContent() {
 }
 
 export function PublicRootLayout() {
+  useSmoothScroll();
+
   useEffect(() => {
     initEmailService();
     document.body.classList.add("public-app");
