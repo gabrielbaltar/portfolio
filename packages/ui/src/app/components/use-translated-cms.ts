@@ -11,7 +11,7 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v3";
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v4";
 let translatedCacheHydrated = false;
 
 function hashString(value: string) {
@@ -260,6 +260,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`projects.${projectIndex}.category`, project.category);
     addText(`projects.${projectIndex}.services`, project.services);
     addText(`projects.${projectIndex}.client`, project.client);
+    addText(`projects.${projectIndex}.year`, project.year);
     addText(`projects.${projectIndex}.description`, project.description);
     addText(`projects.${projectIndex}.seoTitle`, project.seoTitle);
     addText(`projects.${projectIndex}.seoDescription`, project.seoDescription);
@@ -271,6 +272,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`blogPosts.${postIndex}.title`, post.title);
     addText(`blogPosts.${postIndex}.subtitle`, post.subtitle || "");
     addText(`blogPosts.${postIndex}.publisher`, post.publisher);
+    addText(`blogPosts.${postIndex}.date`, post.date);
     addText(`blogPosts.${postIndex}.description`, post.description);
     addText(`blogPosts.${postIndex}.content`, post.content);
     addText(`blogPosts.${postIndex}.category`, post.category || "");
@@ -295,12 +297,14 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`experiences.${experienceIndex}.company`, experience.company);
     addText(`experiences.${experienceIndex}.role`, experience.role);
     addText(`experiences.${experienceIndex}.location`, experience.location);
+    addText(`experiences.${experienceIndex}.period`, experience.period);
     experience.tasks.forEach((task, taskIndex) => addText(`experiences.${experienceIndex}.tasks.${taskIndex}`, task));
   });
 
   data.education.forEach((education, educationIndex) => {
     addText(`education.${educationIndex}.degree`, education.degree);
     addText(`education.${educationIndex}.location`, education.location);
+    addText(`education.${educationIndex}.period`, education.period);
     addText(`education.${educationIndex}.university`, education.university);
     addText(`education.${educationIndex}.description`, education.description);
   });

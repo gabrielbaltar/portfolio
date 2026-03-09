@@ -1,13 +1,16 @@
-// Translation service using free MyMemory API.
-// Caches translations in localStorage to avoid redundant API calls.
+// Translation service with cached browser-side translation for dynamic CMS content.
 
 export type TranslationLanguage = "pt" | "en";
 
-const CACHE_KEY = "portfolio_translations_cache_v3";
-const API_URL = "https://api.mymemory.translated.net/get";
-
-const BATCH_SEPARATOR = " ||| ";
+const CACHE_KEY = "portfolio_translations_cache_v4";
+const LEGACY_CACHE_KEYS = ["portfolio_translations_cache_v3", "portfolio_translations_cache"];
+const GOOGLE_API_URL = "https://translate.googleapis.com/translate_a/single";
+const MYMEMORY_API_URL = "https://api.mymemory.translated.net/get";
 const MAX_REQUEST_CHARS = 420;
+const TRANSLATE_CONCURRENCY = 8;
+
+const inFlightTranslations = new Map<string, Promise<string>>();
+let legacyCacheCleared = false;
 
 const PORTUGUESE_HINTS = new Set([
   "de",
@@ -93,6 +96,7 @@ const EXACT_TRANSLATION_OVERRIDES: Record<string, Partial<Record<"pt" | "en", st
 };
 
 function getCache(): Record<string, string> {
+  clearLegacyCache();
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     return cached ? JSON.parse(cached) : {};
@@ -106,6 +110,17 @@ function setCache(cache: Record<string, string>) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {
     // localStorage full — silently fail
+  }
+}
+
+function clearLegacyCache() {
+  if (legacyCacheCleared || typeof window === "undefined") return;
+  legacyCacheCleared = true;
+
+  try {
+    LEGACY_CACHE_KEYS.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Ignore storage failures.
   }
 }
 
@@ -156,6 +171,34 @@ function getTranslationOverride(text: string, _from: string, to: string) {
   }
 
   return null;
+}
+
+function normalizeTranslatedText(
+  original: string,
+  translated: unknown,
+  provider: "google" | "mymemory",
+) {
+  if (typeof translated !== "string") return null;
+
+  let value = translated.trim();
+  if (!value) return null;
+
+  if (
+    provider === "mymemory" &&
+    /MYMEMORY WARNING|YOU USED ALL AVAILABLE FREE TRANSLATIONS/i.test(value)
+  ) {
+    return null;
+  }
+
+  if (
+    original.length < 100 &&
+    value === value.toUpperCase() &&
+    original !== original.toUpperCase()
+  ) {
+    value = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  }
+
+  return value;
 }
 
 function splitOversizedToken(token: string, maxChars: number) {
@@ -264,34 +307,32 @@ async function translateSingle(
     return combined;
   }
 
-  try {
-    const url = `${API_URL}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.responseStatus === 200 && data.responseData?.translatedText) {
-      let translated = data.responseData.translatedText;
-      // MyMemory sometimes returns ALL CAPS for short text — fix that
-      if (
-        text.length < 100 &&
-        translated === translated.toUpperCase() &&
-        text !== text.toUpperCase()
-      ) {
-        translated =
-          translated.charAt(0).toUpperCase() +
-          translated.slice(1).toLowerCase();
-      }
-      cache[key] = translated;
-      setCache(cache);
-      return translated;
-    }
-    return text;
-  } catch {
-    return text;
+  if (inFlightTranslations.has(key)) {
+    return inFlightTranslations.get(key)!;
   }
+
+  const request = (async () => {
+    const translated =
+      (await translateWithGoogle(text, from, to)) ??
+      (await translateWithMyMemory(text, from, to));
+
+    if (translated == null) {
+      return text;
+    }
+
+    const nextCache = getCache();
+    nextCache[key] = translated;
+    setCache(nextCache);
+    return translated;
+  })()
+    .finally(() => {
+      inFlightTranslations.delete(key);
+    });
+
+  inFlightTranslations.set(key, request);
+  return request;
 }
 
-// Translate a batch of texts, using cache when available
 export async function translateBatch(
   texts: string[],
   from: string = "pt",
@@ -330,101 +371,19 @@ export async function translateBatch(
 
   if (uncachedTexts.length === 0) return results;
 
-  // Batch into chunks of ~450 chars to stay within API limits (500 char max per request)
-  const MAX_CHARS = MAX_REQUEST_CHARS;
-  const batches: { texts: string[]; indices: number[] }[] = [];
-  let currentBatch: string[] = [];
-  let currentIndices: number[] = [];
-  let currentLength = 0;
+  for (let start = 0; start < uncachedTexts.length; start += TRANSLATE_CONCURRENCY) {
+    const chunkTexts = uncachedTexts.slice(start, start + TRANSLATE_CONCURRENCY);
+    const chunkIndices = uncachedIndices.slice(start, start + TRANSLATE_CONCURRENCY);
+    const translatedChunk = await Promise.all(
+      chunkTexts.map((text) => translateSingle(text, from, to)),
+    );
 
-  for (let i = 0; i < uncachedTexts.length; i++) {
-    const text = uncachedTexts[i];
-    const addedLength =
-      text.length + (currentBatch.length > 0 ? BATCH_SEPARATOR.length : 0);
-
-    if (currentLength + addedLength > MAX_CHARS && currentBatch.length > 0) {
-      batches.push({ texts: [...currentBatch], indices: [...currentIndices] });
-      currentBatch = [];
-      currentIndices = [];
-      currentLength = 0;
-    }
-
-    currentBatch.push(text);
-    currentIndices.push(uncachedIndices[i]);
-    currentLength += addedLength;
-  }
-
-  if (currentBatch.length > 0) {
-    batches.push({ texts: currentBatch, indices: currentIndices });
-  }
-
-  // Process batches with concurrency limit
-  const CONCURRENCY = 5;
-  for (let b = 0; b < batches.length; b += CONCURRENCY) {
-    const batchSlice = batches.slice(b, b + CONCURRENCY);
-    const promises = batchSlice.map(async (batch) => {
-      if (batch.texts.length === 1) {
-        // Single text — translate directly
-        const translated = await translateSingle(
-          batch.texts[0],
-          from,
-          to
-        );
-        results[batch.indices[0]] = translated;
-      } else {
-        // Multiple texts — join with separator
-        const joined = batch.texts.join(BATCH_SEPARATOR);
-        try {
-          const url = `${API_URL}?q=${encodeURIComponent(joined)}&langpair=${from}|${to}`;
-          const res = await fetch(url);
-          const data = await res.json();
-
-          if (
-            data.responseStatus === 200 &&
-            data.responseData?.translatedText
-          ) {
-            const translated = data.responseData.translatedText;
-            const parts = translated.split(/\s*\|\|\|\s*/).map((part: string) => part.trim());
-
-            if (
-              parts.length !== batch.indices.length ||
-              parts.some((part: string) => part.length === 0)
-            ) {
-              for (let j = 0; j < batch.texts.length; j++) {
-                const t = await translateSingle(batch.texts[j], from, to);
-                results[batch.indices[j]] = t;
-              }
-              return;
-            }
-
-            const updatedCache = getCache();
-            for (let j = 0; j < batch.indices.length; j++) {
-              const translatedPart = parts[j];
-              results[batch.indices[j]] = translatedPart;
-              updatedCache[makeCacheKey(batch.texts[j], from, to)] =
-                translatedPart;
-            }
-            setCache(updatedCache);
-          } else {
-            // Fallback: translate individually
-            for (let j = 0; j < batch.texts.length; j++) {
-              const t = await translateSingle(batch.texts[j], from, to);
-              results[batch.indices[j]] = t;
-            }
-          }
-        } catch {
-          // On error, keep original texts
-          for (let j = 0; j < batch.indices.length; j++) {
-            results[batch.indices[j]] = batch.texts[j];
-          }
-        }
-      }
+    translatedChunk.forEach((translated, offset) => {
+      results[chunkIndices[offset]] = translated;
     });
 
-    await Promise.all(promises);
-    // Small delay to respect rate limits
-    if (b + CONCURRENCY < batches.length) {
-      await new Promise((r) => setTimeout(r, 100));
+    if (start + TRANSLATE_CONCURRENCY < uncachedTexts.length) {
+      await new Promise((resolve) => setTimeout(resolve, 40));
     }
   }
 
@@ -491,5 +450,45 @@ export async function translateText(
 
 // Clear translation cache
 export function clearTranslationCache() {
+  clearLegacyCache();
   localStorage.removeItem(CACHE_KEY);
+}
+
+async function translateWithGoogle(text: string, from: string, to: string) {
+  try {
+    const url =
+      `${GOOGLE_API_URL}?client=gtx&sl=${encodeURIComponent(from)}&tl=${encodeURIComponent(to)}` +
+      `&dt=t&q=${encodeURIComponent(text)}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    const translated = Array.isArray(payload?.[0])
+      ? payload[0]
+          .map((segment: unknown) => (
+            Array.isArray(segment) && typeof segment[0] === "string" ? segment[0] : ""
+          ))
+          .join("")
+      : null;
+
+    return normalizeTranslatedText(text, translated, "google");
+  } catch {
+    return null;
+  }
+}
+
+async function translateWithMyMemory(text: string, from: string, to: string) {
+  try {
+    const url = `${MYMEMORY_API_URL}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const response = await fetch(url);
+    const payload = await response.json();
+
+    if (payload?.responseStatus && payload.responseStatus >= 400) {
+      return null;
+    }
+
+    return normalizeTranslatedText(text, payload?.responseData?.translatedText, "mymemory");
+  } catch {
+    return null;
+  }
 }
