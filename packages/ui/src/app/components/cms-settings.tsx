@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
 import { toast } from "sonner";
@@ -91,6 +91,21 @@ export function CMSSettings() {
     cms.updateProfile(profile);
     toast.success("Configuracoes salvas!");
   };
+
+  useEffect(() => {
+    if (tab !== "profile") return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.key.toLowerCase() !== "s") return;
+
+      event.preventDefault();
+      saveProfile();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [tab, profile, siteSettings]);
 
   const handleReset = async () => {
     try {
