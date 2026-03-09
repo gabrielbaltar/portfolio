@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
-import { translateBatch } from "./translation-service";
+import { translateBatchToLanguage } from "./translation-service";
 import {
   applyRichTextTranslation,
   collectRichTextTranslation,
@@ -11,28 +11,21 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v2";
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v3";
 let translatedCacheHydrated = false;
 
-function dataHash(data: CMSData): string {
-  const parts = [
-    data.projects.length,
-    data.blogPosts.length,
-    data.pages.length,
-    data.experiences.length,
-    data.education.length,
-    data.certifications.length,
-    data.stack.length,
-    data.awards.length,
-    data.recommendations.length,
-    data.projects.map((item) => item.updatedAt || item.id).join(","),
-    data.blogPosts.map((item) => item.updatedAt || item.id).join(","),
-    data.pages.map((item) => item.updatedAt || item.id).join(","),
-    data.profile.aboutParagraph1?.slice(0, 30) || "",
-    data.siteSettings.siteDescription?.slice(0, 30) || "",
-  ];
+function hashString(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
 
-  return parts.join("|");
+function dataHash(data: CMSData): string {
+  const { media: _media, ...translationRelevant } = data;
+  return hashString(JSON.stringify(translationRelevant));
 }
 
 function getCacheKey(hash: string, lang: Language) {
@@ -196,8 +189,6 @@ function collectBlockTexts(
 }
 
 async function translateCMSData(data: CMSData, targetLang: Language): Promise<CMSData> {
-  if (targetLang === "pt") return data;
-
   const texts: string[] = [];
   const map: TranslationEntry[] = [];
   const richEntries: RichTranslationEntry[] = [];
@@ -264,9 +255,11 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   profileFields.forEach((field) => addText(`profile.${field}`, data.profile[field] as string));
 
   data.projects.forEach((project, projectIndex) => {
+    addText(`projects.${projectIndex}.title`, project.title);
     addText(`projects.${projectIndex}.subtitle`, project.subtitle);
     addText(`projects.${projectIndex}.category`, project.category);
     addText(`projects.${projectIndex}.services`, project.services);
+    addText(`projects.${projectIndex}.client`, project.client);
     addText(`projects.${projectIndex}.description`, project.description);
     addText(`projects.${projectIndex}.seoTitle`, project.seoTitle);
     addText(`projects.${projectIndex}.seoDescription`, project.seoDescription);
@@ -277,10 +270,13 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   data.blogPosts.forEach((post, postIndex) => {
     addText(`blogPosts.${postIndex}.title`, post.title);
     addText(`blogPosts.${postIndex}.subtitle`, post.subtitle || "");
+    addText(`blogPosts.${postIndex}.publisher`, post.publisher);
     addText(`blogPosts.${postIndex}.description`, post.description);
     addText(`blogPosts.${postIndex}.content`, post.content);
     addText(`blogPosts.${postIndex}.category`, post.category || "");
     addText(`blogPosts.${postIndex}.services`, post.services || "");
+    addText(`blogPosts.${postIndex}.author`, post.author);
+    addText(`blogPosts.${postIndex}.readTime`, post.readTime);
     addText(`blogPosts.${postIndex}.seoTitle`, post.seoTitle);
     addText(`blogPosts.${postIndex}.seoDescription`, post.seoDescription);
     post.tags.forEach((tag, tagIndex) => addText(`blogPosts.${postIndex}.tags.${tagIndex}`, tag));
@@ -296,6 +292,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   });
 
   data.experiences.forEach((experience, experienceIndex) => {
+    addText(`experiences.${experienceIndex}.company`, experience.company);
     addText(`experiences.${experienceIndex}.role`, experience.role);
     addText(`experiences.${experienceIndex}.location`, experience.location);
     experience.tasks.forEach((task, taskIndex) => addText(`experiences.${experienceIndex}.tasks.${taskIndex}`, task));
@@ -304,29 +301,34 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   data.education.forEach((education, educationIndex) => {
     addText(`education.${educationIndex}.degree`, education.degree);
     addText(`education.${educationIndex}.location`, education.location);
+    addText(`education.${educationIndex}.university`, education.university);
     addText(`education.${educationIndex}.description`, education.description);
   });
 
   data.certifications.forEach((certification, certificationIndex) => {
     addText(`certifications.${certificationIndex}.title`, certification.title);
+    addText(`certifications.${certificationIndex}.issuer`, certification.issuer);
   });
 
   data.stack.forEach((item, stackIndex) => {
+    addText(`stack.${stackIndex}.name`, item.name);
     addText(`stack.${stackIndex}.description`, item.description);
   });
 
   data.awards.forEach((award, awardIndex) => {
     addText(`awards.${awardIndex}.title`, award.title);
+    addText(`awards.${awardIndex}.issuer`, award.issuer);
   });
 
   data.recommendations.forEach((recommendation, recommendationIndex) => {
+    addText(`recommendations.${recommendationIndex}.name`, recommendation.name);
     addText(`recommendations.${recommendationIndex}.role`, recommendation.role);
     addText(`recommendations.${recommendationIndex}.quote`, recommendation.quote);
   });
 
   if (texts.length === 0) return data;
 
-  const translatedTexts = await translateBatch(texts, "pt", targetLang);
+  const translatedTexts = await translateBatchToLanguage(texts, targetLang);
   const translatedData = cloneData(data);
 
   map.forEach(({ path, index }) => {
@@ -347,8 +349,6 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
 }
 
 function startPrefetch(sourceData: CMSData, hash: string, targetLang: Language) {
-  if (targetLang === "pt") return Promise.resolve(sourceData);
-
   const cacheKey = getCacheKey(hash, targetLang);
   hydrateTranslatedCache();
 
@@ -386,12 +386,6 @@ export function useTranslatedCMS() {
   const currentHash = dataHash(data);
 
   useEffect(() => {
-    if (lang === "pt") {
-      setTranslatedData(data);
-      setIsTranslating(false);
-      return;
-    }
-
     const translationId = ++translationRef.current;
     const cacheKey = getCacheKey(currentHash, lang);
     hydrateTranslatedCache();
@@ -412,8 +406,9 @@ export function useTranslatedCMS() {
   }, [lang, data, currentHash]);
 
   useEffect(() => {
+    void startPrefetch(data, currentHash, "pt");
     void startPrefetch(data, currentHash, "en");
   }, [data, currentHash]);
 
-  return { data: lang === "pt" ? data : translatedData, isTranslating };
+  return { data: translatedData, isTranslating };
 }

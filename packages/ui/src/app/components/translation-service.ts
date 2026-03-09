@@ -1,10 +1,72 @@
 // Translation service using free MyMemory API.
 // Caches translations in localStorage to avoid redundant API calls.
 
-const CACHE_KEY = "portfolio_translations_cache_v2";
+export type TranslationLanguage = "pt" | "en";
+
+const CACHE_KEY = "portfolio_translations_cache_v3";
 const API_URL = "https://api.mymemory.translated.net/get";
 
 const BATCH_SEPARATOR = " ||| ";
+const MAX_REQUEST_CHARS = 420;
+
+const PORTUGUESE_HINTS = new Set([
+  "de",
+  "do",
+  "da",
+  "dos",
+  "das",
+  "que",
+  "com",
+  "para",
+  "uma",
+  "um",
+  "mais",
+  "como",
+  "sobre",
+  "projeto",
+  "artigo",
+  "disponivel",
+  "disponível",
+  "conteudo",
+  "conteúdo",
+  "experiencia",
+  "experiência",
+  "ferramentas",
+  "gestao",
+  "gestão",
+  "usuario",
+  "usuário",
+  "paginas",
+  "páginas",
+  "trabalho",
+]);
+
+const ENGLISH_HINTS = new Set([
+  "the",
+  "and",
+  "with",
+  "from",
+  "your",
+  "this",
+  "that",
+  "about",
+  "project",
+  "article",
+  "content",
+  "available",
+  "design",
+  "website",
+  "user",
+  "pages",
+  "settings",
+  "case",
+  "study",
+  "work",
+  "tools",
+  "read",
+  "view",
+  "more",
+]);
 
 const EXACT_TRANSLATION_OVERRIDES: Record<string, Partial<Record<"pt" | "en", string>>> = {
   "Disponível para trabalho": { en: "Available for work" },
@@ -51,6 +113,38 @@ function makeCacheKey(text: string, from: string, to: string): string {
   return `${from}>${to}:${text}`;
 }
 
+export function detectTextLanguage(
+  text: string,
+  fallback: TranslationLanguage = "pt",
+): TranslationLanguage {
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'-]/gu, " ");
+
+  if (!normalized) return fallback;
+
+  let portugueseScore = 0;
+  let englishScore = 0;
+
+  if (/[áàâãéêíóôõúç]/i.test(text)) portugueseScore += 4;
+  if (/\b(?:ção|ções|mente|dade|agens?)\b/i.test(normalized)) portugueseScore += 2;
+  if (/\b(?:ing|tion|ness|ment)\b/i.test(normalized)) englishScore += 1;
+  if (/\b(?:you're|you're|we're|they're|don't|doesn't|isn't|it's|that's)\b/i.test(normalized)) englishScore += 3;
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  for (const word of words) {
+    if (PORTUGUESE_HINTS.has(word)) portugueseScore += 1;
+    if (ENGLISH_HINTS.has(word)) englishScore += 1;
+  }
+
+  if (portugueseScore === englishScore) {
+    return fallback;
+  }
+
+  return portugueseScore > englishScore ? "pt" : "en";
+}
+
 function getTranslationOverride(text: string, _from: string, to: string) {
   const normalized = text.trim();
   if (!normalized) return null;
@@ -62,6 +156,84 @@ function getTranslationOverride(text: string, _from: string, to: string) {
   }
 
   return null;
+}
+
+function splitOversizedToken(token: string, maxChars: number) {
+  if (token.length <= maxChars) return [token];
+
+  const parts: string[] = [];
+  let current = "";
+
+  const words = token.split(/(\s+)/);
+  for (const word of words) {
+    if (word.length > maxChars) {
+      if (current) {
+        parts.push(current);
+        current = "";
+      }
+
+      for (let index = 0; index < word.length; index += maxChars) {
+        parts.push(word.slice(index, index + maxChars));
+      }
+      continue;
+    }
+
+    if ((current + word).length > maxChars && current) {
+      parts.push(current);
+      current = word;
+      continue;
+    }
+
+    current += word;
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts.length > 0 ? parts : [token];
+}
+
+function splitTextIntoChunks(text: string, maxChars: number = MAX_REQUEST_CHARS) {
+  if (text.length <= maxChars) return [text];
+
+  const chunks: string[] = [];
+  let current = "";
+  const tokens = text.split(/(\n+|(?<=[.!?])\s+|,\s+|;\s+)/);
+
+  for (const token of tokens) {
+    if (!token) continue;
+
+    if (token.length > maxChars) {
+      const oversizedParts = splitOversizedToken(token, maxChars);
+      oversizedParts.forEach((part) => {
+        if ((current + part).length > maxChars && current) {
+          chunks.push(current);
+          current = "";
+        }
+        if (part.length > maxChars) {
+          chunks.push(part);
+        } else {
+          current += part;
+        }
+      });
+      continue;
+    }
+
+    if ((current + token).length > maxChars && current) {
+      chunks.push(current);
+      current = token;
+      continue;
+    }
+
+    current += token;
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks.length > 0 ? chunks : [text];
 }
 
 async function translateSingle(
@@ -80,6 +252,16 @@ async function translateSingle(
     cache[key] = override;
     setCache(cache);
     return override;
+  }
+
+  if (text.length > MAX_REQUEST_CHARS) {
+    const translatedChunks = await Promise.all(
+      splitTextIntoChunks(text).map((chunk) => translateSingle(chunk, from, to)),
+    );
+    const combined = translatedChunks.join("");
+    cache[key] = combined;
+    setCache(cache);
+    return combined;
   }
 
   try {
@@ -149,7 +331,7 @@ export async function translateBatch(
   if (uncachedTexts.length === 0) return results;
 
   // Batch into chunks of ~450 chars to stay within API limits (500 char max per request)
-  const MAX_CHARS = 450;
+  const MAX_CHARS = MAX_REQUEST_CHARS;
   const batches: { texts: string[]; indices: number[] }[] = [];
   let currentBatch: string[] = [];
   let currentIndices: number[] = [];
@@ -247,6 +429,54 @@ export async function translateBatch(
   }
 
   return results;
+}
+
+export async function translateBatchToLanguage(
+  texts: string[],
+  targetLang: TranslationLanguage,
+): Promise<string[]> {
+  if (texts.length === 0) return texts;
+
+  const fallbackSource: TranslationLanguage = targetLang === "en" ? "pt" : "en";
+  const results: string[] = new Array(texts.length);
+  const groups: Record<TranslationLanguage, { indices: number[]; texts: string[] }> = {
+    pt: { indices: [], texts: [] },
+    en: { indices: [], texts: [] },
+  };
+
+  texts.forEach((text, index) => {
+    const normalized = text?.trim();
+    if (!normalized) {
+      results[index] = text;
+      return;
+    }
+
+    const sourceLang = detectTextLanguage(normalized, fallbackSource);
+    if (sourceLang === targetLang) {
+      results[index] = text;
+      return;
+    }
+
+    groups[sourceLang].indices.push(index);
+    groups[sourceLang].texts.push(text);
+  });
+
+  const translations = await Promise.all(
+    (Object.entries(groups) as Array<[TranslationLanguage, { indices: number[]; texts: string[] }]>)
+      .filter(([, group]) => group.texts.length > 0)
+      .map(async ([sourceLang, group]) => {
+        const translated = await translateBatch(group.texts, sourceLang, targetLang);
+        return { indices: group.indices, translated };
+      }),
+  );
+
+  translations.forEach(({ indices, translated }) => {
+    indices.forEach((index, itemIndex) => {
+      results[index] = translated[itemIndex];
+    });
+  });
+
+  return results.map((value, index) => value ?? texts[index]);
 }
 
 // Translate a single text (convenience)
