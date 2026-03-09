@@ -25,6 +25,14 @@ body,
   cursor: not-allowed;
 }
 
+@media (max-width: 768px) {
+  .public-app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  .public-app textarea,
+  .public-app select {
+    font-size: 16px !important;
+  }
+}
+
 .code-highlight-scroll {
   scrollbar-width: thin;
 }

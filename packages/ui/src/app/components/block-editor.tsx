@@ -123,7 +123,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       };
     case "code": return { type: "code", code: "", language: "typescript", caption: "" };
     case "image": return { type: "image", url: "", caption: "" };
-    case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false, previewStart: 0, previewDuration: 4 };
+    case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false, previewStart: 0, previewDuration: 4, fit: "contain", zoom: 1 };
     case "quote": return { type: "quote", text: "", author: "" };
     case "cta": return { type: "cta", text: "", buttonText: "", buttonUrl: "", openInNewTab: true };
     case "embed": return { type: "embed", url: "", caption: "" };
@@ -1191,7 +1191,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
         )}
 
         {block.type === "video" && (() => {
-          const vBlock = block as { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number };
+          const vBlock = block as { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; fit?: "contain" | "cover"; zoom?: number };
           const muxPlaybackId = extractMuxPlaybackId(vBlock.url);
           const applyVideoUrl = (url: string) => {
             const trimmedUrl = normalizeVideoInput(url);
@@ -1260,10 +1260,10 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       autoPlay={vBlock.autoplay || false}
                       loop={vBlock.loop || false}
                       muted={vBlock.muted || vBlock.autoplay || false}
-                      previewStart={vBlock.previewStart || 0}
-                      previewDuration={vBlock.previewDuration ?? 4}
                       height={300}
                       borderRadius={(block as any).borderRadius || 0}
+                      fit={vBlock.fit || "contain"}
+                      zoom={vBlock.zoom ?? 1}
                     />
                     <div
                       className="pointer-events-none absolute inset-0 rounded-lg transition-colors"
@@ -1340,22 +1340,34 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
               </div>
               <div className="grid gap-2 min-[980px]:grid-cols-2">
                 <label className="space-y-1">
-                  <FieldLabel>Inicio do preview</FieldLabel>
-                  <MiniInput
-                    type="number"
-                    value={String(vBlock.previewStart ?? 0)}
-                    onChange={(value) => onChange({ ...vBlock, previewStart: Math.max(0, Number(value) || 0) } as ContentBlock)}
-                    placeholder="0"
-                  />
+                  <FieldLabel>Enquadramento</FieldLabel>
+                  <select
+                    value={vBlock.fit || "contain"}
+                    onChange={(e) => onChange({ ...vBlock, fit: e.target.value as "contain" | "cover" } as ContentBlock)}
+                    className="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa] focus:outline-none focus:border-[#555]"
+                    style={{ fontSize: "12px" }}
+                  >
+                    <option value="contain">Conteudo inteiro</option>
+                    <option value="cover">Preencher quadro</option>
+                  </select>
                 </label>
                 <label className="space-y-1">
-                  <FieldLabel>Duracao do preview</FieldLabel>
-                  <MiniInput
-                    type="number"
-                    value={String(vBlock.previewDuration ?? 4)}
-                    onChange={(value) => onChange({ ...vBlock, previewDuration: Math.max(0, Number(value) || 0) } as ContentBlock)}
-                    placeholder="4"
-                  />
+                  <FieldLabel>Zoom visual</FieldLabel>
+                  <div className="flex items-center gap-2 rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={1.6}
+                      step={0.02}
+                      value={vBlock.zoom ?? 1}
+                      onChange={(e) => onChange({ ...vBlock, zoom: Number(e.target.value) } as ContentBlock)}
+                      className="flex-1 h-1 cursor-pointer"
+                      style={{ accentColor: "#00ff3c" }}
+                    />
+                    <span className="w-12 text-right tabular-nums text-[#888]" style={{ fontSize: "11px" }}>
+                      {`${Math.round((vBlock.zoom ?? 1) * 100)}%`}
+                    </span>
+                  </div>
                 </label>
               </div>
               <input
@@ -1373,7 +1385,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 placeholder="Legenda (opcional)..."
               />
               <p className="text-[#444] px-1" style={{ fontSize: "10px" }}>
-                O preview em loop usa o trecho definido acima. Ao clicar em play, o video reinicia do zero. Se voce colar um Playback ID do Mux, o CMS monta o stream HLS e a thumbnail automaticamente.
+                Use "Preencher quadro" para ocupar todo o frame e ajuste o zoom sem alterar o arquivo original do video. Se voce colar um Playback ID do Mux, o CMS monta o stream HLS e a thumbnail automaticamente.
               </p>
               {/* Border radius control */}
               <div className="flex items-center gap-2 px-1">

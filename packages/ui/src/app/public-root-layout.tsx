@@ -39,6 +39,10 @@ function PublicRootContent() {
 export function PublicRootLayout() {
   useEffect(() => {
     initEmailService();
+    document.body.classList.add("public-app");
+    return () => {
+      document.body.classList.remove("public-app");
+    };
   }, []);
 
   return (

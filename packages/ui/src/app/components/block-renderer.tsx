@@ -97,7 +97,15 @@ function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" 
   );
 }
 
-export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
+export function BlockRenderer({
+  blocks,
+  imagesClickable = false,
+  onImageClick,
+}: {
+  blocks: ContentBlock[];
+  imagesClickable?: boolean;
+  onImageClick?: (src: string, alt: string) => void;
+}) {
   if (!blocks || blocks.length === 0) return null;
 
   return (
@@ -185,27 +193,36 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
             const svg = isSvg(block.url);
             const gif = isGif(block.url);
             const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
+            const alt = richTextToPlainText(block.caption) || "";
+            const imageClassName = imagesClickable ? "cursor-pointer" : undefined;
+            const openImage = () => {
+              if (!imagesClickable || !onImageClick) return;
+              onImageClick(block.url, alt);
+            };
             return (
               <figure key={i} className="my-8">
                 {svg ? (
                   <img
                     src={block.url}
-                    alt={richTextToPlainText(block.caption) || ""}
-                    className="mx-auto"
+                    alt={alt}
+                    className={`mx-auto ${imageClassName || ""}`}
+                    onClick={openImage}
                     style={{ maxHeight: "525px", maxWidth: "100%", objectFit: "contain", borderRadius: radius }}
                   />
                 ) : gif ? (
                   <img
                     src={block.url}
-                    alt={richTextToPlainText(block.caption) || ""}
-                    className="w-full object-cover"
+                    alt={alt}
+                    className={`w-full object-cover ${imageClassName || ""}`}
+                    onClick={openImage}
                     style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
                   />
                 ) : (
                   <ImageWithFallback
                     src={block.url}
-                    alt={richTextToPlainText(block.caption) || ""}
-                    className="w-full object-cover"
+                    alt={alt}
+                    className={`w-full object-cover ${imageClassName || ""}`}
+                    onClick={openImage}
                     style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
                   />
                 )}
@@ -233,10 +250,10 @@ export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
                     autoPlay={block.autoplay || false}
                     loop={block.loop || false}
                     muted={block.muted || block.autoplay || false}
-                    previewStart={block.previewStart || 0}
-                    previewDuration={block.previewDuration ?? 4}
                     height={525}
                     borderRadius={vRadius}
+                    fit={block.fit || "contain"}
+                    zoom={block.zoom ?? 1}
                   />
                 </div>
               </figure>

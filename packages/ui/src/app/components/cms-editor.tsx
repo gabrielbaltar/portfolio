@@ -700,9 +700,9 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                       autoPlay={vBlock.autoplay || false}
                       loop={vBlock.loop || false}
                       muted={vBlock.muted || vBlock.autoplay || false}
-                      previewStart={vBlock.previewStart || 0}
-                      previewDuration={vBlock.previewDuration ?? 4}
                       height={300}
+                      fit={vBlock.fit || "contain"}
+                      zoom={vBlock.zoom ?? 1}
                     />
                     {vBlock.caption && (
                       <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>{vBlock.caption}</figcaption>

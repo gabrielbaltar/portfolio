@@ -17,12 +17,15 @@ interface VideoPlayerProps {
   previewDuration?: number;
   height?: number;
   borderRadius?: number;
+  fit?: "contain" | "cover";
+  zoom?: number;
 }
 
 interface QualityOption {
   index: number;
   label: string;
   description: string;
+  isAuto?: boolean;
 }
 
 type PlayButtonTone = "light" | "dark";
@@ -51,17 +54,53 @@ function formatQualityLabel(level: Level) {
 }
 
 function buildQualityOptions(levels: Level[]): QualityOption[] {
-  return levels.map((level, index) => {
-    const resolution = level.width && level.height ? `${level.width}x${level.height}` : "";
-    const bitrate = formatBitrate(level.bitrate);
-    const description = [resolution, bitrate].filter(Boolean).join(" • ") || "Stream adaptativo";
+  const manualOptions = levels
+    .map((level, index) => {
+      const resolution = level.width && level.height ? `${level.width}x${level.height}` : "";
+      const bitrate = formatBitrate(level.bitrate);
+      const description = [resolution, bitrate].filter(Boolean).join(" • ") || "Stream adaptativo";
 
-    return {
-      index,
-      label: formatQualityLabel(level),
-      description,
-    };
+      return {
+        index,
+        label: formatQualityLabel(level),
+        description,
+        height: level.height || 0,
+        bitrate: level.bitrate || 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.height !== a.height) return b.height - a.height;
+      return b.bitrate - a.bitrate;
+    })
+    .map(({ height: _height, bitrate: _bitrate, ...option }) => option);
+
+  return [
+    {
+      index: -1,
+      label: "Auto",
+      description: "Ajusta a qualidade conforme a conexao",
+      isAuto: true,
+    },
+    ...manualOptions,
+  ];
+}
+
+function getHighestQualityIndex(levels: Level[]) {
+  let selectedIndex = -1;
+  let selectedHeight = -1;
+  let selectedBitrate = -1;
+
+  levels.forEach((level, index) => {
+    const height = level.height || 0;
+    const bitrate = level.bitrate || 0;
+    if (height > selectedHeight || (height === selectedHeight && bitrate > selectedBitrate)) {
+      selectedIndex = index;
+      selectedHeight = height;
+      selectedBitrate = bitrate;
+    }
   });
+
+  return selectedIndex;
 }
 
 function sampleAverageLuminance(image: CanvasImageSource, sourceWidth: number, sourceHeight: number) {
@@ -123,10 +162,11 @@ export function VideoPlayer({
   previewDuration = 4,
   height = 525,
   borderRadius = 0,
+  fit = "contain",
+  zoom = 1,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-  const previewLoopingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -148,18 +188,12 @@ export function VideoPlayer({
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
   const [fullPlaybackStarted, setFullPlaybackStarted] = useState(autoPlay);
-  const [isPreviewLooping, setIsPreviewLooping] = useState(false);
 
   const prevVolume = useRef(1);
   const normalizedPreviewStart = Math.max(0, previewStart || 0);
-  const normalizedPreviewDuration = Math.max(0, previewDuration || 0);
-  const teaserEnabled = !autoPlay && normalizedPreviewDuration > 0;
-  const isPreviewMode = teaserEnabled && !fullPlaybackStarted;
-  const interactivePlaying = playing && !isPreviewLooping;
   const resolvedSource = resolveVideoSource(src, poster, normalizedPreviewStart);
-  const selectedQualityOption = qualityOptions.find((option) => option.index === selectedQuality);
-  const qualityButtonLabel = selectedQualityOption?.label || (qualityOptions.length > 0 ? "Auto" : null);
-
+  const showPrimaryPlayButton = !error && !playing && !loading && (!fullPlaybackStarted || currentTime <= 0.1);
+  const normalizedZoom = Math.max(1, Math.min(1.6, zoom || 1));
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -171,15 +205,11 @@ export function VideoPlayer({
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (isPreviewMode) {
-      previewLoopingRef.current = false;
-      setIsPreviewLooping(false);
+    if (v.paused) {
+      if (Number.isFinite(v.duration) && v.duration > 0 && v.currentTime >= v.duration - 0.1) {
+        v.currentTime = 0;
+      }
       setFullPlaybackStarted(true);
-      v.pause();
-      v.currentTime = 0;
-      v.loop = loop;
-      v.defaultMuted = muted;
-      v.muted = muted;
       void v.play().then(() => {
         setPlaying(true);
         setError(false);
@@ -188,21 +218,11 @@ export function VideoPlayer({
         setError(true);
         setFullPlaybackStarted(false);
       });
-      return;
-    }
-    if (v.paused) {
-      void v.play().then(() => {
-        setPlaying(true);
-        setError(false);
-      }).catch(() => {
-        setPlaying(false);
-        setError(true);
-      });
     } else {
       v.pause();
       setPlaying(false);
     }
-  }, [isPreviewMode, loop, muted]);
+  }, []);
 
   // Volume
   const toggleMute = useCallback(() => {
@@ -263,20 +283,20 @@ export function VideoPlayer({
 
   // Playback rate
   const rates = [0.5, 0.75, 1, 1.25, 1.5, 2];
-  const cycleRate = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const idx = rates.indexOf(playbackRate);
-    const next = rates[(idx + 1) % rates.length];
-    v.playbackRate = next;
-    setPlaybackRate(next);
-  }, [playbackRate]);
 
   const applyQuality = useCallback((levelIndex: number) => {
     const hls = hlsRef.current;
     if (!hls) return;
 
     setSelectedQuality(levelIndex);
+    if (levelIndex < 0) {
+      hls.currentLevel = -1;
+      hls.loadLevel = -1;
+      hls.nextLevel = -1;
+      return;
+    }
+
+    hls.currentLevel = levelIndex;
     hls.loadLevel = levelIndex;
     hls.nextLevel = levelIndex;
 
@@ -289,10 +309,10 @@ export function VideoPlayer({
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-    if (interactivePlaying) {
+    if (playing) {
       controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
     }
-  }, [interactivePlaying]);
+  }, [playing]);
 
   // Hover time preview on progress bar
   const handleProgressHover = useCallback((e: React.MouseEvent) => {
@@ -360,7 +380,7 @@ export function VideoPlayer({
     const onPause = () => setPlaying(false);
     const onEnded = () => {
       setPlaying(false);
-      if (!loop && !previewLoopingRef.current && teaserEnabled) {
+      if (!loop) {
         setFullPlaybackStarted(false);
       }
     };
@@ -396,7 +416,7 @@ export function VideoPlayer({
       v.removeEventListener("canplay", onCanPlay);
       v.removeEventListener("error", onError);
     };
-  }, [loop, teaserEnabled]);
+  }, [loop]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -424,13 +444,12 @@ export function VideoPlayer({
       return;
     }
 
-    if (v.canPlayType("application/vnd.apple.mpegurl")) {
-      v.src = resolvedSource.src;
-      v.load();
-      return;
-    }
-
     if (!Hls.isSupported()) {
+      if (v.canPlayType("application/vnd.apple.mpegurl")) {
+        v.src = resolvedSource.src;
+        v.load();
+        return;
+      }
       setLoading(false);
       setError(true);
       return;
@@ -439,6 +458,7 @@ export function VideoPlayer({
     const hls = new Hls({
       enableWorker: true,
       backBufferLength: 90,
+      startLevel: resolvedSource.muxPlaybackId ? 0 : -1,
     });
 
     hlsRef.current = hls;
@@ -449,17 +469,20 @@ export function VideoPlayer({
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
       const options = buildQualityOptions(hls.levels);
       setQualityOptions(options);
-      if (options.length > 0) {
-        const highestLevel = options[options.length - 1].index;
+      const highestLevel = getHighestQualityIndex(hls.levels);
+      if (highestLevel >= 0) {
+        hls.currentLevel = highestLevel;
         hls.loadLevel = highestLevel;
         hls.nextLevel = highestLevel;
         setSelectedQuality(highestLevel);
+      } else {
+        setSelectedQuality(-1);
       }
       setLoading(false);
       setError(false);
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
-      if (hls.autoLevelEnabled) return;
+      if (hls.autoLevelEnabled || hls.loadLevel < 0) return;
       setSelectedQuality(data.level);
     });
     hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -495,10 +518,8 @@ export function VideoPlayer({
     setPlaying(false);
     setCurrentTime(0);
     setBuffered(0);
-    previewLoopingRef.current = false;
-    setIsPreviewLooping(false);
     setPlayButtonTone("light");
-  }, [autoPlay, previewDuration, previewStart, resolvedSource.src]);
+  }, [autoPlay, resolvedSource.src]);
 
   useEffect(() => {
     const posterUrl = resolvedSource.poster?.trim();
@@ -519,90 +540,6 @@ export function VideoPlayer({
     };
   }, [resolvedSource.poster]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isPreviewMode) return;
-
-    const updateToneFromFrame = () => {
-      if (!video.videoWidth || !video.videoHeight) return;
-      const luminance = sampleAverageLuminance(video, video.videoWidth, video.videoHeight);
-      setPlayButtonTone((previousTone) => getToneFromLuminance(luminance, previousTone));
-    };
-
-    const handleFrameReady = () => {
-      updateToneFromFrame();
-    };
-
-    const intervalId = window.setInterval(updateToneFromFrame, 1400);
-    video.addEventListener("loadeddata", handleFrameReady);
-    video.addEventListener("seeked", handleFrameReady);
-
-    return () => {
-      window.clearInterval(intervalId);
-      video.removeEventListener("loadeddata", handleFrameReady);
-      video.removeEventListener("seeked", handleFrameReady);
-    };
-  }, [isPreviewMode, resolvedSource.src]);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || !isPreviewMode) return;
-
-    const startPreviewLoop = async () => {
-      const duration = Number.isFinite(v.duration) ? v.duration : 0;
-      const safeStart = duration > 0
-        ? Math.min(normalizedPreviewStart, Math.max(duration - 0.15, 0))
-        : normalizedPreviewStart;
-      v.pause();
-      v.currentTime = safeStart;
-      v.defaultMuted = true;
-      v.muted = true;
-      v.loop = false;
-      previewLoopingRef.current = true;
-      setIsPreviewLooping(true);
-      try {
-        await v.play();
-      } catch {
-        previewLoopingRef.current = false;
-        setIsPreviewLooping(false);
-      }
-    };
-
-    const handleCanPlay = () => {
-      void startPreviewLoop();
-    };
-
-    if (v.readyState >= 2) {
-      void startPreviewLoop();
-      return;
-    }
-
-    v.addEventListener("canplay", handleCanPlay);
-    v.addEventListener("loadedmetadata", handleCanPlay);
-    return () => {
-      v.removeEventListener("canplay", handleCanPlay);
-      v.removeEventListener("loadedmetadata", handleCanPlay);
-    };
-  }, [isPreviewMode, normalizedPreviewDuration, normalizedPreviewStart]);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || !isPreviewLooping || !normalizedPreviewDuration) return;
-    const previewEnd = normalizedPreviewStart + normalizedPreviewDuration;
-
-    const enforcePreviewLoop = () => {
-      if (v.currentTime >= previewEnd) {
-        v.currentTime = normalizedPreviewStart;
-      }
-    };
-
-    v.addEventListener("timeupdate", enforcePreviewLoop);
-    return () => {
-      previewLoopingRef.current = false;
-      v.removeEventListener("timeupdate", enforcePreviewLoop);
-    };
-  }, [isPreviewLooping, normalizedPreviewDuration, normalizedPreviewStart]);
-
   // Fullscreen change listener
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -612,13 +549,13 @@ export function VideoPlayer({
 
   // Auto-hide controls when playing
   useEffect(() => {
-    if (interactivePlaying) {
+    if (playing) {
       controlsTimerRef.current = setTimeout(() => setShowControls(false), 3000);
     } else {
       setShowControls(true);
     }
     return () => { if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current); };
-  }, [interactivePlaying]);
+  }, [playing]);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
@@ -635,7 +572,7 @@ export function VideoPlayer({
           borderRadius: isFullscreen ? 0 : `${borderRadius}px`,
         }}
         onMouseMove={showControlsTemporarily}
-        onMouseLeave={() => { if (interactivePlaying) setShowControls(false); setShowSettings(false); }}
+        onMouseLeave={() => { if (playing) setShowControls(false); setShowSettings(false); }}
         tabIndex={0}
         onClick={(e) => {
           // Don't toggle on control clicks
@@ -649,18 +586,23 @@ export function VideoPlayer({
           poster={resolvedSource.poster || undefined}
           autoPlay={autoPlay}
           loop={loop}
-          muted={muted || isPreviewMode}
+          muted={muted}
           playsInline
           preload="auto"
           crossOrigin="anonymous"
-          className="h-full w-full object-contain"
+          className="h-full w-full"
+          style={{
+            objectFit: fit,
+            transform: normalizedZoom === 1 ? undefined : `scale(${normalizedZoom})`,
+            transformOrigin: "center center",
+          }}
         />
 
-        {/* Large center play button (before first play) */}
-        {!error && isPreviewMode && (
+        {/* Large center play button */}
+        {showPrimaryPlayButton && (
           <div className="absolute inset-0 flex items-center justify-center z-10">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-md transition-transform hover:scale-110"
+              className="w-16 h-16 rounded-full flex cursor-pointer items-center justify-center backdrop-blur-md transition-transform hover:scale-110"
               style={{
                 backgroundColor: playButtonTone === "dark" ? "rgba(8,8,8,0.55)" : "rgba(250,250,250,0.15)",
                 border: playButtonTone === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.2)",
@@ -821,7 +763,7 @@ export function VideoPlayer({
                 style={{ fontSize: "11px" }}
                 title="Configuracoes"
               >
-                {qualityButtonLabel || (playbackRate !== 1 ? `${playbackRate}x` : <Settings size={14} />)}
+                <Settings size={14} />
               </button>
               {showSettings && (
                 <div

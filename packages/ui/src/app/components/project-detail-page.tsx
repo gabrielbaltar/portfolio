@@ -8,21 +8,43 @@ import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { BlockRenderer } from "./block-renderer";
 import { ContentImage } from "./content-image";
+import { ImageLightbox } from "./image-lightbox";
 import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
 
-function ImageCard({ src, alt, className = "", position = "50% 50%" }: { src: string; alt: string; className?: string; position?: string }) {
+function ImageCard({
+  src,
+  alt,
+  className = "",
+  position = "50% 50%",
+  onClick,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  position?: string;
+  onClick?: () => void;
+}) {
   return (
-    <ContentImage
-      src={src}
-      alt={alt}
-      emptyLabel="Sem imagem"
-      className={`w-full rounded-2xl object-cover ${className}`}
-      position={position}
-      style={{ height: "525px", maxHeight: "525px" }}
-    />
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!src}
+      className="block w-full bg-transparent border-none p-0 text-left disabled:cursor-default"
+      style={{ cursor: src ? "pointer" : "default" }}
+      aria-label={`Ampliar imagem: ${alt}`}
+    >
+      <ContentImage
+        src={src}
+        alt={alt}
+        emptyLabel="Sem imagem"
+        className={`w-full rounded-2xl object-cover ${className}`}
+        position={position}
+        style={{ height: "525px", maxHeight: "525px", cursor: "pointer" }}
+      />
+    </button>
   );
 }
 
@@ -42,6 +64,7 @@ export function ProjectDetailPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
   const backTo = getBackTarget(location.state, "/projects");
 
   useEffect(() => {
@@ -163,6 +186,10 @@ export function ProjectDetailPage() {
 
   const heroImage = project.image || "";
   const gallery = (project.galleryImages || []).filter(Boolean);
+  const openImageLightbox = (src: string, alt: string) => {
+    if (!src) return;
+    setLightboxImage({ src, alt });
+  };
 
   // Metadata columns
   const meta = [
@@ -254,13 +281,18 @@ export function ProjectDetailPage() {
 
       {/* Hero Image */}
       <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-10">
-        <ImageCard src={heroImage} alt={project.title} position={project.imagePosition || "50% 50%"} />
+        <ImageCard
+          src={heroImage}
+          alt={project.title}
+          position={project.imagePosition || "50% 50%"}
+          onClick={() => openImageLightbox(heroImage, project.title)}
+        />
       </ScrollReveal>
 
       {/* Content blocks */}
       {project.contentBlocks && project.contentBlocks.length > 0 && (
         <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-12">
-          <BlockRenderer blocks={project.contentBlocks} />
+          <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={openImageLightbox} />
         </ScrollReveal>
       )}
 
@@ -269,11 +301,23 @@ export function ProjectDetailPage() {
         <div className="max-w-[700px] mx-auto px-5 mt-12 flex flex-col gap-8">
           {gallery.map((img, i) => (
             <ScrollReveal key={i}>
-              <ImageCard src={img} alt={`${project.title} gallery ${i + 1}`} position={project.galleryPositions?.[i] || "50% 50%"} />
+              <ImageCard
+                src={img}
+                alt={`${project.title} gallery ${i + 1}`}
+                position={project.galleryPositions?.[i] || "50% 50%"}
+                onClick={() => openImageLightbox(img, `${project.title} gallery ${i + 1}`)}
+              />
             </ScrollReveal>
           ))}
         </div>
       )}
+
+      <ImageLightbox
+        open={Boolean(lightboxImage)}
+        src={lightboxImage?.src || ""}
+        alt={lightboxImage?.alt || ""}
+        onClose={() => setLightboxImage(null)}
+      />
 
       {/* View more projects */}
       <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-20">

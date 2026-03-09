@@ -47,7 +47,7 @@ export function extractMuxPlaybackId(value: string) {
 }
 
 export function buildMuxPlaybackUrl(playbackId: string) {
-  return `https://${MUX_STREAM_HOST}/${playbackId}.m3u8`;
+  return `https://${MUX_STREAM_HOST}/${playbackId}.m3u8?rendition_order=desc`;
 }
 
 export function buildMuxPosterUrl(playbackId: string, time = 0) {

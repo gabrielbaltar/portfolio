@@ -90,6 +90,28 @@ const PORTFOLIO_CODE_THEME: PrismTheme = {
   ],
 };
 
+const PORTFOLIO_CODE_LIGHT_THEME: PrismTheme = {
+  plain: {
+    color: "#18202c",
+    backgroundColor: "#f6f7fb",
+  },
+  styles: [
+    { types: ["comment", "prolog", "doctype", "cdata"], style: { color: "#7a8494", fontStyle: "italic" } },
+    { types: ["punctuation"], style: { color: "#5b6575" } },
+    { types: ["operator"], style: { color: "#8b5cf6" } },
+    { types: ["keyword", "tag", "selector", "important"], style: { color: "#0f766e", fontWeight: "600" } },
+    { types: ["function"], style: { color: "#b45309" } },
+    { types: ["class-name", "builtin", "property", "attr-name"], style: { color: "#1d4ed8" } },
+    { types: ["boolean", "number", "constant", "symbol"], style: { color: "#c2410c" } },
+    { types: ["string", "char", "attr-value", "inserted"], style: { color: "#be185d" } },
+    { types: ["regex", "entity", "url"], style: { color: "#0f766e" } },
+    { types: ["variable", "namespace"], style: { color: "#18202c" } },
+    { types: ["deleted"], style: { color: "#dc2626" } },
+    { types: ["bold"], style: { fontWeight: "700" } },
+    { types: ["italic"], style: { fontStyle: "italic" } },
+  ],
+};
+
 const TERMINAL_PUBLIC_THEME: PrismTheme = {
   plain: {
     color: "#dde3d8",
@@ -98,6 +120,19 @@ const TERMINAL_PUBLIC_THEME: PrismTheme = {
   styles: [
     { types: ["comment", "prolog", "doctype", "cdata"], style: { color: "#73786f", fontStyle: "italic" } },
     { types: ["punctuation", "operator", "keyword", "string", "number", "function", "boolean", "builtin", "class-name", "tag", "selector", "attr-name", "attr-value", "property", "symbol", "regex", "important", "inserted", "deleted", "variable", "namespace"], style: { color: "#dde3d8" } },
+    { types: ["bold"], style: { fontWeight: "700" } },
+    { types: ["italic"], style: { fontStyle: "italic" } },
+  ],
+};
+
+const TERMINAL_LIGHT_THEME: PrismTheme = {
+  plain: {
+    color: "#2a3128",
+    backgroundColor: "#f4f6f1",
+  },
+  styles: [
+    { types: ["comment", "prolog", "doctype", "cdata"], style: { color: "#7b8477", fontStyle: "italic" } },
+    { types: ["punctuation", "operator", "keyword", "string", "number", "function", "boolean", "builtin", "class-name", "tag", "selector", "attr-name", "attr-value", "property", "symbol", "regex", "important", "inserted", "deleted", "variable", "namespace"], style: { color: "#2a3128" } },
     { types: ["bold"], style: { fontWeight: "700" } },
     { types: ["italic"], style: { fontStyle: "italic" } },
   ],
@@ -122,16 +157,16 @@ function getCodeTheme(theme: "dark" | "light", variant: CodeHighlightVariant, la
   }
 
   if (isTerminalLikeLanguage(language)) {
-    return TERMINAL_PUBLIC_THEME;
+    return theme === "light" ? TERMINAL_LIGHT_THEME : TERMINAL_PUBLIC_THEME;
   }
 
-  return PORTFOLIO_CODE_THEME;
+  return theme === "light" ? PORTFOLIO_CODE_LIGHT_THEME : PORTFOLIO_CODE_THEME;
 }
 
 function getScrollbarStyles(theme: "dark" | "light", variant: CodeHighlightVariant, backgroundColor: string): CSSProperties {
   const thumbColor = variant === "editor"
     ? (theme === "light" ? "rgba(36, 45, 62, 0.28)" : "rgba(152, 180, 214, 0.28)")
-    : "rgba(255, 255, 255, 0.18)";
+    : (theme === "light" ? "rgba(73, 82, 97, 0.22)" : "rgba(255, 255, 255, 0.18)");
 
   return {
     "--code-scroll-track": backgroundColor,

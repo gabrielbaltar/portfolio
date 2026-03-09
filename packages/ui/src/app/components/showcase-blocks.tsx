@@ -116,7 +116,7 @@ function parseFontSizeToPx(value: string | undefined) {
 
 function getTypographySampleMinHeight(value: string | undefined) {
   const px = parseFontSizeToPx(value);
-  return `${Math.max(128, Math.min(260, Math.round(px * 2 + 80)))}px`;
+  return `${Math.max(84, Math.min(240, Math.round(px * 1.45 + 24)))}px`;
 }
 
 function StyleGuideBlockView({
@@ -304,7 +304,7 @@ function TypographyBlockView({
                 className="border-t px-4 py-5 md:px-5 md:py-6"
                 style={{ backgroundColor: theme.surfaceAlt, borderColor: theme.border }}
               >
-                <div className="flex flex-col justify-between gap-6" style={{ minHeight: getTypographySampleMinHeight(font.size) }}>
+                <div className="flex flex-col justify-between gap-4" style={{ minHeight: getTypographySampleMinHeight(font.size) }}>
                   <p
                     className="w-full min-w-0"
                     style={{
