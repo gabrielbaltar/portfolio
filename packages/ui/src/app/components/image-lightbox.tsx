@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface ImageLightboxProps {
   open: boolean;
@@ -37,6 +36,7 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
       className="fixed inset-0 z-[120] flex items-center justify-center p-4 backdrop-blur-xl md:p-8"
       style={{ backgroundColor: "rgba(32, 32, 34, 0.72)" }}
       onClick={onClose}
+      onContextMenu={(event) => event.preventDefault()}
       role="dialog"
       aria-modal="true"
       aria-label={alt || "Imagem ampliada"}
@@ -58,11 +58,22 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
       <div
         className="flex max-h-[88vh] max-w-[92vw] items-center justify-center"
         onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => event.preventDefault()}
       >
-        <ImageWithFallback
-          src={src}
-          alt={alt}
-          className="block h-auto max-h-[88vh] w-auto max-w-[92vw] object-contain"
+        <div
+          role="img"
+          aria-label={alt}
+          className="max-h-[88vh] max-w-[92vw] select-none bg-center bg-no-repeat"
+          style={{
+            width: "min(92vw, 1500px)",
+            height: "min(88vh, 1100px)",
+            backgroundImage: `url("${src}")`,
+            backgroundSize: "contain",
+            WebkitTouchCallout: "none",
+            userSelect: "none",
+          }}
+          onContextMenu={(event) => event.preventDefault()}
+          onDragStart={(event) => event.preventDefault()}
         />
       </div>
     </div>
