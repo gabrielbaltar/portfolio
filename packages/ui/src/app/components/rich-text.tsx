@@ -22,6 +22,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { type Theme, useTheme } from "./theme-context";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -124,6 +125,71 @@ function sanitizeInlineFontSize(value?: string | null) {
   const size = Number.parseInt(normalized, 10);
   if (Number.isNaN(size) || size < 10 || size > 96) return null;
   return `${size}px`;
+}
+
+function parseInlineRgbColor(value: string) {
+  const normalized = sanitizeInlineColor(value);
+  if (!normalized || normalized === "inherit") return null;
+
+  if (normalized.startsWith("#")) {
+    const hex = normalized.slice(1);
+    if (hex.length === 3) {
+      return {
+        r: Number.parseInt(hex[0] + hex[0], 16),
+        g: Number.parseInt(hex[1] + hex[1], 16),
+        b: Number.parseInt(hex[2] + hex[2], 16),
+      };
+    }
+
+    if (hex.length === 6) {
+      return {
+        r: Number.parseInt(hex.slice(0, 2), 16),
+        g: Number.parseInt(hex.slice(2, 4), 16),
+        b: Number.parseInt(hex.slice(4, 6), 16),
+      };
+    }
+
+    return null;
+  }
+
+  const match = normalized.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (!match) return null;
+
+  return {
+    r: Number.parseInt(match[1], 10),
+    g: Number.parseInt(match[2], 10),
+    b: Number.parseInt(match[3], 10),
+  };
+}
+
+function toRelativeLuminanceChannel(channel: number) {
+  const normalized = channel / 255;
+  return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function getRelativeLuminance(color: { r: number; g: number; b: number }) {
+  return (
+    0.2126 * toRelativeLuminanceChannel(color.r) +
+    0.7152 * toRelativeLuminanceChannel(color.g) +
+    0.0722 * toRelativeLuminanceChannel(color.b)
+  );
+}
+
+function resolveThemeAwareInlineColor(color: string | null, theme: Theme) {
+  if (!color || color === "inherit" || theme !== "light") return color || undefined;
+
+  const parsedColor = parseInlineRgbColor(color);
+  if (!parsedColor) return color;
+
+  const channelSpread = Math.max(parsedColor.r, parsedColor.g, parsedColor.b) - Math.min(parsedColor.r, parsedColor.g, parsedColor.b);
+  const isNearNeutral = channelSpread <= 18;
+  const isVeryLight = getRelativeLuminance(parsedColor) >= 0.88;
+
+  if (isNearNeutral && isVeryLight) {
+    return "var(--text-primary, #111111)";
+  }
+
+  return color;
 }
 
 function appendNode(target: HTMLElement, node: Node) {
@@ -271,7 +337,7 @@ export function isRichTextEmpty(value?: string | null) {
   return richTextToPlainText(normalized) === "";
 }
 
-function renderNode(node: Node, key: string): ReactNode {
+function renderNode(node: Node, key: string, theme: Theme): ReactNode {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent;
   }
@@ -279,7 +345,7 @@ function renderNode(node: Node, key: string): ReactNode {
   if (!(node instanceof HTMLElement)) return null;
 
   const tagName = node.tagName.toLowerCase();
-  const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`));
+  const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`, theme));
 
   if (tagName === "br") return <br key={key} />;
   if (tagName === "strong" || tagName === "b") return <strong key={key}>{children}</strong>;
@@ -332,11 +398,12 @@ function renderNode(node: Node, key: string): ReactNode {
     const inlineColor = sanitizeInlineColor(node.style.color);
     const inlineFontSize = sanitizeInlineFontSize(node.style.fontSize);
     if (inlineColor || inlineFontSize) {
+      const resolvedColor = resolveThemeAwareInlineColor(inlineColor, theme);
       return (
         <span
           key={key}
           style={{
-            color: inlineColor || undefined,
+            color: resolvedColor,
             fontSize: inlineFontSize || undefined,
           }}
         >
@@ -356,6 +423,7 @@ export function RichTextContent({
   value?: string | null;
   placeholder?: string;
 }) {
+  const { theme } = useTheme();
   const normalized = normalizeRichTextHtml(value);
 
   if (!normalized) {
@@ -369,7 +437,7 @@ export function RichTextContent({
   const parser = new DOMParser();
   const parsed = parser.parseFromString(normalized, "text/html");
 
-  return <>{Array.from(parsed.body.childNodes).map((node, index) => renderNode(node, `rich-${index}`))}</>;
+  return <>{Array.from(parsed.body.childNodes).map((node, index) => renderNode(node, `rich-${index}`, theme))}</>;
 }
 
 function insertHtmlAtSelection(html: string) {
