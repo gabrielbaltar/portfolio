@@ -131,7 +131,13 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
   }
 }
 
-function BlockTypeSelector({ onSelect }: { onSelect: (type: ContentBlock["type"]) => void }) {
+function BlockTypeSelector({
+  onSelect,
+  compact = false,
+}: {
+  onSelect: (type: ContentBlock["type"]) => void;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -154,10 +160,14 @@ function BlockTypeSelector({ onSelect }: { onSelect: (type: ContentBlock["type"]
       <button
         ref={btnRef}
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#363636] text-[#ababab] hover:text-white hover:border-[#555] transition-colors cursor-pointer"
-        style={{ fontSize: "13px" }}
+        className={
+          compact
+            ? "flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[#2f2f2f] px-3 py-2 text-[#777] transition-colors hover:border-[#555] hover:text-white cursor-pointer"
+            : "flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#363636] text-[#ababab] hover:text-white hover:border-[#555] transition-colors cursor-pointer"
+        }
+        style={{ fontSize: compact ? "12px" : "13px", backgroundColor: compact ? "#0d0d0d" : undefined }}
       >
-        <Plus size={14} /> Adicionar bloco
+        <Plus size={14} /> {compact ? "Adicionar aqui" : "Adicionar bloco"}
       </button>
       {open && (
         <>
@@ -1550,16 +1560,20 @@ function BlockEditorInner({ blocks, onChange }: { blocks: ContentBlock[]; onChan
       </label>
       <div className="space-y-2">
         {blocks.map((block, i) => (
-          <DraggableBlock
-            key={`block-${i}-${block.type}`}
-            block={block}
-            index={i}
-            total={blocks.length}
-            onChange={(b) => updateBlock(i, b)}
-            onRemove={() => removeBlock(i)}
-            onMove={(dir) => moveBlockByButton(i, dir)}
-            moveBlock={moveBlockByDrag}
-          />
+          <div key={`block-${i}-${block.type}`} className="space-y-2">
+            <DraggableBlock
+              block={block}
+              index={i}
+              total={blocks.length}
+              onChange={(b) => updateBlock(i, b)}
+              onRemove={() => removeBlock(i)}
+              onMove={(dir) => moveBlockByButton(i, dir)}
+              moveBlock={moveBlockByDrag}
+            />
+            {i < blocks.length - 1 && (
+              <BlockTypeSelector compact onSelect={(type) => addBlock(type, i)} />
+            )}
+          </div>
         ))}
       </div>
       <BlockTypeSelector onSelect={(type) => addBlock(type)} />
