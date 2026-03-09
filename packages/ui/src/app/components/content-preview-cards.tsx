@@ -79,34 +79,38 @@ export function ProjectPreviewCard({
         style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="flex items-start justify-between gap-3">
-          <p
-            className="flex min-h-[48px] min-w-0 flex-1 items-start gap-1.5"
-            style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
-          >
+          <div className="flex min-w-0 flex-1 items-start gap-1.5">
             {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
-            <span
-              className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
-              style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-              }}
-            >
-              {title}
-            </span>
-          </p>
+            <div className="min-w-0 flex-1">
+              <p
+                className="min-h-[48px] overflow-hidden text-ellipsis break-words"
+                style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+              >
+                <span
+                  className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {title}
+                </span>
+              </p>
+              <p
+                className="line-clamp-1"
+                style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
+              >
+                {category || "Sem categoria"}
+              </p>
+            </div>
+          </div>
           <ArrowUpRight
             size={16}
             className="mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
             style={{ color: "var(--text-secondary, #ababab)" }}
           />
         </div>
-        <p
-          className="line-clamp-1"
-          style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
-        >
-          {category || "Sem categoria"}
-        </p>
       </div>
     </Link>
   );
