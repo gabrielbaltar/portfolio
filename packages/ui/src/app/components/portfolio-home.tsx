@@ -413,13 +413,13 @@ export function PortfolioHome() {
               >
                 <div
                   className="w-8 h-8 rounded-md shrink-0 flex items-center justify-center"
-                  style={{ backgroundColor: item.color || "var(--border-primary)" }}
+                  style={{ backgroundColor: item.logo ? "transparent" : (item.color || "var(--border-primary)") }}
                 >
                   {item.logo ? (
                     <img
                       src={item.logo}
                       alt={item.name}
-                      className="h-5 w-5 object-contain"
+                      className="h-6 w-6 object-contain"
                       draggable={false}
                     />
                   ) : (
