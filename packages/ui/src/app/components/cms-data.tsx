@@ -49,6 +49,7 @@ interface CMSContextType {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  saveAll: () => Promise<void>;
   updateData: (newData: CMSData) => void;
   updateSiteSettings: (siteSettings: SiteSettings) => void;
   updateProfile: (profile: ProfileData) => void;
@@ -85,6 +86,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const dataRef = useRef<CMSData>(data);
+  const persistedDataRef = useRef<CMSData>(data);
 
   useEffect(() => {
     dataRef.current = data;
@@ -98,6 +100,8 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     try {
       const nextData = await loadByMode(mode);
       setData(nextData);
+      dataRef.current = nextData;
+      persistedDataRef.current = nextData;
       if (!silent) {
         setError(null);
       }
@@ -168,6 +172,10 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       dataRef.current = { ...dataRef.current, [key]: previous } as CMSData;
       toast.error(message);
     });
+
+    void savePromise.then(() => {
+      persistedDataRef.current = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
+    });
   };
 
   const updateCollection = <K extends CMSCollectionName>(key: K, nextValue: CMSData[K]) => {
@@ -178,12 +186,18 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
 
     if (mode !== "cms") return;
 
-    void persistCollection(key, previous, nextValue).catch((err) => {
+    const savePromise = persistCollection(key, previous, nextValue);
+
+    void savePromise.catch((err) => {
       const message = err instanceof Error ? err.message : "Erro ao salvar alteracoes.";
       const reverted = { ...dataRef.current, [key]: previous } as CMSData;
       setData(reverted);
       dataRef.current = reverted;
       toast.error(message);
+    });
+
+    void savePromise.then(() => {
+      persistedDataRef.current = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
     });
   };
 
@@ -221,6 +235,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
         dataProvider.saveCollection("recommendations", previous.recommendations, nextData.recommendations),
         dataProvider.saveCollection("media", previous.media, nextData.media),
       ]);
+      persistedDataRef.current = nextData;
       toast.success("Conteudo demo restaurado.");
     } catch (err) {
       setData(previous);
@@ -230,6 +245,30 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     }
   };
 
+  const saveAll = async () => {
+    if (mode !== "cms") return;
+
+    const previous = persistedDataRef.current;
+    const nextData = dataRef.current;
+
+    await dataProvider.saveSiteSettings(nextData.siteSettings);
+    await dataProvider.saveProfile(nextData.profile);
+    await Promise.all([
+      dataProvider.saveCollection("projects", previous.projects, nextData.projects),
+      dataProvider.saveCollection("blogPosts", previous.blogPosts, nextData.blogPosts),
+      dataProvider.saveCollection("pages", previous.pages, nextData.pages),
+      dataProvider.saveCollection("experiences", previous.experiences, nextData.experiences),
+      dataProvider.saveCollection("education", previous.education, nextData.education),
+      dataProvider.saveCollection("certifications", previous.certifications, nextData.certifications),
+      dataProvider.saveCollection("stack", previous.stack, nextData.stack),
+      dataProvider.saveCollection("awards", previous.awards, nextData.awards),
+      dataProvider.saveCollection("recommendations", previous.recommendations, nextData.recommendations),
+      dataProvider.saveCollection("media", previous.media, nextData.media),
+    ]);
+
+    persistedDataRef.current = nextData;
+  };
+
   const value = useMemo<CMSContextType>(
     () => ({
       mode,
@@ -237,6 +276,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       loading,
       error,
       refresh,
+      saveAll,
       updateData,
       updateSiteSettings: (siteSettings) => updateSingleton("siteSettings", siteSettings),
       updateProfile: (profile) => updateSingleton("profile", profile),
@@ -254,7 +294,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       removeMediaItem,
       resetData,
     }),
-    [data, error, loading, mode],
+    [data, error, loading, mode, saveAll],
   );
 
   return <CMSContext.Provider value={value}>{children}</CMSContext.Provider>;
@@ -266,6 +306,7 @@ const fallbackContext: CMSContextType = {
   loading: false,
   error: null,
   refresh: async () => {},
+  saveAll: async () => {},
   updateData: () => {},
   updateSiteSettings: () => {},
   updateProfile: () => {},

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   LayoutDashboard, FileText, Image, Settings, LogOut,
   ChevronLeft, ChevronRight, Briefcase, BookOpen, Globe
@@ -34,7 +35,7 @@ const NAV_SECTIONS = [
 export function CMSLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data } = useCMS();
+  const { data, saveAll } = useCMS();
   const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
@@ -46,6 +47,30 @@ export function CMSLayout() {
   } as const;
 
   const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:4173";
+  const hasLocalShortcut =
+    location.pathname === "/settings" ||
+    /^\/content\/(projects|articles|pages)\/[^/]+\/edit$/.test(location.pathname);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      if (event.key.toLowerCase() !== "s") return;
+      if (hasLocalShortcut) return;
+
+      event.preventDefault();
+      void saveAll()
+        .then(() => {
+          toast.success("Conteudo salvo.");
+        })
+        .catch((error) => {
+          console.error("Erro ao salvar CMS via atalho global:", error);
+          toast.error(error instanceof Error ? error.message : "Erro ao salvar alteracoes.");
+        });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasLocalShortcut, saveAll]);
 
   const handleSignOut = async () => {
     try {
