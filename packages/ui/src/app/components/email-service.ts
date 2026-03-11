@@ -6,9 +6,15 @@
 import emailjs from "@emailjs/browser";
 
 // ─── EmailJS credentials ─────────────────────────────────────
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
+const EMAILJS_FALLBACK_CONFIG = {
+  serviceId: "service_idmftes",
+  templateId: "template_ob93doe",
+  publicKey: "q77sMIK9f29XKPTyQ",
+} as const;
+
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || EMAILJS_FALLBACK_CONFIG.serviceId;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || EMAILJS_FALLBACK_CONFIG.templateId;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || EMAILJS_FALLBACK_CONFIG.publicKey;
 // ──────────────────────────────────────────────────────────────
 
 /** Initialize EmailJS — call once on app mount */
