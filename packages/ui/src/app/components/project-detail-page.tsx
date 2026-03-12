@@ -365,8 +365,6 @@ export function ProjectDetailPage() {
                 subtitle={cardCopy.subtitle}
                 image={p.image || ""}
                 imagePosition={p.imagePosition || "50% 50%"}
-                galleryImages={p.galleryImages}
-                galleryPositions={p.galleryPositions}
                 locked={Boolean(p.password && p.password.trim() !== "")}
               />
             );

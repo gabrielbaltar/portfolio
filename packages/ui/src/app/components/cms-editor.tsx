@@ -28,6 +28,7 @@ import { CodeHighlight } from "./code-highlight";
 import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
+import { ContentImage } from "./content-image";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
@@ -605,21 +606,22 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               style={{ borderColor: "#1e1e1e" }}
             >
               <span className="text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Previa do card com slider
+                Previa do card
               </span>
             </div>
             <div className={contentType === "articles" ? "grid gap-0 min-[700px]:grid-cols-[1.1fr,0.9fr]" : ""}>
               <div
                 style={contentType === "articles" ? { borderBottom: "1px solid #1e1e1e", borderRight: previewMode === "desktop" ? "1px solid #1e1e1e" : undefined } : undefined}
               >
-                <PreviewMediaSlider
-                  title={cardPreviewTitle || item.title || "Preview"}
-                  image={item.image}
-                  imagePosition={item.imagePosition || "50% 50%"}
-                  galleryImages={item.galleryImages || []}
-                  galleryPositions={item.galleryPositions || []}
-                  aspectRatio={contentType === "projects" ? "700 / 525" : "3 / 2"}
-                />
+                <div style={{ aspectRatio: contentType === "projects" ? "700 / 525" : "3 / 2" }}>
+                  <ContentImage
+                    src={item.image}
+                    alt={cardPreviewTitle || item.title || "Preview"}
+                    emptyLabel="Sem capa"
+                    className="h-full w-full object-cover"
+                    position={item.imagePosition || "50% 50%"}
+                  />
+                </div>
               </div>
               <div className="space-y-2 px-4 py-4">
                 <p style={{ fontSize: "17px", lineHeight: "25px", color: "#fafafa" }}>
@@ -1095,9 +1097,9 @@ function ImageUrlField({
       if (uploadedImages.length === 1) {
         toast.success("Imagem enviada em qualidade original.");
       } else if (result.coverUpdated && result.galleryAdded > 0) {
-        toast.success(`Slider configurado com ${result.galleryAdded + 1} imagens.`);
+        toast.success(`Capa atualizada e ${result.galleryAdded} imagens enviadas para a galeria.`);
       } else if (result.galleryAdded > 0) {
-        toast.success(`${result.galleryAdded} imagens adicionadas ao slider.`);
+        toast.success(`${result.galleryAdded} imagens adicionadas na galeria.`);
       } else {
         toast.info("As imagens selecionadas ja estavam cadastradas.");
       }
@@ -1166,8 +1168,8 @@ function ImageUrlField({
         </div>
         <p className="mt-2 px-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
           {dragOver
-            ? "Solte aqui. Varias imagens viram slider automaticamente."
-            : "Arraste uma ou varias imagens aqui. Se enviar varias, a primeira vira capa e as demais entram no slider."}
+            ? "Solte aqui para atualizar a capa e enviar o restante para a galeria."
+            : "Arraste uma ou varias imagens aqui. A primeira vira capa e as demais vao para a galeria."}
         </p>
       </div>
       <input
@@ -1182,7 +1184,7 @@ function ImageUrlField({
         }}
       />
       <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-        Use este campo para trocar a capa ou soltar varias imagens de uma vez e montar o slider do card.
+        Use este campo para trocar a capa. Se enviar varias imagens, as extras vao para a galeria do conteudo.
       </p>
     </div>
   );
@@ -1300,7 +1302,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
       <div className="space-y-1">
         <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
         <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-          Adicione imagens extras por upload ou URL. Quando houver mais de uma imagem, o card publico mostra o slider automaticamente.
+          Adicione imagens extras por upload ou URL para montar a galeria do case ou artigo.
         </p>
       </div>
       <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>

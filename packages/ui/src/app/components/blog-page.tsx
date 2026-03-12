@@ -55,8 +55,6 @@ export function BlogPage() {
                   description={post.description}
                   image={post.image}
                   imagePosition={(post as any).imagePosition || "50% 50%"}
-                  galleryImages={post.galleryImages}
-                  galleryPositions={post.galleryPositions}
                   publisher={post.publisher}
                   date={post.date}
                   category={(post as any).category}

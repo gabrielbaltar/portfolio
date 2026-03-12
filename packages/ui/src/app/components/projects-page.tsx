@@ -103,8 +103,6 @@ export function ProjectsPage() {
                     subtitle={cardCopy.subtitle}
                     image={project.image}
                     imagePosition={(project as any).imagePosition || "50% 50%"}
-                    galleryImages={project.galleryImages}
-                    galleryPositions={project.galleryPositions}
                     locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
                   />
                 </motion.div>

@@ -10,8 +10,6 @@ type ProjectPreviewCardProps = {
   subtitle?: string;
   image?: string;
   imagePosition?: string;
-  galleryImages?: string[];
-  galleryPositions?: string[];
   locked?: boolean;
   className?: string;
 };
@@ -22,8 +20,6 @@ type ArticlePreviewCardProps = {
   description?: string;
   image?: string;
   imagePosition?: string;
-  galleryImages?: string[];
-  galleryPositions?: string[];
   publisher?: string;
   date?: string;
   category?: string;
@@ -232,8 +228,6 @@ export function ProjectPreviewCard({
   subtitle,
   image,
   imagePosition = "50% 50%",
-  galleryImages = [],
-  galleryPositions = [],
   locked = false,
   className = "",
 }: ProjectPreviewCardProps) {
@@ -255,14 +249,15 @@ export function ProjectPreviewCard({
       />
 
       <div className="relative z-20">
-        <PreviewMediaSlider
-          title={title}
-          image={image}
-          imagePosition={imagePosition}
-          galleryImages={galleryImages}
-          galleryPositions={galleryPositions}
-          aspectRatio="700 / 525"
-        />
+        <div className="pointer-events-none" style={{ aspectRatio: "700 / 525" }}>
+          <ContentImage
+            src={image}
+            alt={title}
+            emptyLabel="Sem capa"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            position={imagePosition}
+          />
+        </div>
         {locked && (
           <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
             <div
@@ -329,8 +324,6 @@ export function ArticlePreviewCard({
   description,
   image,
   imagePosition = "50% 50%",
-  galleryImages = [],
-  galleryPositions = [],
   publisher,
   date,
   category,
@@ -362,14 +355,15 @@ export function ArticlePreviewCard({
         className="relative z-20 w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
         style={{ borderRight: "1px solid var(--border-secondary, #242424)" }}
       >
-        <PreviewMediaSlider
-          title={title}
-          image={image}
-          imagePosition={imagePosition}
-          galleryImages={galleryImages}
-          galleryPositions={galleryPositions}
-          aspectRatio="3 / 2"
-        />
+        <div className="pointer-events-none" style={{ aspectRatio: "3 / 2" }}>
+          <ContentImage
+            src={image}
+            alt={title}
+            emptyLabel="Sem capa"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            position={imagePosition}
+          />
+        </div>
       </div>
 
       <div className="pointer-events-none relative z-20 flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4">

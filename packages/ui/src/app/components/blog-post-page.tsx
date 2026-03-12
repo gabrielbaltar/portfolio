@@ -478,8 +478,6 @@ export function BlogPostPage() {
                     description={relatedPost.description}
                     image={relatedPost.image || ""}
                     imagePosition={(relatedPost as any).imagePosition || "50% 50%"}
-                    galleryImages={relatedPost.galleryImages}
-                    galleryPositions={relatedPost.galleryPositions}
                     publisher={relatedPost.publisher}
                     date={relatedPost.date}
                     category={(relatedPost as any).category}
