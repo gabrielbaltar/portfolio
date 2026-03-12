@@ -1197,8 +1197,6 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [urlInput, setUrlInput] = useState("");
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return items;
@@ -1331,7 +1329,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           Adicione imagens extras por upload ou URL para montar a galeria do case ou artigo.
         </p>
         <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
-          Arraste para reordenar, clique para ver inteira e use reposicionar para ajustar o enquadramento.
+          Clique para ver inteira e use o menu de 3 pontos para reordenar, reposicionar ou remover.
         </p>
       </div>
       <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
@@ -1376,28 +1374,10 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
             onChange={(pos) => handlePositionChange(i, pos)}
             onRemove={() => handleRemove(i)}
             height={160}
-            sortable
-            isSortTarget={dropIndex === i}
-            onSortStart={() => {
-              setDraggedIndex(i);
-              setDropIndex(i);
-            }}
-            onSortOver={(event) => {
-              event.preventDefault();
-              if (draggedIndex == null || draggedIndex === i) return;
-              setDropIndex(i);
-            }}
-            onSortDrop={(event) => {
-              event.preventDefault();
-              if (draggedIndex == null) return;
-              handleMove(draggedIndex, i);
-              setDraggedIndex(null);
-              setDropIndex(null);
-            }}
-            onSortEnd={() => {
-              setDraggedIndex(null);
-              setDropIndex(null);
-            }}
+            canMoveBackward={i > 0}
+            canMoveForward={i < images.length - 1}
+            onMoveBackward={() => handleMove(i, i - 1)}
+            onMoveForward={() => handleMove(i, i + 1)}
           />
         ))}
         <button

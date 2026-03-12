@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Move, Check, RotateCcw, GripVertical, Expand, MoreVertical, Trash2 } from "lucide-react";
+import { Move, Check, RotateCcw, Expand, MoreVertical, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { ImageLightbox } from "./image-lightbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
@@ -262,12 +263,10 @@ export function ImagePositionEditorCompact({
   onRemove,
   alt = "",
   height = 200,
-  sortable = false,
-  onSortStart,
-  onSortOver,
-  onSortDrop,
-  onSortEnd,
-  isSortTarget = false,
+  canMoveBackward = false,
+  canMoveForward = false,
+  onMoveBackward,
+  onMoveForward,
 }: {
   src: string;
   position: string;
@@ -275,12 +274,10 @@ export function ImagePositionEditorCompact({
   onRemove: () => void;
   alt?: string;
   height?: number;
-  sortable?: boolean;
-  onSortStart?: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onSortOver?: (event: React.DragEvent<HTMLDivElement>) => void;
-  onSortDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
-  onSortEnd?: () => void;
-  isSortTarget?: boolean;
+  canMoveBackward?: boolean;
+  canMoveForward?: boolean;
+  onMoveBackward?: () => void;
+  onMoveForward?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -353,11 +350,8 @@ export function ImagePositionEditorCompact({
       style={{
         height: `${height}px`,
         cursor: editing ? (dragging ? "grabbing" : "grab") : "pointer",
-        boxShadow: isSortTarget ? "0 0 0 2px rgba(59,130,246,0.55)" : undefined,
       }}
       onMouseDown={handleMouseDown}
-      onDragOver={onSortOver}
-      onDrop={onSortDrop}
       onClick={(event) => {
         if (event.defaultPrevented || editing) return;
         setLightboxOpen(true);
@@ -397,39 +391,13 @@ export function ImagePositionEditorCompact({
       ) : (
         <>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100" />
-          <div className={`pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between transition-opacity duration-150 ${toolbarVisibility}`}>
-            {sortable ? (
-              <button
-                type="button"
-                draggable
-                onDragStart={(event) => {
-                  event.stopPropagation();
-                  onSortStart?.(event);
-                }}
-                onDragEnd={(event) => {
-                  event.stopPropagation();
-                  onSortEnd?.();
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-white/12 bg-black/65 px-2.5 text-white backdrop-blur-sm cursor-grab active:cursor-grabbing"
-                style={{ fontSize: "11px" }}
-                title="Arraste para reordenar"
-              >
-                <GripVertical size={12} />
-                Ordenar
-              </button>
-            ) : (
-              <span />
-            )}
+          <div className={`pointer-events-none absolute inset-x-2 top-2 flex items-start justify-end transition-opacity duration-150 ${toolbarVisibility}`}>
             <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
+                  onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
-                    event.preventDefault();
                     event.stopPropagation();
                   }}
                   className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-black/65 text-white backdrop-blur-sm cursor-pointer"
@@ -472,6 +440,48 @@ export function ImagePositionEditorCompact({
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
+                  className="cursor-pointer text-[#f5f5f5] focus:bg-[#1f1f1f] focus:text-white"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onChange("50% 50%");
+                    setActionsOpen(false);
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  Centralizar enquadramento
+                </DropdownMenuItem>
+                {(canMoveBackward || canMoveForward) ? <DropdownMenuSeparator className="bg-[#252525]" /> : null}
+                {canMoveBackward ? (
+                  <DropdownMenuItem
+                    className="cursor-pointer text-[#f5f5f5] focus:bg-[#1f1f1f] focus:text-white"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onMoveBackward?.();
+                      setActionsOpen(false);
+                    }}
+                  >
+                    <ArrowUp size={14} />
+                    Mover antes
+                  </DropdownMenuItem>
+                ) : null}
+                {canMoveForward ? (
+                  <DropdownMenuItem
+                    className="cursor-pointer text-[#f5f5f5] focus:bg-[#1f1f1f] focus:text-white"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onMoveForward?.();
+                      setActionsOpen(false);
+                    }}
+                  >
+                    <ArrowDown size={14} />
+                    Mover depois
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator className="bg-[#252525]" />
+                <DropdownMenuItem
                   className="cursor-pointer text-[#ffb4b4] focus:bg-[#2a1414] focus:text-[#ffd2d2]"
                   onSelect={(event) => {
                     event.preventDefault();
@@ -485,16 +495,6 @@ export function ImagePositionEditorCompact({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-3 pb-2 pt-8">
-            <span className="rounded-full border border-white/10 bg-black/55 px-2 py-1 text-white/75 backdrop-blur-sm" style={{ fontSize: "10px" }}>
-              Clique para abrir
-            </span>
-            {canReposition ? (
-              <span className="rounded-full border border-white/10 bg-black/55 px-2 py-1 text-white/75 backdrop-blur-sm" style={{ fontSize: "10px" }}>
-                Ajuste no menu
-              </span>
-            ) : null}
           </div>
         </>
       )}

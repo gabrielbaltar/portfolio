@@ -378,8 +378,6 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
   const imageBlock = block.type === "image" ? block : null;
   const [imageLightbox, setImageLightbox] = useState<{ src: string; alt: string } | null>(null);
-  const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
-  const [dropSlideIndex, setDropSlideIndex] = useState<number | null>(null);
 
   const moveItem = useCallback(<T,>(items: T[], fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return items;
@@ -1448,7 +1446,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                         </span>
                       </div>
                       <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
-                        Arraste para reordenar, clique para ver inteira e ajuste o enquadramento de cada slide.
+                        Clique para ver inteira e use o menu de 3 pontos para reordenar, reposicionar ou remover.
                       </p>
                       <div className="grid grid-cols-2 gap-2 min-[980px]:grid-cols-3">
                         {imageSlides.map((slide, slideIndex) => (
@@ -1468,28 +1466,10 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                               onChange={(position) => handleImagePositionChange(slideIndex, position)}
                               onRemove={() => (slideIndex === 0 ? removePrimaryImage() : removeGalleryImage(slideIndex - 1))}
                               height={160}
-                              sortable
-                              isSortTarget={dropSlideIndex === slideIndex}
-                              onSortStart={() => {
-                                setDraggedSlideIndex(slideIndex);
-                                setDropSlideIndex(slideIndex);
-                              }}
-                              onSortOver={(event) => {
-                                event.preventDefault();
-                                if (draggedSlideIndex == null || draggedSlideIndex === slideIndex) return;
-                                setDropSlideIndex(slideIndex);
-                              }}
-                              onSortDrop={(event) => {
-                                event.preventDefault();
-                                if (draggedSlideIndex == null) return;
-                                handleSlideMove(draggedSlideIndex, slideIndex);
-                                setDraggedSlideIndex(null);
-                                setDropSlideIndex(null);
-                              }}
-                              onSortEnd={() => {
-                                setDraggedSlideIndex(null);
-                                setDropSlideIndex(null);
-                              }}
+                              canMoveBackward={slideIndex > 0}
+                              canMoveForward={slideIndex < imageSlides.length - 1}
+                              onMoveBackward={() => handleSlideMove(slideIndex, slideIndex - 1)}
+                              onMoveForward={() => handleSlideMove(slideIndex, slideIndex + 1)}
                             />
                           </div>
                         ))}
