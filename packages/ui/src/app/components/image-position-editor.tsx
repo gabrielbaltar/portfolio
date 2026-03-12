@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Move, Check, RotateCcw } from "lucide-react";
+import { Move, Check, RotateCcw, GripVertical, Expand } from "lucide-react";
+import { ImageLightbox } from "./image-lightbox";
 
 /**
  * ImagePositionEditor — Allows the user to drag/reposition an image 
@@ -253,16 +254,31 @@ export function ImagePositionEditorCompact({
   position = "50% 50%",
   onChange,
   onRemove,
+  alt = "",
   height = 200,
+  sortable = false,
+  onSortStart,
+  onSortOver,
+  onSortDrop,
+  onSortEnd,
+  isSortTarget = false,
 }: {
   src: string;
   position: string;
   onChange: (position: string) => void;
   onRemove: () => void;
+  alt?: string;
   height?: number;
+  sortable?: boolean;
+  onSortStart?: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onSortOver?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onSortDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
+  onSortEnd?: () => void;
+  isSortTarget?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number }>(() => parsePosition(position));
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -324,12 +340,21 @@ export function ImagePositionEditorCompact({
     <div
       ref={containerRef}
       className={`relative group rounded-lg overflow-hidden ${editing ? "ring-2 ring-blue-500" : ""}`}
-      style={{ height: `${height}px`, cursor: editing ? (dragging ? "grabbing" : "grab") : "default" }}
+      style={{
+        height: `${height}px`,
+        cursor: editing ? (dragging ? "grabbing" : "grab") : "pointer",
+        boxShadow: isSortTarget ? "0 0 0 2px rgba(59,130,246,0.55)" : undefined,
+      }}
       onMouseDown={handleMouseDown}
+      onDragOver={onSortOver}
+      onDrop={onSortDrop}
+      onClick={() => {
+        if (!editing) setLightboxOpen(true);
+      }}
     >
       <img
         src={src}
-        alt=""
+        alt={alt}
         draggable={false}
         onLoad={handleImageLoad}
         className="w-full h-full select-none"
@@ -358,6 +383,37 @@ export function ImagePositionEditorCompact({
         </>
       ) : (
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          {sortable && (
+            <button
+              type="button"
+              draggable
+              onDragStart={(event) => {
+                event.stopPropagation();
+                onSortStart?.(event);
+              }}
+              onDragEnd={(event) => {
+                event.stopPropagation();
+                onSortEnd?.();
+              }}
+              onClick={(event) => event.stopPropagation()}
+              className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-2 py-1 cursor-grab active:cursor-grabbing flex items-center gap-1 backdrop-blur-sm"
+              style={{ fontSize: "11px" }}
+              title="Arraste para reordenar"
+            >
+              <GripVertical size={11} /> Ordenar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLightboxOpen(true);
+            }}
+            className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 backdrop-blur-sm"
+            style={{ fontSize: "11px" }}
+          >
+            <Expand size={11} /> Ver inteira
+          </button>
           {canReposition && (
             <button
               onClick={(e) => { e.stopPropagation(); setEditing(true); }}
@@ -372,6 +428,12 @@ export function ImagePositionEditorCompact({
           >✕ Remover</button>
         </div>
       )}
+      <ImageLightbox
+        open={lightboxOpen}
+        src={src}
+        alt={alt || "Imagem ampliada"}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }

@@ -156,7 +156,7 @@ export function PreviewMediaSlider({
               <button
                 type="button"
                 onClick={goToPrevious}
-                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
                 style={{
                   backgroundColor: "rgba(5, 5, 7, 0.68)",
                   backdropFilter: "blur(12px)",
@@ -170,7 +170,7 @@ export function PreviewMediaSlider({
               <button
                 type="button"
                 onClick={goToNext}
-                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
                 style={{
                   backgroundColor: "rgba(5, 5, 7, 0.68)",
                   backdropFilter: "blur(12px)",
@@ -197,7 +197,7 @@ export function PreviewMediaSlider({
                     key={slide.key}
                     type="button"
                     onClick={(event) => goToSlide(event, index)}
-                    className="rounded-full transition-all"
+                    className="cursor-pointer rounded-full transition-all"
                     style={{
                       width: index === activeIndex ? "20px" : "8px",
                       height: "6px",

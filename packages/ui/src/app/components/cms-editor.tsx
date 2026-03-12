@@ -1197,10 +1197,21 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
+  const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return items;
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(fromIndex, 1);
+    nextItems.splice(toIndex, 0, movedItem);
+    return nextItems;
+  };
 
   const appendImages = (incomingImages: string[]) => {
     const seen = new Set(images);
     const nextImages = [...images];
+    const nextPositions = [...(positions || [])];
     let addedCount = 0;
 
     incomingImages.forEach((image) => {
@@ -1208,10 +1219,14 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
       if (!normalized || seen.has(normalized)) return;
       seen.add(normalized);
       nextImages.push(normalized);
+      nextPositions.push("50% 50%");
       addedCount += 1;
     });
 
     onChange(nextImages);
+    if (onPositionsChange && addedCount > 0) {
+      onPositionsChange(nextPositions);
+    }
     return addedCount;
   };
 
@@ -1289,6 +1304,17 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
     onPositionsChange(newPositions);
   };
 
+  const handleMove = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    onChange(moveItem(images, fromIndex, toIndex));
+
+    if (onPositionsChange) {
+      const safePositions = images.map((_, index) => positions?.[index] || "50% 50%");
+      onPositionsChange(moveItem(safePositions, fromIndex, toIndex));
+    }
+  };
+
   const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setDragOver(false);
@@ -1303,6 +1329,9 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
         <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
         <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
           Adicione imagens extras por upload ou URL para montar a galeria do case ou artigo.
+        </p>
+        <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
+          Arraste para reordenar, clique para ver inteira e use reposicionar para ajustar o enquadramento.
         </p>
       </div>
       <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
@@ -1342,10 +1371,33 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           <ImagePositionEditorCompact
             key={i}
             src={img}
+            alt={`Galeria ${i + 1}`}
             position={(positions && positions[i]) || "50% 50%"}
             onChange={(pos) => handlePositionChange(i, pos)}
             onRemove={() => handleRemove(i)}
             height={160}
+            sortable
+            isSortTarget={dropIndex === i}
+            onSortStart={() => {
+              setDraggedIndex(i);
+              setDropIndex(i);
+            }}
+            onSortOver={(event) => {
+              event.preventDefault();
+              if (draggedIndex == null || draggedIndex === i) return;
+              setDropIndex(i);
+            }}
+            onSortDrop={(event) => {
+              event.preventDefault();
+              if (draggedIndex == null) return;
+              handleMove(draggedIndex, i);
+              setDraggedIndex(null);
+              setDropIndex(null);
+            }}
+            onSortEnd={() => {
+              setDraggedIndex(null);
+              setDropIndex(null);
+            }}
           />
         ))}
         <button

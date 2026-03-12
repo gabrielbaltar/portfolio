@@ -16,6 +16,8 @@ import {
   isAdjustableLineHeightBlock,
 } from "./content-block-utils";
 import { LineHeightControl } from "./line-height-control";
+import { ImagePositionEditorCompact } from "./image-position-editor";
+import { ImageLightbox } from "./image-lightbox";
 import { RichTextEditor } from "./rich-text";
 import { ShowcaseBlockView } from "./showcase-blocks";
 import { VideoPlayer } from "./video-player";
@@ -375,12 +377,55 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const [dragOverIconIndex, setDragOverIconIndex] = useState<number | null>(null);
   const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
   const imageBlock = block.type === "image" ? block : null;
+  const [imageLightbox, setImageLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
+  const [dropSlideIndex, setDropSlideIndex] = useState<number | null>(null);
+
+  const moveItem = useCallback(<T,>(items: T[], fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return items;
+    const nextItems = [...items];
+    const [movedItem] = nextItems.splice(fromIndex, 1);
+    nextItems.splice(toIndex, 0, movedItem);
+    return nextItems;
+  }, []);
 
   const normalizeImageBlock = useCallback((currentBlock: Extract<ContentBlock, { type: "image" }>) => ({
     ...currentBlock,
     galleryImages: [...(currentBlock.galleryImages || [])],
     galleryPositions: [...(currentBlock.galleryPositions || [])],
   }), []);
+
+  const replaceImageSlides = useCallback((slides: { src: string; position: string }[]) => {
+    if (!imageBlock) return;
+
+    const normalizedBlock = normalizeImageBlock(imageBlock);
+    const [coverSlide, ...gallerySlides] = slides.filter((slide) => slide.src.trim() !== "");
+
+    onChange({
+      ...normalizedBlock,
+      url: coverSlide?.src || "",
+      position: coverSlide?.position || normalizedBlock.position || "50% 50%",
+      galleryImages: gallerySlides.map((slide) => slide.src),
+      galleryPositions: gallerySlides.map((slide) => slide.position),
+    } as ContentBlock);
+  }, [imageBlock, normalizeImageBlock, onChange]);
+
+  const imageSlides = imageBlock
+    ? [
+        imageBlock.url
+          ? {
+              src: imageBlock.url,
+              position: imageBlock.position || "50% 50%",
+              label: "Capa",
+            }
+          : null,
+        ...(imageBlock.galleryImages || []).map((src, index) => ({
+          src,
+          position: imageBlock.galleryPositions?.[index] || "50% 50%",
+          label: `Slide ${index + 2}`,
+        })),
+      ].filter((slide): slide is { src: string; position: string; label: string } => Boolean(slide?.src))
+    : [];
 
   const appendImageGallery = useCallback((
     currentBlock: Extract<ContentBlock, { type: "image" }>,
@@ -487,6 +532,28 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
     nextBlock.galleryPositions.splice(galleryIndex, 1);
     onChange(nextBlock as ContentBlock);
   }, [imageBlock, normalizeImageBlock, onChange]);
+
+  const handleImagePositionChange = useCallback((slideIndex: number, position: string) => {
+    if (!imageBlock) return;
+
+    if (slideIndex === 0) {
+      onChange({ ...normalizeImageBlock(imageBlock), position } as ContentBlock);
+      return;
+    }
+
+    const nextBlock = normalizeImageBlock(imageBlock);
+    const galleryIndex = slideIndex - 1;
+    while (nextBlock.galleryPositions.length <= galleryIndex) {
+      nextBlock.galleryPositions.push("50% 50%");
+    }
+    nextBlock.galleryPositions[galleryIndex] = position;
+    onChange(nextBlock as ContentBlock);
+  }, [imageBlock, normalizeImageBlock, onChange]);
+
+  const handleSlideMove = useCallback((fromIndex: number, toIndex: number) => {
+    if (!imageSlides.length || fromIndex === toIndex) return;
+    replaceImageSlides(moveItem(imageSlides, fromIndex, toIndex));
+  }, [imageSlides, moveItem, replaceImageSlides]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1298,6 +1365,13 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                         frameStyle={{ borderRadius: `${block.borderRadius || 0}px` }}
                         disablePointerEvents={false}
                         emptyLabel="Imagem"
+                        imageClassName="cursor-pointer"
+                        onImageClick={(src) =>
+                          setImageLightbox({
+                            src,
+                            alt: block.caption || "Imagem do bloco",
+                          })
+                        }
                       />
                     </div>
                     {dragOver && (
@@ -1373,25 +1447,50 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                           A capa fica na visualizacao principal
                         </span>
                       </div>
+                      <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
+                        Arraste para reordenar, clique para ver inteira e ajuste o enquadramento de cada slide.
+                      </p>
                       <div className="grid grid-cols-2 gap-2 min-[980px]:grid-cols-3">
-                        {galleryImages.map((imageUrl, galleryIndex) => (
-                          <div key={`${imageUrl}-${galleryIndex}`} className="overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#141414]">
-                            <div className="aspect-[4/3]">
-                              <img src={imageUrl} alt={`Slide ${galleryIndex + 2}`} className="h-full w-full object-cover" />
-                            </div>
-                            <div className="flex items-center justify-between gap-2 border-t border-[#1f1f1f] px-2.5 py-2">
+                        {imageSlides.map((slide, slideIndex) => (
+                          <div key={`${slide.src}-${slideIndex}`} className="space-y-1">
+                            <div className="flex items-center justify-between gap-2 px-1">
                               <span className="text-[#777]" style={{ fontSize: "11px" }}>
-                                Slide {galleryIndex + 2}
+                                {slide.label}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => removeGalleryImage(galleryIndex)}
-                                className="text-[#777] transition-colors hover:text-red-400 cursor-pointer flex items-center gap-1"
-                                style={{ fontSize: "11px" }}
-                              >
-                                <Trash2 size={11} /> Remover
-                              </button>
+                              <span className="text-[#555]" style={{ fontSize: "10px" }}>
+                                {slideIndex === 0 ? "Slide principal" : "Arraste para ordenar"}
+                              </span>
                             </div>
+                            <ImagePositionEditorCompact
+                              src={slide.src}
+                              alt={`${block.caption || "Imagem"} ${slide.label}`}
+                              position={slide.position}
+                              onChange={(position) => handleImagePositionChange(slideIndex, position)}
+                              onRemove={() => (slideIndex === 0 ? removePrimaryImage() : removeGalleryImage(slideIndex - 1))}
+                              height={160}
+                              sortable
+                              isSortTarget={dropSlideIndex === slideIndex}
+                              onSortStart={() => {
+                                setDraggedSlideIndex(slideIndex);
+                                setDropSlideIndex(slideIndex);
+                              }}
+                              onSortOver={(event) => {
+                                event.preventDefault();
+                                if (draggedSlideIndex == null || draggedSlideIndex === slideIndex) return;
+                                setDropSlideIndex(slideIndex);
+                              }}
+                              onSortDrop={(event) => {
+                                event.preventDefault();
+                                if (draggedSlideIndex == null) return;
+                                handleSlideMove(draggedSlideIndex, slideIndex);
+                                setDraggedSlideIndex(null);
+                                setDropSlideIndex(null);
+                              }}
+                              onSortEnd={() => {
+                                setDraggedSlideIndex(null);
+                                setDropSlideIndex(null);
+                              }}
+                            />
                           </div>
                         ))}
                       </div>
@@ -1402,6 +1501,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
             </div>
           );
         })()}
+        {block.type === "image" && imageLightbox && (
+          <ImageLightbox
+            open={Boolean(imageLightbox)}
+            src={imageLightbox.src}
+            alt={imageLightbox.alt}
+            onClose={() => setImageLightbox(null)}
+          />
+        )}
         {block.type === "image" && (
           <>
             <RichTextEditor
