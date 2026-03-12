@@ -10,6 +10,7 @@ interface ContentImageProps {
   position?: string;
   emptyLabel?: string;
   iconSize?: number;
+  onClick?: () => void;
 }
 
 export function ContentImage({
@@ -20,6 +21,7 @@ export function ContentImage({
   position = "50% 50%",
   emptyLabel = "Sem imagem",
   iconSize = 18,
+  onClick,
 }: ContentImageProps) {
   if (src && src.trim() !== "") {
     return (
@@ -28,6 +30,7 @@ export function ContentImage({
         alt={alt}
         className={className}
         style={{ ...style, objectPosition: position }}
+        onClick={onClick}
       />
     );
   }

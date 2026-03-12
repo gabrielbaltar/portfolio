@@ -7,6 +7,7 @@ import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock }
 import { CodeHighlight } from "./code-highlight";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
+import { PreviewMediaSlider } from "./content-preview-cards";
 
 function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
@@ -94,6 +95,37 @@ function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" 
         </figcaption>
       )}
     </figure>
+  );
+}
+
+function ImageBlockSlider({
+  block,
+  alt,
+  imagesClickable,
+  onImageClick,
+}: {
+  block: Extract<ContentBlock, { type: "image" }>;
+  alt: string;
+  imagesClickable: boolean;
+  onImageClick?: (src: string, alt: string) => void;
+}) {
+  const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
+
+  return (
+    <PreviewMediaSlider
+      title={alt || "Imagem"}
+      image={block.url}
+      imagePosition={block.position || "50% 50%"}
+      galleryImages={block.galleryImages || []}
+      galleryPositions={block.galleryPositions || []}
+      aspectRatio="4 / 3"
+      frameClassName="rounded-xl"
+      frameStyle={{ borderRadius: radius }}
+      imageClassName={imagesClickable ? "cursor-pointer" : ""}
+      disablePointerEvents={!imagesClickable}
+      onImageClick={imagesClickable && onImageClick ? (src) => onImageClick(src, alt) : undefined}
+      emptyLabel="Sem imagem"
+    />
   );
 }
 
@@ -189,7 +221,8 @@ export function BlockRenderer({
           case "code":
             return <CodeBlockView key={i} block={block} />;
           case "image": {
-            if (!block.url) return null;
+            const hasGallery = (block.galleryImages || []).filter(Boolean).length > 0;
+            if (!block.url && !hasGallery) return null;
             const svg = isSvg(block.url);
             const gif = isGif(block.url);
             const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
@@ -201,7 +234,14 @@ export function BlockRenderer({
             };
             return (
               <figure key={i} className="my-8">
-                {svg ? (
+                {hasGallery ? (
+                  <ImageBlockSlider
+                    block={block}
+                    alt={alt}
+                    imagesClickable={imagesClickable}
+                    onImageClick={onImageClick}
+                  />
+                ) : svg ? (
                   <img
                     src={block.url}
                     alt={alt}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, ExternalLink, Lock } from "lucide-react";
 import { ContentImage } from "./content-image";
@@ -87,6 +87,9 @@ export function PreviewMediaSlider({
   frameClassName = "",
   imageClassName = "",
   emptyLabel = "Sem capa",
+  frameStyle,
+  disablePointerEvents = true,
+  onImageClick,
 }: {
   title: string;
   image?: string;
@@ -97,6 +100,9 @@ export function PreviewMediaSlider({
   frameClassName?: string;
   imageClassName?: string;
   emptyLabel?: string;
+  frameStyle?: CSSProperties;
+  disablePointerEvents?: boolean;
+  onImageClick?: (src: string) => void;
 }) {
   const slides = useMemo(
     () => buildSlides(image, imagePosition, galleryImages, galleryPositions),
@@ -128,12 +134,16 @@ export function PreviewMediaSlider({
   };
 
   const activeSlide = slides[activeIndex];
+  const handleImageClick = () => {
+    if (!activeSlide.src || !onImageClick) return;
+    onImageClick(activeSlide.src);
+  };
 
   return (
-    <div className="pointer-events-none">
+    <div className={disablePointerEvents ? "pointer-events-none" : undefined}>
       <div
         className={`relative overflow-hidden ${frameClassName}`}
-        style={{ aspectRatio }}
+        style={{ aspectRatio, ...frameStyle }}
       >
         <ContentImage
           src={activeSlide.src}
@@ -141,6 +151,7 @@ export function PreviewMediaSlider({
           emptyLabel={emptyLabel}
           className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
           position={activeSlide.position}
+          onClick={handleImageClick}
         />
 
         {hasMultipleSlides && (

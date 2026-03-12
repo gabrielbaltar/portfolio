@@ -20,6 +20,7 @@ import { RichTextEditor } from "./rich-text";
 import { ShowcaseBlockView } from "./showcase-blocks";
 import { VideoPlayer } from "./video-player";
 import { extractMuxPlaybackId, normalizeVideoInput } from "./video-source";
+import { PreviewMediaSlider } from "./content-preview-cards";
 
 const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.ReactNode }[] = [
   { type: "paragraph", label: "Paragrafo", icon: <Type size={14} /> },
@@ -122,7 +123,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
         ],
       };
     case "code": return { type: "code", code: "", language: "typescript", caption: "" };
-    case "image": return { type: "image", url: "", caption: "" };
+    case "image": return { type: "image", url: "", caption: "", galleryImages: [], galleryPositions: [] };
     case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false, previewStart: 0, previewDuration: 4, fit: "contain", zoom: 1 };
     case "quote": return { type: "quote", text: "", author: "" };
     case "cta": return { type: "cta", text: "", buttonText: "", buttonUrl: "", openInNewTab: true };
@@ -365,6 +366,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
   const fontSizeMap: Record<string, string> = { heading1: "20px", heading2: "17px", heading3: "15px", paragraph: "14px" };
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const iconFileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -372,30 +374,136 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const [iconUploadingIndex, setIconUploadingIndex] = useState<number | null>(null);
   const [dragOverIconIndex, setDragOverIconIndex] = useState<number | null>(null);
   const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
+  const imageBlock = block.type === "image" ? block : null;
 
-  const handleImageUpload = async (file: File) => {
-    if (!file.type.startsWith("image/") && file.type !== "image/svg+xml") return;
-    setUploading(true);
+  const normalizeImageBlock = useCallback((currentBlock: Extract<ContentBlock, { type: "image" }>) => ({
+    ...currentBlock,
+    galleryImages: [...(currentBlock.galleryImages || [])],
+    galleryPositions: [...(currentBlock.galleryPositions || [])],
+  }), []);
+
+  const appendImageGallery = useCallback((
+    currentBlock: Extract<ContentBlock, { type: "image" }>,
+    nextUrls: string[],
+  ) => {
+    const normalizedBlock = normalizeImageBlock(currentBlock);
+    const seen = new Set([normalizedBlock.url, ...normalizedBlock.galleryImages].filter(Boolean));
+
+    nextUrls.forEach((nextUrl) => {
+      const trimmedUrl = nextUrl.trim();
+      if (!trimmedUrl || seen.has(trimmedUrl)) return;
+      seen.add(trimmedUrl);
+      normalizedBlock.galleryImages.push(trimmedUrl);
+      normalizedBlock.galleryPositions.push("50% 50%");
+    });
+
+    return normalizedBlock;
+  }, [normalizeImageBlock]);
+
+  const uploadImageAsset = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/") && file.type !== "image/svg+xml") return "";
+
     try {
       const uploaded = await dataProvider.uploadMedia(file, "public");
       addMediaItem(uploaded);
-      onChange({ ...block, url: uploaded.url } as ContentBlock);
+      return uploaded.url;
     } catch {
-      try {
-        const originalDataUrl = await readFileAsDataUrl(file);
-        onChange({ ...block, url: originalDataUrl } as ContentBlock);
-      } finally {
-        setUploading(false);
-      }
-      return;
+      return readFileAsDataUrl(file);
     }
-    setUploading(false);
-  };
+  }, [addMediaItem]);
+
+  const handleImageUpload = useCallback(async (
+    files: FileList | File[],
+    mode: "smart" | "replace-cover" | "append-gallery" = "smart",
+  ) => {
+    if (!imageBlock) return;
+
+    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/") || file.type === "image/svg+xml");
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    setDragOver(false);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of validFiles) {
+        const uploadedUrl = await uploadImageAsset(file);
+        if (uploadedUrl) {
+          uploadedUrls.push(uploadedUrl);
+        }
+      }
+
+      if (uploadedUrls.length === 0) return;
+
+      let nextBlock = normalizeImageBlock(imageBlock);
+
+      if (mode === "replace-cover") {
+        nextBlock.url = uploadedUrls[0];
+        if (uploadedUrls.length > 1) {
+          nextBlock = appendImageGallery(nextBlock, uploadedUrls.slice(1));
+        }
+      } else if (mode === "append-gallery") {
+        if (!nextBlock.url) {
+          nextBlock.url = uploadedUrls[0];
+          nextBlock = appendImageGallery(nextBlock, uploadedUrls.slice(1));
+        } else {
+          nextBlock = appendImageGallery(nextBlock, uploadedUrls);
+        }
+      } else if (!nextBlock.url) {
+        nextBlock.url = uploadedUrls[0];
+        nextBlock = appendImageGallery(nextBlock, uploadedUrls.slice(1));
+      } else if (uploadedUrls.length === 1) {
+        nextBlock.url = uploadedUrls[0];
+      } else {
+        nextBlock = appendImageGallery(nextBlock, uploadedUrls);
+      }
+
+      onChange(nextBlock as ContentBlock);
+    } finally {
+      setUploading(false);
+    }
+  }, [appendImageGallery, imageBlock, normalizeImageBlock, onChange, uploadImageAsset]);
+
+  const removePrimaryImage = useCallback(() => {
+    if (!imageBlock) return;
+
+    const nextBlock = normalizeImageBlock(imageBlock);
+    const nextCover = nextBlock.galleryImages.shift() || "";
+    const nextPosition = nextBlock.galleryPositions.shift();
+
+    onChange({
+      ...nextBlock,
+      url: nextCover,
+      position: nextCover ? nextPosition || nextBlock.position || "50% 50%" : nextBlock.position,
+    } as ContentBlock);
+  }, [imageBlock, normalizeImageBlock, onChange]);
+
+  const removeGalleryImage = useCallback((galleryIndex: number) => {
+    if (!imageBlock) return;
+
+    const nextBlock = normalizeImageBlock(imageBlock);
+    nextBlock.galleryImages.splice(galleryIndex, 1);
+    nextBlock.galleryPositions.splice(galleryIndex, 1);
+    onChange(nextBlock as ContentBlock);
+  }, [imageBlock, normalizeImageBlock, onChange]);
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleImageUpload(file);
+    e.preventDefault();
+    setDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    if (imageBlock) {
+      void handleImageUpload(files, imageBlock.url ? "append-gallery" : "smart");
+      return;
+    }
+
+    const file = files[0];
+    if (file) {
+      void handleImageUpload([file]);
+    }
   };
 
   const updateIconGridItem = (iconIndex: number, updates: { name?: string; url?: string; notes?: string }) => {
@@ -1124,56 +1232,180 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
           </div>
         )}
 
-        {block.type === "image" && (
-          <div className="space-y-2">
-            {!(block as any).url ? (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 px-4 cursor-pointer transition-colors ${dragOver ? "border-[#555] bg-[#1f1f1f]" : "border-[#2a2a2a] bg-[#141414] hover:border-[#444] hover:bg-[#1a1a1a]"}`}
-              >
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); }} />
-                {uploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-[#555] border-t-white rounded-full animate-spin" />
-                    <span className="text-[#888]" style={{ fontSize: "13px" }}>Carregando...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Upload size={20} className="text-[#555]" />
-                    <span className="text-[#888]" style={{ fontSize: "13px" }}>Clique ou arraste uma imagem aqui</span>
-                    <span className="text-[#555]" style={{ fontSize: "11px" }}>PNG, JPG, GIF, SVG, WebP</span>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div
-                className="relative group/img"
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-              >
-                <img src={(block as any).url} alt={(block as any).caption} className="w-full max-h-[240px] rounded-lg object-cover" />
-                <div className={`absolute inset-0 transition-colors rounded-lg flex items-center justify-center gap-2 ${dragOver ? "bg-black/55 opacity-100" : "bg-black/0 opacity-0 group-hover/img:bg-black/40 group-hover/img:opacity-100"}`}>
-                  {dragOver && (
-                    <span className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-white backdrop-blur-sm" style={{ fontSize: "11px" }}>
-                      Solte a imagem para substituir
-                    </span>
+        {block.type === "image" && (() => {
+          const galleryImages = (block.galleryImages || []).filter(Boolean);
+          const hasSlider = galleryImages.length > 0;
+
+          return (
+            <div className="space-y-3">
+              {!block.url ? (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 px-4 cursor-pointer transition-colors ${dragOver ? "border-[#555] bg-[#1f1f1f]" : "border-[#2a2a2a] bg-[#141414] hover:border-[#444] hover:bg-[#1a1a1a]"}`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files;
+                      if (files && files.length > 0) {
+                        void handleImageUpload(files, "smart");
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-[#555] border-t-white rounded-full animate-spin" />
+                      <span className="text-[#888]" style={{ fontSize: "13px" }}>Carregando...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload size={20} className="text-[#555]" />
+                      <span className="text-[#888]" style={{ fontSize: "13px" }}>Clique ou arraste uma ou varias imagens aqui</span>
+                      <span className="text-[#555]" style={{ fontSize: "11px" }}>A primeira vira capa e as demais entram no slider do bloco</span>
+                    </>
                   )}
-                  <button onClick={() => fileInputRef.current?.click()} className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-3 py-1.5 cursor-pointer flex items-center gap-1.5 backdrop-blur-sm" style={{ fontSize: "12px" }}>
-                    <Upload size={12} /> Trocar
-                  </button>
-                  <button onClick={() => onChange({ ...block, url: "" } as ContentBlock)} className="bg-[#222]/80 hover:bg-red-500/80 text-white rounded-md px-3 py-1.5 cursor-pointer flex items-center gap-1.5 backdrop-blur-sm" style={{ fontSize: "12px" }}>
-                    <X size={12} /> Remover
-                  </button>
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file); e.currentTarget.value = ""; }} />
-              </div>
-            )}
+              ) : (
+                <div className="space-y-3">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    className={`overflow-hidden rounded-xl border transition-colors ${dragOver ? "border-[#555] bg-[#151515]" : "border-[#2a2a2a] bg-[#141414]"}`}
+                  >
+                    <div className="border-b border-[#1f1f1f] px-3 py-2">
+                      <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        {hasSlider ? `Slider ativo com ${galleryImages.length + 1} imagens` : "Imagem unica"}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <PreviewMediaSlider
+                        title={block.caption || "Imagem do bloco"}
+                        image={block.url}
+                        imagePosition={block.position || "50% 50%"}
+                        galleryImages={galleryImages}
+                        galleryPositions={block.galleryPositions || []}
+                        aspectRatio="16 / 10"
+                        frameClassName="rounded-lg"
+                        frameStyle={{ borderRadius: `${block.borderRadius || 0}px` }}
+                        disablePointerEvents={false}
+                        emptyLabel="Imagem"
+                      />
+                    </div>
+                    {dragOver && (
+                      <div className="border-t border-[#1f1f1f] px-3 py-2 text-center text-[#9a9a9a]" style={{ fontSize: "11px" }}>
+                        Solte aqui para adicionar as imagens ao slider sem trocar a capa
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-md bg-[#1a1a1a] px-3 py-2 text-[#fafafa] transition-colors hover:bg-[#222] cursor-pointer flex items-center gap-1.5"
+                      style={{ fontSize: "12px" }}
+                    >
+                      <Upload size={12} /> Trocar capa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryFileInputRef.current?.click()}
+                      className="rounded-md bg-[#1a1a1a] px-3 py-2 text-[#fafafa] transition-colors hover:bg-[#222] cursor-pointer flex items-center gap-1.5"
+                      style={{ fontSize: "12px" }}
+                    >
+                      <Plus size={12} /> Adicionar ao slider
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removePrimaryImage}
+                      className="rounded-md bg-[#1a1a1a] px-3 py-2 text-white transition-colors hover:bg-red-500/80 cursor-pointer flex items-center gap-1.5"
+                      style={{ fontSize: "12px" }}
+                    >
+                      <X size={12} /> Remover imagem
+                    </button>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files;
+                      if (files && files.length > 0) {
+                        void handleImageUpload(files, "replace-cover");
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  <input
+                    ref={galleryFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      const files = event.target.files;
+                      if (files && files.length > 0) {
+                        void handleImageUpload(files, "append-gallery");
+                      }
+                      event.currentTarget.value = "";
+                    }}
+                  />
+
+                  {hasSlider && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Imagens do slider
+                        </span>
+                        <span className="text-[#555]" style={{ fontSize: "11px" }}>
+                          A capa fica na visualizacao principal
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 min-[980px]:grid-cols-3">
+                        {galleryImages.map((imageUrl, galleryIndex) => (
+                          <div key={`${imageUrl}-${galleryIndex}`} className="overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#141414]">
+                            <div className="aspect-[4/3]">
+                              <img src={imageUrl} alt={`Slide ${galleryIndex + 2}`} className="h-full w-full object-cover" />
+                            </div>
+                            <div className="flex items-center justify-between gap-2 border-t border-[#1f1f1f] px-2.5 py-2">
+                              <span className="text-[#777]" style={{ fontSize: "11px" }}>
+                                Slide {galleryIndex + 2}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeGalleryImage(galleryIndex)}
+                                className="text-[#777] transition-colors hover:text-red-400 cursor-pointer flex items-center gap-1"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <Trash2 size={11} /> Remover
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        {block.type === "image" && (
+          <>
             <RichTextEditor
-              value={(block as any).caption}
+              value={block.caption}
               onChange={(caption) => onChange({ ...block, caption } as ContentBlock)}
               multiline={false}
               compact
@@ -1182,7 +1414,6 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
               editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
               placeholderClassName="px-2.5 py-1.5"
             />
-            {/* Border radius control */}
             <div className="flex items-center gap-2 px-1">
               <span className="text-[#666] shrink-0" style={{ fontSize: "11px" }}>Arredondamento</span>
               <input
@@ -1190,14 +1421,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 min={0}
                 max={32}
                 step={1}
-                value={(block as any).borderRadius || 0}
-                onChange={(e) => onChange({ ...block, borderRadius: parseInt(e.target.value) } as ContentBlock)}
+                value={block.borderRadius || 0}
+                onChange={(event) => onChange({ ...block, borderRadius: parseInt(event.target.value) } as ContentBlock)}
                 className="flex-1 h-1 cursor-pointer"
                 style={{ accentColor: "#00ff3c" }}
               />
-              <span className="text-[#555] w-8 text-right tabular-nums" style={{ fontSize: "11px" }}>{(block as any).borderRadius || 0}px</span>
+              <span className="text-[#555] w-8 text-right tabular-nums" style={{ fontSize: "11px" }}>{block.borderRadius || 0}px</span>
             </div>
-          </div>
+          </>
         )}
 
         {block.type === "video" && (() => {

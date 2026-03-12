@@ -91,7 +91,7 @@ export type ContentBlock =
   | { type: "user-flow"; title: string; steps: UserFlowStep[] }
   | { type: "sitemap"; title: string; sections: SitemapSection[] }
   | { type: "code"; code: string; language: string; caption?: string }
-  | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number }
+  | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number; galleryImages?: string[]; galleryPositions?: string[] }
   | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; borderRadius?: number; fit?: "contain" | "cover"; zoom?: number }
   | { type: "divider"; spacing?: number }
   | { type: "quote"; text: string; author: string; lineHeight?: number }

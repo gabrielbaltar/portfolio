@@ -850,9 +850,29 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                   </div>
                 );
               case "image":
-                return block.url ? (
+                return block.url || (block.galleryImages || []).some(Boolean) ? (
                   <figure key={i} className="my-6">
-                    <img src={block.url} alt={richTextToPlainText(block.caption) || ""} className="w-full rounded-lg object-cover max-h-[300px]" />
+                    {(block.galleryImages || []).filter(Boolean).length > 0 ? (
+                      <PreviewMediaSlider
+                        title={richTextToPlainText(block.caption) || item.title || "Imagem"}
+                        image={block.url}
+                        imagePosition={block.position || "50% 50%"}
+                        galleryImages={block.galleryImages || []}
+                        galleryPositions={block.galleryPositions || []}
+                        aspectRatio="16 / 10"
+                        frameClassName="rounded-lg"
+                        frameStyle={{ borderRadius: `${block.borderRadius ?? 8}px` }}
+                        disablePointerEvents={false}
+                        emptyLabel="Imagem"
+                      />
+                    ) : (
+                      <img
+                        src={block.url}
+                        alt={richTextToPlainText(block.caption) || ""}
+                        className="w-full rounded-lg object-cover max-h-[300px]"
+                        style={{ borderRadius: `${block.borderRadius ?? 8}px` }}
+                      />
+                    )}
                     {block.caption && (
                       <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>
                         <RichTextContent value={block.caption} />
