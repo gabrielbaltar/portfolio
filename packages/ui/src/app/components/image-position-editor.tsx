@@ -1,6 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Move, Check, RotateCcw, GripVertical, Expand } from "lucide-react";
+import { Move, Check, RotateCcw, GripVertical, Expand, MoreVertical, Trash2 } from "lucide-react";
 import { ImageLightbox } from "./image-lightbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 /**
  * ImagePositionEditor — Allows the user to drag/reposition an image 
@@ -279,6 +285,7 @@ export function ImagePositionEditorCompact({
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number }>(() => parsePosition(position));
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -335,6 +342,9 @@ export function ImagePositionEditorCompact({
   }, [dragging, handleMouseMove, handleMouseUp]);
 
   const canReposition = needsRepositioning();
+  const toolbarVisibility = actionsOpen
+    ? "opacity-100"
+    : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
     <div
@@ -348,8 +358,9 @@ export function ImagePositionEditorCompact({
       onMouseDown={handleMouseDown}
       onDragOver={onSortOver}
       onDrop={onSortDrop}
-      onClick={() => {
-        if (!editing) setLightboxOpen(true);
+      onClick={(event) => {
+        if (event.defaultPrevented || editing) return;
+        setLightboxOpen(true);
       }}
     >
       <img
@@ -370,63 +381,122 @@ export function ImagePositionEditorCompact({
           <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-black/70 text-white px-2 py-0.5 rounded-full flex items-center gap-2" style={{ fontSize: "10px" }}>
             <Move size={10} /> {pos.x}%, {pos.y}%
           </div>
-          <div className="absolute top-1.5 right-1.5 flex gap-1">
+          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); onChange(`${pos.x}% ${pos.y}%`); setEditing(false); }}
-              className="p-1 rounded bg-green-600/90 text-white cursor-pointer"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-green-600/90 text-white cursor-pointer shadow-[0_8px_30px_rgba(0,0,0,0.28)]"
+              title="Salvar enquadramento"
             ><Check size={12} /></button>
             <button
               onClick={(e) => { e.stopPropagation(); setPos(parsePosition(position)); setEditing(false); }}
-              className="p-1 rounded bg-black/60 text-white cursor-pointer"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white cursor-pointer shadow-[0_8px_30px_rgba(0,0,0,0.28)]"
+              title="Cancelar ajuste"
             >✕</button>
           </div>
         </>
       ) : (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-          {sortable && (
-            <button
-              type="button"
-              draggable
-              onDragStart={(event) => {
-                event.stopPropagation();
-                onSortStart?.(event);
-              }}
-              onDragEnd={(event) => {
-                event.stopPropagation();
-                onSortEnd?.();
-              }}
-              onClick={(event) => event.stopPropagation()}
-              className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-2 py-1 cursor-grab active:cursor-grabbing flex items-center gap-1 backdrop-blur-sm"
-              style={{ fontSize: "11px" }}
-              title="Arraste para reordenar"
-            >
-              <GripVertical size={11} /> Ordenar
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setLightboxOpen(true);
-            }}
-            className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 backdrop-blur-sm"
-            style={{ fontSize: "11px" }}
-          >
-            <Expand size={11} /> Ver inteira
-          </button>
-          {canReposition && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-              className="bg-[#222]/80 hover:bg-[#333] text-white rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 backdrop-blur-sm"
-              style={{ fontSize: "11px" }}
-            ><Move size={11} /> Reposicionar</button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="bg-red-600/80 hover:bg-red-600 text-white rounded-md px-2 py-1 cursor-pointer flex items-center gap-1 backdrop-blur-sm"
-            style={{ fontSize: "11px" }}
-          >✕ Remover</button>
-        </div>
+        <>
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100" />
+          <div className={`pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between transition-opacity duration-150 ${toolbarVisibility}`}>
+            {sortable ? (
+              <button
+                type="button"
+                draggable
+                onDragStart={(event) => {
+                  event.stopPropagation();
+                  onSortStart?.(event);
+                }}
+                onDragEnd={(event) => {
+                  event.stopPropagation();
+                  onSortEnd?.();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                className="pointer-events-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-white/12 bg-black/65 px-2.5 text-white backdrop-blur-sm cursor-grab active:cursor-grabbing"
+                style={{ fontSize: "11px" }}
+                title="Arraste para reordenar"
+              >
+                <GripVertical size={12} />
+                Ordenar
+              </button>
+            ) : (
+              <span />
+            )}
+            <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full border border-white/12 bg-black/65 text-white backdrop-blur-sm cursor-pointer"
+                  aria-label="Abrir acoes da imagem"
+                  title="Acoes da imagem"
+                >
+                  <MoreVertical size={14} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                sideOffset={8}
+                className="min-w-[180px] border-[#2a2a2a] bg-[#141414] text-[#f5f5f5]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <DropdownMenuItem
+                  className="cursor-pointer text-[#f5f5f5] focus:bg-[#1f1f1f] focus:text-white"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setLightboxOpen(true);
+                    setActionsOpen(false);
+                  }}
+                >
+                  <Expand size={14} />
+                  Ver inteira
+                </DropdownMenuItem>
+                {canReposition && (
+                  <DropdownMenuItem
+                    className="cursor-pointer text-[#f5f5f5] focus:bg-[#1f1f1f] focus:text-white"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEditing(true);
+                      setActionsOpen(false);
+                    }}
+                  >
+                    <Move size={14} />
+                    Reposicionar
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="cursor-pointer text-[#ffb4b4] focus:bg-[#2a1414] focus:text-[#ffd2d2]"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRemove();
+                    setActionsOpen(false);
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Remover
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-3 pb-2 pt-8">
+            <span className="rounded-full border border-white/10 bg-black/55 px-2 py-1 text-white/75 backdrop-blur-sm" style={{ fontSize: "10px" }}>
+              Clique para abrir
+            </span>
+            {canReposition ? (
+              <span className="rounded-full border border-white/10 bg-black/55 px-2 py-1 text-white/75 backdrop-blur-sm" style={{ fontSize: "10px" }}>
+                Ajuste no menu
+              </span>
+            ) : null}
+          </div>
+        </>
       )}
       <ImageLightbox
         open={lightboxOpen}

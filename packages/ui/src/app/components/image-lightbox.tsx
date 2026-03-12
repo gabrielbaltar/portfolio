@@ -35,7 +35,10 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center p-4 backdrop-blur-xl md:p-8"
       style={{ backgroundColor: "rgba(32, 32, 34, 0.72)" }}
-      onClick={onClose}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
       onContextMenu={(event) => event.preventDefault()}
       role="dialog"
       aria-modal="true"
@@ -43,7 +46,10 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
     >
       <button
         type="button"
-        onClick={onClose}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
         className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors cursor-pointer"
         style={{
           border: "1px solid rgba(255,255,255,0.14)",
