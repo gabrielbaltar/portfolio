@@ -77,7 +77,7 @@ function buildSlides(
   return slides;
 }
 
-function PreviewMediaSlider({
+export function PreviewMediaSlider({
   title,
   image,
   imagePosition = "50% 50%",

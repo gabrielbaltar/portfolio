@@ -27,6 +27,7 @@ import { LineHeightControl } from "./line-height-control";
 import { CodeHighlight } from "./code-highlight";
 import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
+import { PreviewMediaSlider } from "./content-preview-cards";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
@@ -540,6 +541,16 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     );
   };
 
+  const isCardPreviewContent = contentType === "projects" || contentType === "articles";
+  const cardPreviewTitle =
+    contentType === "projects"
+      ? (item.cardTitle || "").trim() || item.title
+      : item.title;
+  const cardPreviewSubtitle =
+    contentType === "projects"
+      ? (item.cardSubtitle || "").trim()
+      : (item.subtitle || item.description || "").trim();
+
   return (
     <div
       className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-[14px]"
@@ -584,6 +595,58 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
           margin: previewMode === "mobile" ? "0 auto" : undefined,
         }}
       >
+        {isCardPreviewContent && (
+          <div
+            className="mb-8 overflow-hidden rounded-[16px]"
+            style={{ backgroundColor: "#101010", border: "1px solid #1e1e1e" }}
+          >
+            <div
+              className="border-b px-4 py-3"
+              style={{ borderColor: "#1e1e1e" }}
+            >
+              <span className="text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Previa do card com slider
+              </span>
+            </div>
+            <div className={contentType === "articles" ? "grid gap-0 min-[700px]:grid-cols-[1.1fr,0.9fr]" : ""}>
+              <div
+                style={contentType === "articles" ? { borderBottom: "1px solid #1e1e1e", borderRight: previewMode === "desktop" ? "1px solid #1e1e1e" : undefined } : undefined}
+              >
+                <PreviewMediaSlider
+                  title={cardPreviewTitle || item.title || "Preview"}
+                  image={item.image}
+                  imagePosition={item.imagePosition || "50% 50%"}
+                  galleryImages={item.galleryImages || []}
+                  galleryPositions={item.galleryPositions || []}
+                  aspectRatio={contentType === "projects" ? "700 / 525" : "3 / 2"}
+                />
+              </div>
+              <div className="space-y-2 px-4 py-4">
+                <p style={{ fontSize: "17px", lineHeight: "25px", color: "#fafafa" }}>
+                  {cardPreviewTitle || "Titulo do card"}
+                </p>
+                {cardPreviewSubtitle && (
+                  <p style={{ fontSize: "14px", lineHeight: "21px", color: "#8d8d8d" }}>
+                    {cardPreviewSubtitle}
+                  </p>
+                )}
+                {contentType === "projects" && item.category && (
+                  <p style={{ fontSize: "12px", lineHeight: "18px", color: "#666" }}>
+                    Categoria do case: {item.category}
+                  </p>
+                )}
+                {contentType === "articles" && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                    {item.publisher && <span>{item.publisher}</span>}
+                    {item.date && <span>{item.date}</span>}
+                    {item.category && <span>{item.category}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cover image */}
         {item.image && (
           <div className="mb-8 overflow-hidden rounded-[12px]" style={{ backgroundColor: item.imageBgColor || "transparent" }}>
@@ -916,34 +979,110 @@ function ImageUrlField({
   value,
   onChange,
   placeholder,
+  galleryImages = [],
+  onGalleryImagesChange,
+  galleryPositions = [],
+  onGalleryPositionsChange,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  galleryImages?: string[];
+  onGalleryImagesChange?: (values: string[]) => void;
+  galleryPositions?: string[];
+  onGalleryPositionsChange?: (positions: string[]) => void;
 }) {
   const { addMediaItem } = useCMS();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const handleUpload = async (file: File) => {
-    if (!file.type.startsWith("image/")) return;
+  const appendToGallery = (incomingImages: string[]) => {
+    if (!onGalleryImagesChange) return 0;
+
+    const seen = new Set(galleryImages);
+    if (value?.trim()) seen.add(value.trim());
+
+    const nextGalleryImages = [...galleryImages];
+    const nextGalleryPositions = [...galleryPositions];
+    let addedCount = 0;
+
+    incomingImages.forEach((image) => {
+      const normalized = image.trim();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      nextGalleryImages.push(normalized);
+      nextGalleryPositions.push("50% 50%");
+      addedCount += 1;
+    });
+
+    if (addedCount > 0) {
+      onGalleryImagesChange(nextGalleryImages);
+      onGalleryPositionsChange?.(nextGalleryPositions);
+    }
+
+    return addedCount;
+  };
+
+  const applyIncomingImages = (incomingImages: string[]) => {
+    const normalizedImages = incomingImages.map((image) => image.trim()).filter(Boolean);
+    if (!normalizedImages.length) return { coverUpdated: false, galleryAdded: 0 };
+
+    if (!onGalleryImagesChange) {
+      onChange(normalizedImages[0]);
+      return { coverUpdated: true, galleryAdded: 0 };
+    }
+
+    if (normalizedImages.length === 1) {
+      onChange(normalizedImages[0]);
+      return { coverUpdated: true, galleryAdded: 0 };
+    }
+
+    if (value?.trim()) {
+      return { coverUpdated: false, galleryAdded: appendToGallery(normalizedImages) };
+    }
+
+    onChange(normalizedImages[0]);
+    return { coverUpdated: true, galleryAdded: appendToGallery(normalizedImages.slice(1)) };
+  };
+
+  const handleUpload = async (files: FileList | File[]) => {
+    const imageFiles = getImageFiles(files);
+    if (!imageFiles.length) return;
 
     setUploading(true);
     try {
-      const uploaded = await dataProvider.uploadMedia(file, "public");
-      addMediaItem(uploaded);
-      onChange(uploaded.url);
-      toast.success("Imagem enviada em qualidade original.");
-    } catch {
-      try {
-        const originalDataUrl = await readFileAsDataUrl(file);
-        onChange(originalDataUrl);
-        toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
-      } catch {
-        toast.error("Nao foi possivel carregar a imagem.");
+      const uploadedImages: string[] = [];
+
+      for (const file of imageFiles) {
+        try {
+          const uploaded = await dataProvider.uploadMedia(file, "public");
+          addMediaItem(uploaded);
+          uploadedImages.push(uploaded.url);
+        } catch {
+          try {
+            const originalDataUrl = await readFileAsDataUrl(file);
+            uploadedImages.push(originalDataUrl);
+            toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
+          } catch {
+            toast.error("Nao foi possivel carregar a imagem.");
+          }
+        }
       }
+
+      const result = applyIncomingImages(uploadedImages);
+      if (uploadedImages.length === 1) {
+        toast.success("Imagem enviada em qualidade original.");
+      } else if (result.coverUpdated && result.galleryAdded > 0) {
+        toast.success(`Slider configurado com ${result.galleryAdded + 1} imagens.`);
+      } else if (result.galleryAdded > 0) {
+        toast.success(`${result.galleryAdded} imagens adicionadas ao slider.`);
+      } else {
+        toast.info("As imagens selecionadas ja estavam cadastradas.");
+      }
+    } catch {
+      toast.error("Nao foi possivel carregar as imagens.");
     } finally {
       setUploading(false);
     }
@@ -952,8 +1091,9 @@ function ImageUrlField({
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragOver(false);
-    const file = getImageFiles(event.dataTransfer.files)[0];
-    if (file) void handleUpload(file);
+    if (event.dataTransfer.files.length) {
+      void handleUpload(event.dataTransfer.files);
+    }
   };
 
   return (
@@ -1006,23 +1146,23 @@ function ImageUrlField({
         </div>
         <p className="mt-2 px-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
           {dragOver
-            ? "Solte a imagem para enviar em qualidade original."
-            : "Arraste uma imagem para este campo ou use o botao de upload."}
+            ? "Solte aqui. Varias imagens viram slider automaticamente."
+            : "Arraste uma ou varias imagens aqui. Se enviar varias, a primeira vira capa e as demais entram no slider."}
         </p>
       </div>
       <input
         ref={fileRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) void handleUpload(file);
+          if (event.target.files?.length) void handleUpload(event.target.files);
           event.currentTarget.value = "";
         }}
       />
       <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-        Use este upload para manter a qualidade original da capa no projeto ou artigo.
+        Use este campo para trocar a capa ou soltar varias imagens de uma vez e montar o slider do card.
       </p>
     </div>
   );
@@ -1034,23 +1174,47 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
+
+  const appendImages = (incomingImages: string[]) => {
+    const seen = new Set(images);
+    const nextImages = [...images];
+    let addedCount = 0;
+
+    incomingImages.forEach((image) => {
+      const normalized = image.trim();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      nextImages.push(normalized);
+      addedCount += 1;
+    });
+
+    onChange(nextImages);
+    return addedCount;
+  };
+
+  const parseImageUrls = (value: string) =>
+    value
+      .split(/\r?\n|,/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
 
   const handleUpload = async (files: FileList | File[]) => {
     const imageFiles = getImageFiles(files);
     if (!imageFiles.length) return;
     setUploading(true);
-    const nextImages = [...images];
+    const uploadedImages: string[] = [];
 
     try {
       for (const file of imageFiles) {
         try {
           const uploaded = await dataProvider.uploadMedia(file, "public");
           addMediaItem(uploaded);
-          nextImages.push(uploaded.url);
+          uploadedImages.push(uploaded.url);
         } catch {
           try {
             const originalDataUrl = await readFileAsDataUrl(file);
-            nextImages.push(originalDataUrl);
+            uploadedImages.push(originalDataUrl);
             toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
           } catch {
             toast.error("Nao foi possivel carregar a imagem.");
@@ -1058,10 +1222,30 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
         }
       }
 
-      onChange(nextImages);
-      toast.success(imageFiles.length === 1 ? "Imagem adicionada em qualidade original." : `${imageFiles.length} imagens adicionadas.`);
+      const addedCount = appendImages(uploadedImages);
+      if (addedCount > 0) {
+        toast.success(addedCount === 1 ? "Imagem adicionada em qualidade original." : `${addedCount} imagens adicionadas.`);
+      } else {
+        toast.info("As imagens selecionadas ja estavam na galeria.");
+      }
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleAddUrls = () => {
+    const nextUrls = parseImageUrls(urlInput);
+    if (!nextUrls.length) {
+      toast.error("Cole pelo menos uma URL de imagem.");
+      return;
+    }
+
+    const addedCount = appendImages(nextUrls);
+    setUrlInput("");
+    if (addedCount > 0) {
+      toast.success(addedCount === 1 ? "URL adicionada na galeria." : `${addedCount} URLs adicionadas na galeria.`);
+    } else {
+      toast.info("As URLs informadas ja estavam na galeria.");
     }
   };
 
@@ -1093,7 +1277,44 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
 
   return (
     <div className="space-y-2">
-      <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
+      <div className="space-y-1">
+        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
+        <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          Adicione imagens extras por upload ou URL. Quando houver mais de uma imagem, o card publico mostra o slider automaticamente.
+        </p>
+      </div>
+      <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
+        <div className="flex flex-col gap-2 min-[1080px]:flex-row">
+          <textarea
+            value={urlInput}
+            onChange={(event) => setUrlInput(event.target.value)}
+            placeholder={"Cole uma ou varias URLs de imagem\nUma por linha ou separadas por virgula"}
+            rows={3}
+            className="min-h-[84px] flex-1 resize-none rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#666] focus:outline-none transition-colors"
+            style={{ fontSize: "13px", lineHeight: "19.5px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
+          />
+          <div className="flex gap-2 min-[1080px]:w-[230px] min-[1080px]:flex-col">
+            <button
+              type="button"
+              onClick={handleAddUrls}
+              className="inline-flex h-[40px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-[#ddd] transition-colors hover:bg-[#1a1a1a]"
+              style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+            >
+              <Plus size={12} />
+              Adicionar URL(s)
+            </button>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex h-[40px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-[#ddd] transition-colors hover:bg-[#1a1a1a]"
+              style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+            >
+              <Upload size={12} />
+              {uploading ? "Enviando..." : "Upload multiplo"}
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {images.map((img, i) => (
           <ImagePositionEditorCompact
@@ -1123,7 +1344,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
         >
           <Upload size={14} className="text-[#555]" />
           <span className="text-[#555]" style={{ fontSize: "11px" }}>
-            {uploading ? "Enviando..." : dragOver ? "Solte para adicionar" : "Upload original"}
+            {uploading ? "Enviando..." : dragOver ? "Solte para adicionar" : "Adicionar mais"}
           </span>
           <span className="text-[#444]" style={{ fontSize: "10px" }}>
             Clique ou arraste imagens
@@ -1490,7 +1711,16 @@ export function CMSEditor() {
         defaultOpen: false,
         content: (
           <>
-        <ImageUrlField label="Imagem de capa" value={item.image} onChange={(value) => updateField("image", value)} placeholder="Cole a URL ou envie do computador" />
+        <ImageUrlField
+          label="Imagem de capa"
+          value={item.image}
+          onChange={(value) => updateField("image", value)}
+          placeholder="Cole a URL ou envie do computador"
+          galleryImages={item.galleryImages || []}
+          onGalleryImagesChange={(imgs) => updateField("galleryImages", imgs)}
+          galleryPositions={item.galleryPositions || []}
+          onGalleryPositionsChange={(positions) => updateField("galleryPositions", positions)}
+        />
         {item.image && (
           <ImagePositionEditor
             src={item.image}
@@ -1682,7 +1912,16 @@ export function CMSEditor() {
         defaultOpen: false,
         content: (
           <>
-        <ImageUrlField label="Imagem de capa" value={item.image || ""} onChange={(value) => updateField("image", value)} placeholder="Cole a URL ou envie do computador" />
+        <ImageUrlField
+          label="Imagem de capa"
+          value={item.image || ""}
+          onChange={(value) => updateField("image", value)}
+          placeholder="Cole a URL ou envie do computador"
+          galleryImages={item.galleryImages || []}
+          onGalleryImagesChange={(imgs) => updateField("galleryImages", imgs)}
+          galleryPositions={item.galleryPositions || []}
+          onGalleryPositionsChange={(positions) => updateField("galleryPositions", positions)}
+        />
         {item.image && (
           <ImagePositionEditor
             src={item.image}
