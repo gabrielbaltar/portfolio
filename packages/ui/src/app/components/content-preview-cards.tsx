@@ -248,7 +248,7 @@ export function ProjectPreviewCard({
         aria-label={`Abrir projeto ${title}`}
       />
 
-      <div className="relative z-20">
+      <div className="pointer-events-none relative z-20">
         <div className="pointer-events-none" style={{ aspectRatio: "700 / 525" }}>
           <ContentImage
             src={image}
@@ -352,7 +352,7 @@ export function ArticlePreviewCard({
       />
 
       <div
-        className="relative z-20 w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
+        className="pointer-events-none relative z-20 w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
         style={{ borderRight: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="pointer-events-none" style={{ aspectRatio: "3 / 2" }}>
