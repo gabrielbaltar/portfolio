@@ -1,6 +1,17 @@
 export type Language = "pt" | "en";
 export type ThemeMode = "dark" | "light";
 export type ContentStatus = "draft" | "review" | "published" | "archived";
+export type PortfolioSectionId =
+  | "about"
+  | "projects"
+  | "experience"
+  | "education"
+  | "certifications"
+  | "stack"
+  | "awards"
+  | "recommendations"
+  | "blog"
+  | "contact";
 export type ContentEntityType =
   | "project"
   | "blog_post"
@@ -13,6 +24,16 @@ export type ContentEntityType =
   | "recommendation";
 
 export type MediaVisibility = "public" | "private";
+export type PublicContentVisibilityCollection =
+  | "projects"
+  | "blogPosts"
+  | "pages"
+  | "experiences"
+  | "education"
+  | "certifications"
+  | "stack"
+  | "awards"
+  | "recommendations";
 
 export interface StyleGuidePrinciple {
   title: string;
@@ -100,6 +121,8 @@ export interface SiteSettings extends TimestampedEntity {
   seoDescription: string;
   projectOrder: string[];
   blogPostOrder: string[];
+  sectionVisibility: Partial<Record<PortfolioSectionId, boolean>>;
+  contentVisibility: Record<string, boolean>;
 }
 
 export interface ProfileData extends TimestampedEntity {

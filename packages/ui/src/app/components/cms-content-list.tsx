@@ -8,6 +8,7 @@ import {
   Briefcase,
   Clock,
   Copy,
+  EyeOff,
   FileText,
   GripVertical,
   Grid3X3,
@@ -21,7 +22,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { ensureUniqueSlug, legacySeedData, slugify } from "@portfolio/core";
+import { ensureUniqueSlug, getPublicContentVisibilityKey, legacySeedData, slugify } from "@portfolio/core";
 import { toast } from "sonner";
 import { useCMS, type BlogPost, type ContentStatus, type Page, type Project } from "./cms-data";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
@@ -229,6 +230,7 @@ function DraggableContentRow({
   date,
   isFeatured,
   isProtected,
+  isVisible,
   fullIndex,
   canReorder,
   onMovePreview,
@@ -247,6 +249,7 @@ function DraggableContentRow({
   date: string | null;
   isFeatured: boolean;
   isProtected: boolean;
+  isVisible: boolean;
   fullIndex: number;
   canReorder: boolean;
   onMovePreview: (dragIndex: number, hoverIndex: number) => void;
@@ -360,6 +363,7 @@ function DraggableContentRow({
           </Link>
           {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
           {isProtected && <Lock size={11} className="text-[#ffa500]" />}
+          {!isVisible && <EyeOff size={11} className="text-[#888]" />}
         </div>
 
         <div className="mt-0.5 flex items-center gap-3">
@@ -454,6 +458,7 @@ export function CMSContentList() {
   };
 
   const currentConfig = config[contentType];
+  const visibilityCollection = contentType === "projects" ? "projects" : contentType === "articles" ? "blogPosts" : "pages";
   const sourceItemsForType = contentType === "projects" ? data.projects : contentType === "articles" ? data.blogPosts : data.pages || [];
   const allItemsForType = useMemo(
     () => applyIdOrder(sourceItemsForType, dragOrderIds),
@@ -789,6 +794,7 @@ export function CMSContentList() {
               const category = ("category" in item ? item.category : "") ?? "";
               const isFeatured = "featured" in item && item.featured;
               const isProtected = "password" in item && Boolean(item.password);
+              const isVisible = data.siteSettings.contentVisibility?.[getPublicContentVisibilityKey(visibilityCollection, item.id)] !== false;
               const fullIndex = isReorderableContent ? allItemsForType.findIndex((entry) => entry.id === item.id) : -1;
 
               return (
@@ -802,6 +808,7 @@ export function CMSContentList() {
                   date={date}
                   isFeatured={isFeatured}
                   isProtected={isProtected}
+                  isVisible={isVisible}
                   fullIndex={fullIndex}
                   canReorder={isReorderableContent && !isReorderBlocked}
                   onMovePreview={moveDragPreview}
@@ -821,6 +828,7 @@ export function CMSContentList() {
           {items.map((item) => {
             const isFeatured = "featured" in item && item.featured;
             const isProtected = "password" in item && Boolean(item.password);
+            const isVisible = data.siteSettings.contentVisibility?.[getPublicContentVisibilityKey(visibilityCollection, item.id)] !== false;
             const date = formatDate(item.updatedAt);
             const category = ("category" in item ? item.category : "") ?? "";
 
@@ -850,6 +858,7 @@ export function CMSContentList() {
                     <div className="flex items-center gap-1.5">
                       {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
                       {isProtected && <Lock size={11} className="text-[#ffa500]" />}
+                      {!isVisible && <EyeOff size={11} className="text-[#888]" />}
                     </div>
                   </div>
 

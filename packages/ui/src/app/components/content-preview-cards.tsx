@@ -1,5 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { ArrowUpRight, Clock, ExternalLink, Lock } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, ExternalLink, Lock } from "lucide-react";
 import { ContentImage } from "./content-image";
 import { buildBackTarget } from "./navigation-state";
 
@@ -9,6 +10,8 @@ type ProjectPreviewCardProps = {
   category?: string;
   image?: string;
   imagePosition?: string;
+  galleryImages?: string[];
+  galleryPositions?: string[];
   locked?: boolean;
   className?: string;
 };
@@ -19,6 +22,8 @@ type ArticlePreviewCardProps = {
   description?: string;
   image?: string;
   imagePosition?: string;
+  galleryImages?: string[];
+  galleryPositions?: string[];
   publisher?: string;
   date?: string;
   category?: string;
@@ -29,37 +34,226 @@ type ArticlePreviewCardProps = {
   className?: string;
 };
 
+type PreviewSlide = {
+  key: string;
+  src: string;
+  position: string;
+};
+
+function buildSlides(
+  image?: string,
+  imagePosition = "50% 50%",
+  galleryImages: string[] = [],
+  galleryPositions: string[] = [],
+) {
+  const slides: PreviewSlide[] = [];
+  const seen = new Set<string>();
+
+  const appendSlide = (src: string | undefined, position: string | undefined, key: string) => {
+    const normalizedSrc = src?.trim() || "";
+    if (!normalizedSrc || seen.has(normalizedSrc)) return;
+
+    seen.add(normalizedSrc);
+    slides.push({
+      key,
+      src: normalizedSrc,
+      position: position?.trim() || "50% 50%",
+    });
+  };
+
+  appendSlide(image, imagePosition, "cover");
+  galleryImages.forEach((src, index) => {
+    appendSlide(src, galleryPositions[index], `gallery-${index}`);
+  });
+
+  if (slides.length === 0) {
+    slides.push({
+      key: "empty",
+      src: "",
+      position: imagePosition,
+    });
+  }
+
+  return slides;
+}
+
+function PreviewMediaSlider({
+  title,
+  image,
+  imagePosition = "50% 50%",
+  galleryImages = [],
+  galleryPositions = [],
+  aspectRatio,
+  frameClassName = "",
+  imageClassName = "",
+  emptyLabel = "Sem capa",
+}: {
+  title: string;
+  image?: string;
+  imagePosition?: string;
+  galleryImages?: string[];
+  galleryPositions?: string[];
+  aspectRatio: string;
+  frameClassName?: string;
+  imageClassName?: string;
+  emptyLabel?: string;
+}) {
+  const slides = useMemo(
+    () => buildSlides(image, imagePosition, galleryImages, galleryPositions),
+    [galleryImages, galleryPositions, image, imagePosition],
+  );
+  const [activeIndex, setActiveIndex] = useState(0);
+  const hasMultipleSlides = slides.length > 1;
+
+  useEffect(() => {
+    setActiveIndex((current) => Math.min(current, slides.length - 1));
+  }, [slides.length]);
+
+  const goToPrevious = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveIndex((current) => (current - 1 + slides.length) % slides.length);
+  };
+
+  const goToNext = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveIndex((current) => (current + 1) % slides.length);
+  };
+
+  const goToSlide = (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveIndex(index);
+  };
+
+  const activeSlide = slides[activeIndex];
+
+  return (
+    <div className="pointer-events-none">
+      <div
+        className={`relative overflow-hidden ${frameClassName}`}
+        style={{ aspectRatio }}
+      >
+        <ContentImage
+          src={activeSlide.src}
+          alt={title}
+          emptyLabel={emptyLabel}
+          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
+          position={activeSlide.position}
+        />
+
+        {hasMultipleSlides && (
+          <>
+            <div className="pointer-events-auto absolute inset-x-0 top-1/2 z-30 flex -translate-y-1/2 items-center justify-between px-3">
+              <button
+                type="button"
+                onClick={goToPrevious}
+                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                style={{
+                  backgroundColor: "rgba(5, 5, 7, 0.68)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  color: "rgba(250, 250, 250, 0.88)",
+                }}
+                aria-label="Mostrar imagem anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={goToNext}
+                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                style={{
+                  backgroundColor: "rgba(5, 5, 7, 0.68)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  color: "rgba(250, 250, 250, 0.88)",
+                }}
+                aria-label="Mostrar proxima imagem"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex items-center justify-center px-4 pb-3">
+              <div
+                className="flex items-center gap-1.5 rounded-full px-3 py-2"
+                style={{
+                  backgroundColor: "rgba(8, 8, 10, 0.7)",
+                  backdropFilter: "blur(14px)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                {slides.map((slide, index) => (
+                  <button
+                    key={slide.key}
+                    type="button"
+                    onClick={(event) => goToSlide(event, index)}
+                    className="rounded-full transition-all"
+                    style={{
+                      width: index === activeIndex ? "20px" : "8px",
+                      height: "6px",
+                      backgroundColor: index === activeIndex ? "rgba(250, 250, 250, 0.92)" : "rgba(250, 250, 250, 0.26)",
+                    }}
+                    aria-label={`Mostrar imagem ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {hasMultipleSlides && (
+          <div
+            className="absolute inset-x-0 bottom-0 h-20"
+            style={{ background: "linear-gradient(180deg, rgba(11, 11, 13, 0) 0%, rgba(11, 11, 13, 0.6) 100%)" }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ProjectPreviewCard({
   href,
   title,
   category,
   image,
   imagePosition = "50% 50%",
+  galleryImages = [],
+  galleryPositions = [],
   locked = false,
   className = "",
 }: ProjectPreviewCardProps) {
   const location = useLocation();
 
   return (
-    <Link
-      to={href}
-      state={{ backTo: buildBackTarget(location) }}
-      className={`group flex h-full flex-col overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-1 ${className}`}
+    <article
+      className={`group relative flex h-full flex-col overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-1 ${className}`}
       style={{
         backgroundColor: "var(--bg-secondary, #121212)",
         border: "1px solid var(--border-primary, #363636)",
       }}
     >
-      <div className="relative overflow-hidden" style={{ aspectRatio: "700 / 525" }}>
-        <ContentImage
-          src={image}
-          alt={title}
-          emptyLabel="Sem capa"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-          position={imagePosition}
+      <Link
+        to={href}
+        state={{ backTo: buildBackTarget(location) }}
+        className="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/70"
+        aria-label={`Abrir projeto ${title}`}
+      />
+
+      <div className="relative z-20">
+        <PreviewMediaSlider
+          title={title}
+          image={image}
+          imagePosition={imagePosition}
+          galleryImages={galleryImages}
+          galleryPositions={galleryPositions}
+          aspectRatio="700 / 525"
         />
         {locked && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-full"
               style={{
@@ -75,7 +269,7 @@ export function ProjectPreviewCard({
       </div>
 
       <div
-        className="flex min-h-[92px] flex-1 flex-col justify-between px-4 py-3"
+        className="pointer-events-none relative z-20 flex min-h-[92px] flex-1 flex-col justify-between px-4 py-3"
         style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -112,7 +306,7 @@ export function ProjectPreviewCard({
           />
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
@@ -122,6 +316,8 @@ export function ArticlePreviewCard({
   description,
   image,
   imagePosition = "50% 50%",
+  galleryImages = [],
+  galleryPositions = [],
   publisher,
   date,
   category,
@@ -135,29 +331,35 @@ export function ArticlePreviewCard({
   const visibleTags = tags.slice(0, 3);
 
   return (
-    <Link
-      to={href}
-      state={{ backTo: buildBackTarget(location) }}
-      className={`group flex overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-0.5 sm:flex-row ${className}`}
+    <article
+      className={`group relative flex overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-0.5 sm:flex-row ${className}`}
       style={{
         backgroundColor: "var(--bg-secondary, #121212)",
         border: "1px solid var(--border-primary, #363636)",
       }}
     >
+      <Link
+        to={href}
+        state={{ backTo: buildBackTarget(location) }}
+        className="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/70"
+        aria-label={`Abrir artigo ${title}`}
+      />
+
       <div
-        className="w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
-        style={{ aspectRatio: "3 / 2", borderRight: "1px solid var(--border-secondary, #242424)" }}
+        className="relative z-20 w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
+        style={{ borderRight: "1px solid var(--border-secondary, #242424)" }}
       >
-        <ContentImage
-          src={image}
-          alt={title}
-          emptyLabel="Sem capa"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          position={imagePosition}
+        <PreviewMediaSlider
+          title={title}
+          image={image}
+          imagePosition={imagePosition}
+          galleryImages={galleryImages}
+          galleryPositions={galleryPositions}
+          aspectRatio="3 / 2"
         />
       </div>
 
-      <div className="flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4">
+      <div className="pointer-events-none relative z-20 flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4">
         <div>
           <h3
             className="flex min-h-[48px] min-w-0 items-start gap-1.5"
@@ -233,6 +435,6 @@ export function ArticlePreviewCard({
           {ctaLabel} <ExternalLink size={14} />
         </span>
       </div>
-    </Link>
+    </article>
   );
 }

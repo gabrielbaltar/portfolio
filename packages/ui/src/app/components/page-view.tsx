@@ -4,13 +4,18 @@ import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { BlockRenderer } from "./block-renderer";
 import { getBackTarget } from "./navigation-state";
+import { filterVisibleContent } from "./site-visibility";
 
 export function PageView() {
   const { slug = "" } = useParams();
   const location = useLocation();
   const { data } = useTranslatedCMS();
   const { t } = useLanguage();
-  const page = data.pages.find((item) => item.slug === slug && item.status === "published");
+  const page = filterVisibleContent(
+    data.pages.filter((item) => item.status === "published"),
+    data.siteSettings,
+    "pages",
+  ).find((item) => item.slug === slug);
   const backTo = getBackTarget(location.state, "/");
 
   if (!page) {

@@ -10,12 +10,17 @@ import { ProjectPreviewCard } from "./content-preview-cards";
 import { copyToClipboard } from "./clipboard-utils";
 import { sendContactEmail } from "./email-service";
 import { getProfileSocialLinks } from "./profile-social-links";
+import { filterVisibleContent } from "./site-visibility";
 
 export function ProjectsPage() {
   const { data } = useTranslatedCMS();
   const { locale, t } = useLanguage();
-  const { profile, projects: allProjects } = data;
-  const projects = allProjects.filter((p: any) => !p.status || p.status === "published");
+  const { profile, projects: allProjects, siteSettings } = data;
+  const projects = filterVisibleContent(
+    allProjects.filter((project) => !project.status || project.status === "published"),
+    siteSettings,
+    "projects",
+  );
   const socialLinks = getProfileSocialLinks(profile);
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -95,6 +100,8 @@ export function ProjectsPage() {
                   category={project.category}
                   image={project.image}
                   imagePosition={(project as any).imagePosition || "50% 50%"}
+                  galleryImages={project.galleryImages}
+                  galleryPositions={project.galleryPositions}
                   locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
                 />
               </motion.div>

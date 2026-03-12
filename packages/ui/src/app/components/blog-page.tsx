@@ -5,11 +5,16 @@ import { getVisiblePublicTags } from "./public-tag-utils";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { motion } from "motion/react";
 import { ArticlePreviewCard } from "./content-preview-cards";
+import { filterVisibleContent } from "./site-visibility";
 
 export function BlogPage() {
   const { data } = useTranslatedCMS();
   const { t } = useLanguage();
-  const posts = data.blogPosts.filter((post: any) => !post.status || post.status === "published");
+  const posts = filterVisibleContent(
+    data.blogPosts.filter((post) => !post.status || post.status === "published"),
+    data.siteSettings,
+    "blogPosts",
+  );
 
   return (
     <div
@@ -50,6 +55,8 @@ export function BlogPage() {
                   description={post.description}
                   image={post.image}
                   imagePosition={(post as any).imagePosition || "50% 50%"}
+                  galleryImages={post.galleryImages}
+                  galleryPositions={post.galleryPositions}
                   publisher={post.publisher}
                   date={post.date}
                   category={(post as any).category}

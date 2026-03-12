@@ -14,6 +14,7 @@ import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
+import { filterVisibleContent } from "./site-visibility";
 
 function ImageCard({
   src,
@@ -54,7 +55,12 @@ export function ProjectDetailPage() {
   const location = useLocation();
   const { data } = useTranslatedCMS();
   const { locale, t } = useLanguage();
-  const { profile, projects } = data;
+  const { profile, siteSettings } = data;
+  const projects = filterVisibleContent(
+    data.projects.filter((project) => !project.status || project.status === "published"),
+    siteSettings,
+    "projects",
+  );
   const { isProjectUnlocked, unlockProject } = usePassword();
 
   const project = projects.find((p) => p.slug === slug);
@@ -356,6 +362,8 @@ export function ProjectDetailPage() {
               category={p.category}
               image={p.image || ""}
               imagePosition={p.imagePosition || "50% 50%"}
+              galleryImages={p.galleryImages}
+              galleryPositions={p.galleryPositions}
               locked={Boolean(p.password && p.password.trim() !== "")}
             />
           ))}

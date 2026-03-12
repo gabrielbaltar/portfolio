@@ -15,6 +15,7 @@ import { getVisiblePublicTags } from "./public-tag-utils";
 import { ArticlePreviewCard } from "./content-preview-cards";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
+import { filterVisibleContent } from "./site-visibility";
 
 function ImageCard({ src, alt, className = "", position = "50% 50%" }: { src: string; alt: string; className?: string; position?: string }) {
   return (
@@ -34,12 +35,17 @@ export function BlogPostPage() {
   const location = useLocation();
   const { data } = useTranslatedCMS();
   const { locale, t } = useLanguage();
-  const { profile, blogPosts } = data;
+  const { profile, siteSettings } = data;
+  const blogPosts = filterVisibleContent(
+    data.blogPosts.filter((post) => !post.status || post.status === "published"),
+    siteSettings,
+    "blogPosts",
+  );
   const { isProjectUnlocked, unlockProject } = usePassword();
 
   const post = blogPosts.find((p) => p.slug === slug);
   const otherPosts = blogPosts
-    .filter((p) => p.slug !== slug && (!p.status || p.status === "published"))
+    .filter((p) => p.slug !== slug)
     .slice(0, 3);
 
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -472,6 +478,8 @@ export function BlogPostPage() {
                     description={relatedPost.description}
                     image={relatedPost.image || ""}
                     imagePosition={(relatedPost as any).imagePosition || "50% 50%"}
+                    galleryImages={relatedPost.galleryImages}
+                    galleryPositions={relatedPost.galleryPositions}
                     publisher={relatedPost.publisher}
                     date={relatedPost.date}
                     category={(relatedPost as any).category}

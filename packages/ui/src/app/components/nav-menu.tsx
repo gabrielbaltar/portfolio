@@ -5,11 +5,14 @@ import { useTheme } from "./theme-context";
 import { Sun, Moon, Globe } from "lucide-react";
 import svgPaths from "../../imports/svg-149u5mwuo1";
 import { useLocation } from "react-router";
+import { useCMS } from "./cms-data";
+import { isSectionVisible } from "./site-visibility";
 
 export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { lang, setLang, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const { data } = useCMS();
   const menuRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -49,15 +52,15 @@ export function NavMenu() {
 
   const leftLinks = [
     { label: t("about"), id: "intro" },
-    { label: t("projects"), id: "projects" },
-    { label: t("experience"), id: "experience" },
-    { label: t("education"), id: "education" },
+    ...(isSectionVisible(data.siteSettings, "projects") ? [{ label: t("projects"), id: "projects" }] : []),
+    ...(isSectionVisible(data.siteSettings, "experience") ? [{ label: t("experience"), id: "experience" }] : []),
+    ...(isSectionVisible(data.siteSettings, "education") ? [{ label: t("education"), id: "education" }] : []),
   ];
 
   const rightLinks = [
-    { label: t("tools"), id: "tools" },
-    { label: t("blog"), id: "blog" },
-    { label: t("contact"), id: "contact" },
+    ...(isSectionVisible(data.siteSettings, "stack") ? [{ label: t("tools"), id: "tools" }] : []),
+    ...(isSectionVisible(data.siteSettings, "blog") ? [{ label: t("blog"), id: "blog" }] : []),
+    ...(isSectionVisible(data.siteSettings, "contact") ? [{ label: t("contact"), id: "contact" }] : []),
   ];
 
   const handleClick = (id: string) => {

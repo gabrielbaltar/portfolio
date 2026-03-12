@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
+import { getPublicContentVisibilityKey, type PortfolioSectionId, type PublicContentVisibilityCollection } from "@portfolio/core";
 import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
@@ -57,6 +58,53 @@ function Section({ title, children, defaultOpen = true }: {
   );
 }
 
+function VisibilitySwitch({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      className="flex items-start justify-between gap-4 rounded-lg p-3 transition-colors"
+      style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}
+    >
+      <div className="space-y-1">
+        <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+          {label}
+        </p>
+        <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          {description}
+        </p>
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 accent-[#fafafa]"
+      />
+    </label>
+  );
+}
+
+const PORTFOLIO_SECTION_FIELDS: Array<{ id: PortfolioSectionId; label: string; description: string }> = [
+  { id: "about", label: "Sobre", description: "Mostra ou oculta o bloco de apresentação pessoal." },
+  { id: "projects", label: "Projetos", description: "Controla a seção de projetos na home do portfólio." },
+  { id: "experience", label: "Experiência", description: "Controla a linha do tempo de experiência profissional." },
+  { id: "education", label: "Educação", description: "Controla a seção de formação acadêmica." },
+  { id: "certifications", label: "Certificações", description: "Mostra ou oculta a lista de certificados." },
+  { id: "stack", label: "Stack", description: "Controla a seção de ferramentas e tecnologias." },
+  { id: "awards", label: "Prêmios", description: "Mostra ou oculta a lista de prêmios." },
+  { id: "recommendations", label: "Recomendações", description: "Controla os depoimentos e recomendações." },
+  { id: "blog", label: "Artigos", description: "Controla a seção de artigos e publicações." },
+  { id: "contact", label: "Contato", description: "Mostra ou oculta o bloco final de contato." },
+];
+
 type SettingsTab = "profile" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
 
 export function CMSSettings() {
@@ -75,6 +123,45 @@ export function CMSSettings() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoDragOver, setPhotoDragOver] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const isSectionVisible = (sectionId: PortfolioSectionId) => siteSettings.sectionVisibility?.[sectionId] !== false;
+
+  const setSectionVisibility = (sectionId: PortfolioSectionId, visible: boolean) => {
+    setSiteSettings((current) => {
+      const nextVisibility = { ...(current.sectionVisibility || {}) };
+      if (visible) {
+        delete nextVisibility[sectionId];
+      } else {
+        nextVisibility[sectionId] = false;
+      }
+
+      return {
+        ...current,
+        sectionVisibility: nextVisibility,
+      };
+    });
+  };
+
+  const isItemVisible = (collection: PublicContentVisibilityCollection, id: string) =>
+    siteSettings.contentVisibility?.[getPublicContentVisibilityKey(collection, id)] !== false;
+
+  const setItemVisibility = (collection: PublicContentVisibilityCollection, id: string, visible: boolean) => {
+    setSiteSettings((current) => {
+      const key = getPublicContentVisibilityKey(collection, id);
+      const nextVisibility = { ...(current.contentVisibility || {}) };
+
+      if (visible) {
+        delete nextVisibility[key];
+      } else {
+        nextVisibility[key] = false;
+      }
+
+      return {
+        ...current,
+        contentVisibility: nextVisibility,
+      };
+    });
+  };
 
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "profile", label: "Perfil" },
@@ -320,6 +407,23 @@ export function CMSSettings() {
               </div>
             </Section>
 
+            <Section title="Visibilidade do portfolio">
+              <div className="space-y-3">
+                <p className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  O conteúdo ocultado some do site público, mas continua salvo aqui no CMS para edição futura.
+                </p>
+                {PORTFOLIO_SECTION_FIELDS.map((section) => (
+                  <VisibilitySwitch
+                    key={section.id}
+                    label={section.label}
+                    description={section.description}
+                    checked={isSectionVisible(section.id)}
+                    onChange={(visible) => setSectionVisibility(section.id, visible)}
+                  />
+                ))}
+              </div>
+            </Section>
+
             <Section title="Site & SEO" defaultOpen={false}>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 min-[1680px]:grid-cols-3">
                 <Input label="Titulo do site" value={siteSettings.siteTitle} onChange={(v) => setSiteSettings({ ...siteSettings, siteTitle: v })} />
@@ -359,6 +463,12 @@ export function CMSSettings() {
                 <Input label="Localizacao" value={exp.location} onChange={(v) => setExperiences(experiences.map(e => e.id === exp.id ? { ...e, location: v } : e))} />
               </div>
               <div className="space-y-2">
+                <VisibilitySwitch
+                  label="Mostrar no site"
+                  description="Oculta esta experiência do portfólio sem remover do CMS."
+                  checked={isItemVisible("experiences", exp.id)}
+                  onChange={(visible) => setItemVisibility("experiences", exp.id, visible)}
+                />
                 <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tarefas</label>
                 {exp.tasks.map((task, i) => (
                   <div key={i} className="flex gap-2">
@@ -389,7 +499,7 @@ export function CMSSettings() {
             <button onClick={() => setExperiences([...experiences, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], sortOrder: experiences.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateExperiences(experiences); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateExperiences(experiences); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -401,6 +511,12 @@ export function CMSSettings() {
         <div className="space-y-4">
           {education.map((edu) => (
             <Section key={edu.id} title={edu.degree || "Nova formacao"}>
+              <VisibilitySwitch
+                label="Mostrar no site"
+                description="Oculta esta formação do portfólio sem remover do CMS."
+                checked={isItemVisible("education", edu.id)}
+                onChange={(visible) => setItemVisibility("education", edu.id, visible)}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Grau" value={edu.degree} onChange={(v) => setEducation(education.map(e => e.id === edu.id ? { ...e, degree: v } : e))} />
                 <Input label="Universidade" value={edu.university} onChange={(v) => setEducation(education.map(e => e.id === edu.id ? { ...e, university: v } : e))} />
@@ -417,7 +533,7 @@ export function CMSSettings() {
             <button onClick={() => setEducation([...education, { id: Date.now().toString(), degree: "", university: "", period: "", location: "", description: "", sortOrder: education.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateEducation(education); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateEducation(education); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -429,6 +545,12 @@ export function CMSSettings() {
         <div className="space-y-4">
           {certs.map((cert) => (
             <Section key={cert.id} title={cert.title || "Novo certificado"}>
+              <VisibilitySwitch
+                label="Mostrar no site"
+                description="Oculta este certificado do portfólio sem remover do CMS."
+                checked={isItemVisible("certifications", cert.id)}
+                onChange={(visible) => setItemVisibility("certifications", cert.id, visible)}
+              />
               <Input label="Titulo" value={cert.title} onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, title: v } : c))} />
               <Input label="Emissor" value={cert.issuer} onChange={(v) => setCerts(certs.map(c => c.id === cert.id ? { ...c, issuer: v } : c))} />
               <div className="space-y-3 rounded-lg p-3" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
@@ -465,7 +587,7 @@ export function CMSSettings() {
             <button onClick={() => setCerts([...certs, { id: Date.now().toString(), title: "", issuer: "", link: "", showLink: false, sortOrder: certs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateCertifications(certs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateCertifications(certs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -477,6 +599,12 @@ export function CMSSettings() {
         <div className="space-y-4">
           {stack.map((item) => (
             <Section key={item.id} title={item.name || "Nova ferramenta"}>
+              <VisibilitySwitch
+                label="Mostrar no site"
+                description="Oculta esta stack do portfólio sem remover do CMS."
+                checked={isItemVisible("stack", item.id)}
+                onChange={(visible) => setItemVisibility("stack", item.id, visible)}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input label="Nome" value={item.name} onChange={(v) => setStack(stack.map(s => s.id === item.id ? { ...s, name: v } : s))} />
                 <Input label="Descricao" value={item.description} onChange={(v) => setStack(stack.map(s => s.id === item.id ? { ...s, description: v } : s))} />
@@ -553,7 +681,7 @@ export function CMSSettings() {
             <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateStack(stack); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateStack(stack); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -565,6 +693,12 @@ export function CMSSettings() {
         <div className="space-y-4">
           {awards.map((award) => (
             <Section key={award.id} title={award.title || "Novo premio"} defaultOpen={false}>
+              <VisibilitySwitch
+                label="Mostrar no site"
+                description="Oculta este prêmio do portfólio sem remover do CMS."
+                checked={isItemVisible("awards", award.id)}
+                onChange={(visible) => setItemVisibility("awards", award.id, visible)}
+              />
               <Input label="Titulo" value={award.title} onChange={(v) => setAwards(awards.map(a => a.id === award.id ? { ...a, title: v } : a))} />
               <Input label="Emissor" value={award.issuer} onChange={(v) => setAwards(awards.map(a => a.id === award.id ? { ...a, issuer: v } : a))} />
               <Input label="Link" value={award.link} onChange={(v) => setAwards(awards.map(a => a.id === award.id ? { ...a, link: v } : a))} />
@@ -577,7 +711,7 @@ export function CMSSettings() {
             <button onClick={() => setAwards([...awards, { id: Date.now().toString(), title: "", issuer: "", link: "", sortOrder: awards.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateAwards(awards); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateAwards(awards); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -589,6 +723,12 @@ export function CMSSettings() {
         <div className="space-y-4">
           {recs.map((rec) => (
             <Section key={rec.id} title={rec.name || "Nova recomendacao"} defaultOpen={false}>
+              <VisibilitySwitch
+                label="Mostrar no site"
+                description="Oculta esta recomendação do portfólio sem remover do CMS."
+                checked={isItemVisible("recommendations", rec.id)}
+                onChange={(visible) => setItemVisibility("recommendations", rec.id, visible)}
+              />
               <Input label="Nome" value={rec.name} onChange={(v) => setRecs(recs.map(r => r.id === rec.id ? { ...r, name: v } : r))} />
               <Input label="Cargo" value={rec.role} onChange={(v) => setRecs(recs.map(r => r.id === rec.id ? { ...r, role: v } : r))} />
               <TextArea label="Citacao" value={rec.quote} onChange={(v) => setRecs(recs.map(r => r.id === rec.id ? { ...r, quote: v } : r))} rows={4} />
@@ -601,7 +741,7 @@ export function CMSSettings() {
             <button onClick={() => setRecs([...recs, { id: Date.now().toString(), name: "", role: "", quote: "", sortOrder: recs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateRecommendations(recs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateRecommendations(recs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>

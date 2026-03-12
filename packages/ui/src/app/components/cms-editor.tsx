@@ -4,7 +4,7 @@ import { VersionHistoryPanel, saveVersion, getVersions } from "./version-history
 import { ImagePositionEditor, ImagePositionEditorCompact } from "./image-position-editor";
 import { VideoPlayer } from "./video-player";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ensureUniqueSlug, isReservedPageSlug, slugify } from "@portfolio/core";
+import { ensureUniqueSlug, getPublicContentVisibilityKey, isReservedPageSlug, slugify } from "@portfolio/core";
 import { useParams, useNavigate, Link } from "react-router";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -1113,7 +1113,7 @@ export function CMSEditor() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const contentType = type as ContentType;
   const navigate = useNavigate();
-  const { data, updateProjects, updateBlogPosts, updatePages } = useCMS();
+  const { data, updateProjects, updateBlogPosts, updatePages, updateSiteSettings } = useCMS();
 
   const [mode, setMode] = useState<EditorMode>("split");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -1132,6 +1132,24 @@ export function CMSEditor() {
     const found = getItem();
     return found ? { ...found } : null;
   });
+  const visibilityCollection = contentType === "projects" ? "projects" : contentType === "articles" ? "blogPosts" : "pages";
+  const visibilityKey = getPublicContentVisibilityKey(visibilityCollection, id || "");
+  const isItemVisible = data.siteSettings.contentVisibility?.[visibilityKey] !== false;
+
+  const setItemVisible = (visible: boolean) => {
+    const nextVisibility = { ...(data.siteSettings.contentVisibility || {}) };
+
+    if (visible) {
+      delete nextVisibility[visibilityKey];
+    } else {
+      nextVisibility[visibilityKey] = false;
+    }
+
+    updateSiteSettings({
+      ...data.siteSettings,
+      contentVisibility: nextVisibility,
+    });
+  };
 
   // Autosave timer
   const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1453,6 +1471,24 @@ export function CMSEditor() {
         defaultOpen: false,
         content: (
           <>
+        <div className="rounded-[12px] p-3" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
+          <label className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                Mostrar no site
+              </p>
+              <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                Quando oculto, o projeto desaparece do site público, mas continua salvo aqui no CMS.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={isItemVisible}
+              onChange={(event) => setItemVisible(event.target.checked)}
+              className="mt-0.5 accent-[#fafafa]"
+            />
+          </label>
+        </div>
         <TagsInput tags={item.tags || []} onChange={(tags) => updateField("tags", tags)} />
         <div className="flex items-center gap-2">
           <input
@@ -1627,6 +1663,24 @@ export function CMSEditor() {
         defaultOpen: false,
         content: (
           <>
+        <div className="rounded-[12px] p-3" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
+          <label className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                Mostrar no site
+              </p>
+              <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                Quando oculto, o artigo desaparece do site público, mas continua salvo aqui no CMS.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={isItemVisible}
+              onChange={(event) => setItemVisible(event.target.checked)}
+              className="mt-0.5 accent-[#fafafa]"
+            />
+          </label>
+        </div>
         <TagsInput tags={item.tags || []} onChange={(tags) => updateField("tags", tags)} />
         <div className="flex items-center gap-2">
           <input

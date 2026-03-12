@@ -12,6 +12,7 @@ import { ArticlePreviewCard, ProjectPreviewCard } from "./content-preview-cards"
 import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
 import { getProfileSocialLinks } from "./profile-social-links";
+import { filterVisibleContent, isSectionVisible } from "./site-visibility";
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -78,8 +79,22 @@ export function PortfolioHome() {
     }
   };
 
-  const publishedProjects = projects.filter((p: any) => !p.status || p.status === "published");
-  const publishedBlogPosts = blogPosts.filter((b: any) => !b.status || b.status === "published");
+  const publishedProjects = filterVisibleContent(
+    projects.filter((project) => !project.status || project.status === "published"),
+    siteSettings,
+    "projects",
+  );
+  const publishedBlogPosts = filterVisibleContent(
+    blogPosts.filter((post) => !post.status || post.status === "published"),
+    siteSettings,
+    "blogPosts",
+  );
+  const visibleExperiences = filterVisibleContent(experiences, siteSettings, "experiences");
+  const visibleEducation = filterVisibleContent(education, siteSettings, "education");
+  const visibleCertifications = filterVisibleContent(certifications, siteSettings, "certifications");
+  const visibleStack = filterVisibleContent(stack, siteSettings, "stack");
+  const visibleAwards = filterVisibleContent(awards, siteSettings, "awards");
+  const visibleRecommendations = filterVisibleContent(recommendations, siteSettings, "recommendations");
   const displayedProjects = publishedProjects.slice(0, 4);
   const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
@@ -242,16 +257,19 @@ export function PortfolioHome() {
       </header>
 
       {/* About Me */}
-      <ScrollReveal as="section" id="about" className="max-w-[700px] mx-auto px-5 py-12">
-        <SectionTitle>{t("aboutMe")}</SectionTitle>
-        <div className="mt-6 space-y-4">
-          <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph1}</p>
-          <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph2}</p>
-        </div>
-      </ScrollReveal>
+      {isSectionVisible(siteSettings, "about") && (profile.aboutParagraph1 || profile.aboutParagraph2) && (
+        <ScrollReveal as="section" id="about" className="max-w-[700px] mx-auto px-5 py-12">
+          <SectionTitle>{t("aboutMe")}</SectionTitle>
+          <div className="mt-6 space-y-4">
+            <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph1}</p>
+            <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph2}</p>
+          </div>
+        </ScrollReveal>
+      )}
 
       {/* Projects */}
-      <ScrollReveal as="section" id="projects" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "projects") && displayedProjects.length > 0 && (
+        <ScrollReveal as="section" id="projects" className="max-w-[700px] mx-auto px-5 py-12">
         <div className="flex items-center justify-between mb-8">
           <SectionTitle>{t("projectsTitle")}</SectionTitle>
           <Link
@@ -272,19 +290,23 @@ export function PortfolioHome() {
                   category={project.category}
                   image={project.image}
                   imagePosition={(project as any).imagePosition || "50% 50%"}
+                  galleryImages={project.galleryImages}
+                  galleryPositions={project.galleryPositions}
                   locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
                 />
               </motion.div>
             </StaggerItem>
           ))}
         </StaggerChildren>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Experience */}
-      <ScrollReveal as="section" id="experience" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "experience") && visibleExperiences.length > 0 && (
+        <ScrollReveal as="section" id="experience" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("experienceTitle")}</SectionTitle>
         <div className="mt-8 space-y-0">
-          {experiences.map((exp, i) => (
+          {visibleExperiences.map((exp) => (
             <div
               key={exp.id}
               className="relative pl-6 pb-10 last:pb-0"
@@ -323,13 +345,15 @@ export function PortfolioHome() {
             </div>
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Education */}
-      <ScrollReveal as="section" id="education" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "education") && visibleEducation.length > 0 && (
+        <ScrollReveal as="section" id="education" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("educationTitle")}</SectionTitle>
         <div className="mt-8 space-y-0">
-          {education.map((edu) => (
+          {visibleEducation.map((edu) => (
             <div
               key={edu.id}
               className="relative pl-6 pb-10 last:pb-0"
@@ -363,13 +387,15 @@ export function PortfolioHome() {
             </div>
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Certifications */}
-      <ScrollReveal as="section" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "certifications") && visibleCertifications.length > 0 && (
+        <ScrollReveal as="section" id="certifications" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("certificationsTitle")}</SectionTitle>
         <div className="mt-8 space-y-4">
-          {certifications.map((cert) => (
+          {visibleCertifications.map((cert) => (
             <div
               key={cert.id}
               className="flex items-start sm:items-center justify-between gap-3 py-2"
@@ -393,13 +419,15 @@ export function PortfolioHome() {
             </div>
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Stack / Tools */}
-      <ScrollReveal as="section" id="tools" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "stack") && visibleStack.length > 0 && (
+        <ScrollReveal as="section" id="tools" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("stackTitle")}</SectionTitle>
         <StaggerChildren className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {stack.map((item) => (
+          {visibleStack.map((item) => (
             <StaggerItem key={item.id}>
               <a
                 href={item.link || "#"}
@@ -436,13 +464,15 @@ export function PortfolioHome() {
             </StaggerItem>
           ))}
         </StaggerChildren>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Awards */}
-      <ScrollReveal as="section" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "awards") && visibleAwards.length > 0 && (
+        <ScrollReveal as="section" id="awards" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("awardsTitle")}</SectionTitle>
         <div className="mt-8 space-y-4">
-          {awards.map((award) => (
+          {visibleAwards.map((award) => (
             <div
               key={award.id}
               className="flex items-center justify-between py-2"
@@ -466,13 +496,15 @@ export function PortfolioHome() {
             </div>
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Recommendations */}
-      <ScrollReveal as="section" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "recommendations") && visibleRecommendations.length > 0 && (
+        <ScrollReveal as="section" id="recommendations" className="max-w-[700px] mx-auto px-5 py-12">
         <SectionTitle>{t("recommendationsTitle")}</SectionTitle>
         <div className="mt-8 space-y-8">
-          {recommendations.map((rec) => (
+          {visibleRecommendations.map((rec) => (
             <div
               key={rec.id}
               className="pl-5"
@@ -486,10 +518,12 @@ export function PortfolioHome() {
             </div>
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Blog / Articles */}
-      <ScrollReveal as="section" id="blog" className="max-w-[700px] mx-auto px-5 py-12">
+      {isSectionVisible(siteSettings, "blog") && displayedBlogPosts.length > 0 && (
+        <ScrollReveal as="section" id="blog" className="max-w-[700px] mx-auto px-5 py-12">
         <div className="flex items-center justify-between mb-8">
           <SectionTitle>{t("articlesTitle")}</SectionTitle>
           <Link
@@ -509,6 +543,8 @@ export function PortfolioHome() {
               description={post.description}
               image={post.image}
               imagePosition={(post as any).imagePosition || "50% 50%"}
+              galleryImages={post.galleryImages}
+              galleryPositions={post.galleryPositions}
               publisher={post.publisher}
               date={post.date}
               category={(post as any).category}
@@ -517,10 +553,12 @@ export function PortfolioHome() {
             />
           ))}
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
 
       {/* Contact / Let's Talk */}
-      <ScrollReveal as="footer" id="contact" className="max-w-[700px] mx-auto px-5 py-16">
+      {isSectionVisible(siteSettings, "contact") && (
+        <ScrollReveal as="footer" id="contact" className="max-w-[700px] mx-auto px-5 py-16">
         <SectionTitle>{t("letsTalk")}</SectionTitle>
 
         <div className="mt-8 flex flex-col md:flex-row gap-8">
@@ -608,7 +646,8 @@ export function PortfolioHome() {
             &copy; {t("copyright")} {new Date().getFullYear()}
           </p>
         </div>
-      </ScrollReveal>
+        </ScrollReveal>
+      )}
     </div>
   );
 }

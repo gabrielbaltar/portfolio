@@ -29,6 +29,8 @@ export const defaultSiteSettings: SiteSettings = {
   seoDescription: "",
   projectOrder: [],
   blogPostOrder: [],
+  sectionVisibility: {},
+  contentVisibility: {},
   createdAt: now,
   updatedAt: now,
 };
