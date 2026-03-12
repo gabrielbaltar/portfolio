@@ -61,27 +61,18 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
         <X size={18} />
       </button>
 
-      <div
-        className="flex max-h-[88vh] max-w-[92vw] items-center justify-center"
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-[88vh] max-w-[92vw] select-none object-contain"
+        style={{
+          WebkitTouchCallout: "none",
+          userSelect: "none",
+        }}
         onClick={(event) => event.stopPropagation()}
         onContextMenu={(event) => event.preventDefault()}
-      >
-        <div
-          role="img"
-          aria-label={alt}
-          className="max-h-[88vh] max-w-[92vw] select-none bg-center bg-no-repeat"
-          style={{
-            width: "min(92vw, 1500px)",
-            height: "min(88vh, 1100px)",
-            backgroundImage: `url("${src}")`,
-            backgroundSize: "contain",
-            WebkitTouchCallout: "none",
-            userSelect: "none",
-          }}
-          onContextMenu={(event) => event.preventDefault()}
-          onDragStart={(event) => event.preventDefault()}
-        />
-      </div>
+        onDragStart={(event) => event.preventDefault()}
+      />
     </div>
   );
 }
