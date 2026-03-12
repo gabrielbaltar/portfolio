@@ -7,7 +7,7 @@ import { buildBackTarget } from "./navigation-state";
 type ProjectPreviewCardProps = {
   href: string;
   title: string;
-  category?: string;
+  subtitle?: string;
   image?: string;
   imagePosition?: string;
   galleryImages?: string[];
@@ -218,7 +218,7 @@ function PreviewMediaSlider({
 export function ProjectPreviewCard({
   href,
   title,
-  category,
+  subtitle,
   image,
   imagePosition = "50% 50%",
   galleryImages = [],
@@ -269,7 +269,7 @@ export function ProjectPreviewCard({
       </div>
 
       <div
-        className="pointer-events-none relative z-20 flex min-h-[92px] flex-1 flex-col justify-between px-4 py-3"
+        className="pointer-events-none relative z-20 flex min-h-[92px] flex-1 flex-col justify-center px-4 py-3"
         style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -291,12 +291,14 @@ export function ProjectPreviewCard({
                   {title}
                 </span>
               </p>
-              <p
-                className="line-clamp-1"
-                style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
-              >
-                {category || "Sem categoria"}
-              </p>
+              {subtitle && (
+                <p
+                  className="line-clamp-1"
+                  style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
+                >
+                  {subtitle}
+                </p>
+              )}
             </div>
           </div>
           <ArrowUpRight

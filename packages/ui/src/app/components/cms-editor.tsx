@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronUp, Hash, Globe,
   Plus, Upload, X, History, Lock, LockOpen, Video, Code, GripVertical, RotateCcw,
 } from "lucide-react";
-import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page } from "./cms-data";
+import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page, type SiteSettings } from "./cms-data";
 import { dataProvider } from "./data-provider";
 import {
   clampBlockLineHeight,
@@ -93,6 +93,42 @@ function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
 
 function getImageFiles(files: FileList | File[]) {
   return Array.from(files).filter((file) => file.type.startsWith("image/"));
+}
+
+type ProjectEditorFields = {
+  cardTitle?: string;
+  cardSubtitle?: string;
+};
+
+function normalizeProjectCardField(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function attachProjectCardFields(project: Project, siteSettings: SiteSettings) {
+  const override = siteSettings.projectCardOverrides?.[project.id];
+
+  return {
+    ...project,
+    cardTitle: override?.title || "",
+    cardSubtitle: override?.subtitle || "",
+  };
+}
+
+function splitProjectCardFields(project: Project & ProjectEditorFields) {
+  const { cardTitle, cardSubtitle, ...persistedProject } = project;
+  const normalizedCardTitle = normalizeProjectCardField(cardTitle);
+  const normalizedCardSubtitle = normalizeProjectCardField(cardSubtitle);
+
+  return {
+    project: persistedProject as Project,
+    override:
+      normalizedCardTitle || normalizedCardSubtitle
+        ? {
+            ...(normalizedCardTitle ? { title: normalizedCardTitle } : {}),
+            ...(normalizedCardSubtitle ? { subtitle: normalizedCardSubtitle } : {}),
+          }
+        : null,
+  };
 }
 
 // Reusable form components
@@ -1130,7 +1166,10 @@ export function CMSEditor() {
 
   const [item, setItem] = useState<any>(() => {
     const found = getItem();
-    return found ? { ...found } : null;
+    if (!found) return null;
+    return contentType === "projects"
+      ? attachProjectCardFields(found as Project, data.siteSettings)
+      : { ...found };
   });
   const visibilityCollection = contentType === "projects" ? "projects" : contentType === "articles" ? "blogPosts" : "pages";
   const visibilityKey = getPublicContentVisibilityKey(visibilityCollection, id || "");
@@ -1253,26 +1292,48 @@ export function CMSEditor() {
     if (!draft) return;
     try {
       const normalizedSlug = await buildUniqueSlug();
+      const nextUpdatedAt = new Date().toISOString();
       const nextItem = {
         ...draft,
         slug: normalizedSlug,
         publishedAt: draft.status === "published" ? draft.publishedAt || new Date().toISOString() : null,
-        updatedAt: new Date().toISOString(),
+        updatedAt: nextUpdatedAt,
       };
 
-    // Save version before persisting
+      // Save version before persisting
       const versionLabel = silent ? "Autosave" : "Salvo manualmente";
       if (id) saveVersion(`${contentType}-${id}`, nextItem, versionLabel);
 
       if (contentType === "projects") {
-        updateProjects(data.projects.map((project) => (project.id === id ? nextItem : project)));
+        const { project: persistedProject, override } = splitProjectCardFields(nextItem as Project & ProjectEditorFields);
+        const projectId = persistedProject.id;
+        const nextProjectCardOverrides = { ...(data.siteSettings.projectCardOverrides || {}) };
+
+        if (override) {
+          nextProjectCardOverrides[projectId] = override;
+        } else {
+          delete nextProjectCardOverrides[projectId];
+        }
+
+        updateProjects(data.projects.map((project) => (project.id === id ? persistedProject : project)));
+        updateSiteSettings({
+          ...data.siteSettings,
+          projectCardOverrides: nextProjectCardOverrides,
+          updatedAt: nextUpdatedAt,
+        });
+
+        setItem({
+          ...persistedProject,
+          cardTitle: override?.title || "",
+          cardSubtitle: override?.subtitle || "",
+        });
       } else if (contentType === "articles") {
         updateBlogPosts(data.blogPosts.map((post) => (post.id === id ? nextItem : post)));
+        setItem(nextItem);
       } else if (contentType === "pages") {
         updatePages((data.pages || []).map((page) => (page.id === id ? nextItem : page)));
+        setItem(nextItem);
       }
-
-      setItem(nextItem);
       setHasChanges(false);
       if (!silent) toast.success("Salvo!");
     } catch (err) {
@@ -1383,11 +1444,35 @@ export function CMSEditor() {
         title: "Informacoes basicas",
         content: (
           <>
-        <Input label="Titulo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Nome do projeto" />
-        <Input label="Subtitulo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Descricao curta" />
+        <Input
+          label="Titulo completo do case"
+          value={item.title}
+          onChange={(v) => updateField("title", v)}
+          placeholder="Nome completo que aparece na pagina do projeto"
+        />
+        <Input
+          label="Subtitulo do case"
+          value={item.subtitle || ""}
+          onChange={(v) => updateField("subtitle", v)}
+          placeholder="Texto opcional abaixo do titulo da pagina"
+        />
+        <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
+          <Input
+            label="Titulo do card"
+            value={item.cardTitle || ""}
+            onChange={(v) => updateField("cardTitle", v)}
+            placeholder="Versao curta para home e listagem"
+          />
+          <Input
+            label="Subtitulo do card (opcional)"
+            value={item.cardSubtitle || ""}
+            onChange={(v) => updateField("cardSubtitle", v)}
+            placeholder="Se vazio, o card nao mostra subtitulo"
+          />
+        </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input label="Slug (URL)" value={item.slug || ""} onChange={(v) => updateField("slug", slugify(v))} placeholder="meu-projeto" />
-          <Input label="Categoria" value={item.category} onChange={(v) => updateField("category", v)} placeholder="Web Design" />
+          <Input label="Categoria do case" value={item.category} onChange={(v) => updateField("category", v)} placeholder="Web Design" />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input label="Cliente" value={item.client || ""} onChange={(v) => updateField("client", v)} />

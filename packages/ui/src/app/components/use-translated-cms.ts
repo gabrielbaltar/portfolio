@@ -243,6 +243,10 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   ];
 
   siteSettingsFields.forEach((field) => addText(`siteSettings.${field}`, data.siteSettings[field] as string));
+  Object.entries(data.siteSettings.projectCardOverrides || {}).forEach(([projectId, override]) => {
+    addText(`siteSettings.projectCardOverrides.${projectId}.title`, override.title || "");
+    addText(`siteSettings.projectCardOverrides.${projectId}.subtitle`, override.subtitle || "");
+  });
 
   const profileFields: Array<keyof CMSData["profile"]> = [
     "role",

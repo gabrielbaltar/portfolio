@@ -14,7 +14,7 @@ import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
-import { filterVisibleContent } from "./site-visibility";
+import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 
 function ImageCard({
   src,
@@ -354,19 +354,23 @@ export function ProjectDetailPage() {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {otherProjects.map((p) => (
-            <ProjectPreviewCard
-              key={p.id}
-              href={`/projects/${p.slug}`}
-              title={p.title}
-              category={p.category}
-              image={p.image || ""}
-              imagePosition={p.imagePosition || "50% 50%"}
-              galleryImages={p.galleryImages}
-              galleryPositions={p.galleryPositions}
-              locked={Boolean(p.password && p.password.trim() !== "")}
-            />
-          ))}
+          {otherProjects.map((p) => {
+            const cardCopy = getProjectCardCopy(p, siteSettings);
+
+            return (
+              <ProjectPreviewCard
+                key={p.id}
+                href={`/projects/${p.slug}`}
+                title={cardCopy.title}
+                subtitle={cardCopy.subtitle}
+                image={p.image || ""}
+                imagePosition={p.imagePosition || "50% 50%"}
+                galleryImages={p.galleryImages}
+                galleryPositions={p.galleryPositions}
+                locked={Boolean(p.password && p.password.trim() !== "")}
+              />
+            );
+          })}
         </div>
       </ScrollReveal>
 

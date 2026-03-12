@@ -12,7 +12,7 @@ import { ArticlePreviewCard, ProjectPreviewCard } from "./content-preview-cards"
 import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
 import { getProfileSocialLinks } from "./profile-social-links";
-import { filterVisibleContent, isSectionVisible } from "./site-visibility";
+import { filterVisibleContent, getProjectCardCopy, isSectionVisible } from "./site-visibility";
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -281,22 +281,26 @@ export function PortfolioHome() {
           </Link>
         </div>
         <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {displayedProjects.map((project, i) => (
-            <StaggerItem key={project.id}>
-              <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
-                <ProjectPreviewCard
-                  href={`/projects/${project.slug || project.id}`}
-                  title={project.title}
-                  category={project.category}
-                  image={project.image}
-                  imagePosition={(project as any).imagePosition || "50% 50%"}
-                  galleryImages={project.galleryImages}
-                  galleryPositions={project.galleryPositions}
-                  locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
-                />
-              </motion.div>
-            </StaggerItem>
-          ))}
+          {displayedProjects.map((project) => {
+            const cardCopy = getProjectCardCopy(project, siteSettings);
+
+            return (
+              <StaggerItem key={project.id}>
+                <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.3 }}>
+                  <ProjectPreviewCard
+                    href={`/projects/${project.slug || project.id}`}
+                    title={cardCopy.title}
+                    subtitle={cardCopy.subtitle}
+                    image={project.image}
+                    imagePosition={(project as any).imagePosition || "50% 50%"}
+                    galleryImages={project.galleryImages}
+                    galleryPositions={project.galleryPositions}
+                    locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                  />
+                </motion.div>
+              </StaggerItem>
+            );
+          })}
         </StaggerChildren>
         </ScrollReveal>
       )}

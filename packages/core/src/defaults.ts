@@ -31,6 +31,7 @@ export const defaultSiteSettings: SiteSettings = {
   blogPostOrder: [],
   sectionVisibility: {},
   contentVisibility: {},
+  projectCardOverrides: {},
   createdAt: now,
   updatedAt: now,
 };

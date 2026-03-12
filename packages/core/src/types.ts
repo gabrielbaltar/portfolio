@@ -123,6 +123,7 @@ export interface SiteSettings extends TimestampedEntity {
   blogPostOrder: string[];
   sectionVisibility: Partial<Record<PortfolioSectionId, boolean>>;
   contentVisibility: Record<string, boolean>;
+  projectCardOverrides: Record<string, { title?: string; subtitle?: string }>;
 }
 
 export interface ProfileData extends TimestampedEntity {

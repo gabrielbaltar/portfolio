@@ -10,7 +10,7 @@ import { ProjectPreviewCard } from "./content-preview-cards";
 import { copyToClipboard } from "./clipboard-utils";
 import { sendContactEmail } from "./email-service";
 import { getProfileSocialLinks } from "./profile-social-links";
-import { filterVisibleContent } from "./site-visibility";
+import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 
 export function ProjectsPage() {
   const { data } = useTranslatedCMS();
@@ -86,27 +86,31 @@ export function ProjectsPage() {
           {t("projectsTitle")}
         </motion.h1>
         <div className="mt-10 grid grid-cols-1 min-[560px]:grid-cols-2 gap-6">
-          {projects.map((project, i) => (
-            <ScrollReveal key={project.id}>
-              <motion.div
-                initial={{ y: 30, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-              >
-                <ProjectPreviewCard
-                  href={`/projects/${(project as any).slug || project.id}`}
-                  title={project.title}
-                  category={project.category}
-                  image={project.image}
-                  imagePosition={(project as any).imagePosition || "50% 50%"}
-                  galleryImages={project.galleryImages}
-                  galleryPositions={project.galleryPositions}
-                  locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
-                />
-              </motion.div>
-            </ScrollReveal>
-          ))}
+          {projects.map((project, i) => {
+            const cardCopy = getProjectCardCopy(project, siteSettings);
+
+            return (
+              <ScrollReveal key={project.id}>
+                <motion.div
+                  initial={{ y: 30, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                >
+                  <ProjectPreviewCard
+                    href={`/projects/${(project as any).slug || project.id}`}
+                    title={cardCopy.title}
+                    subtitle={cardCopy.subtitle}
+                    image={project.image}
+                    imagePosition={(project as any).imagePosition || "50% 50%"}
+                    galleryImages={project.galleryImages}
+                    galleryPositions={project.galleryPositions}
+                    locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                  />
+                </motion.div>
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
 
