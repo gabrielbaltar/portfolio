@@ -28,7 +28,7 @@ import { CodeHighlight } from "./code-highlight";
 import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
-import { ContentImage } from "./content-image";
+import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
@@ -652,7 +652,12 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
         {/* Cover image */}
         {item.image && (
           <div className="mb-8 overflow-hidden rounded-[12px]" style={{ backgroundColor: item.imageBgColor || "transparent" }}>
-            <img src={item.image} alt={item.title} className="w-full object-cover" style={{ maxHeight: "220px" }} />
+            <ContentImage
+              src={item.image}
+              alt={item.title}
+              className="w-full object-cover"
+              style={{ maxHeight: "220px" }}
+            />
           </div>
         )}
 
@@ -985,7 +990,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
             <div className="grid grid-cols-2 gap-2">
               {item.galleryImages.map((img: string, idx: number) => (
                 <div key={idx} className="rounded-lg overflow-hidden" style={{ aspectRatio: "16/10" }}>
-                  <img src={img} className="w-full h-full object-cover" />
+                  <ContentImage src={img} alt={`Galeria ${idx + 1}`} className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
@@ -1070,7 +1075,7 @@ function ImageUrlField({
   };
 
   const handleUpload = async (files: FileList | File[]) => {
-    const imageFiles = getImageFiles(files);
+    const imageFiles = Array.from(files).filter((file) => isSupportedVisualUpload(file));
     if (!imageFiles.length) return;
 
     setUploading(true);
@@ -1095,16 +1100,16 @@ function ImageUrlField({
 
       const result = applyIncomingImages(uploadedImages);
       if (uploadedImages.length === 1) {
-        toast.success("Imagem enviada em qualidade original.");
+        toast.success("Asset visual enviado em qualidade original.");
       } else if (result.coverUpdated && result.galleryAdded > 0) {
-        toast.success(`Capa atualizada e ${result.galleryAdded} imagens enviadas para a galeria.`);
+        toast.success(`Capa atualizada e ${result.galleryAdded} assets enviados para a galeria.`);
       } else if (result.galleryAdded > 0) {
-        toast.success(`${result.galleryAdded} imagens adicionadas na galeria.`);
+        toast.success(`${result.galleryAdded} assets adicionados na galeria.`);
       } else {
-        toast.info("As imagens selecionadas ja estavam cadastradas.");
+        toast.info("Os assets selecionados ja estavam cadastrados.");
       }
     } catch {
-      toast.error("Nao foi possivel carregar as imagens.");
+      toast.error("Nao foi possivel carregar os assets visuais.");
     } finally {
       setUploading(false);
     }
@@ -1169,13 +1174,13 @@ function ImageUrlField({
         <p className="mt-2 px-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
           {dragOver
             ? "Solte aqui para atualizar a capa e enviar o restante para a galeria."
-            : "Arraste uma ou varias imagens aqui. A primeira vira capa e as demais vao para a galeria."}
+            : "Arraste uma ou varias capas visuais aqui. A primeira vira capa e as demais vao para a galeria."}
         </p>
       </div>
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,application/json,.json,.lottie"
         multiple
         className="hidden"
         onChange={(event) => {
@@ -1184,8 +1189,83 @@ function ImageUrlField({
         }}
       />
       <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-        Use este campo para trocar a capa. Se enviar varias imagens, as extras vao para a galeria do conteudo.
+        Aceita WebM, Lottie JSON, SVG, WebP animado e imagens estaticas. Os arquivos sao enviados no original, sem compressao.
       </p>
+    </div>
+  );
+}
+
+function NonPositionableGalleryAssetCard({
+  src,
+  index,
+  onRemove,
+  canMoveBackward,
+  canMoveForward,
+  onMoveBackward,
+  onMoveForward,
+}: {
+  src: string;
+  index: number;
+  onRemove: () => void;
+  canMoveBackward?: boolean;
+  canMoveForward?: boolean;
+  onMoveBackward?: () => void;
+  onMoveForward?: () => void;
+}) {
+  const assetKind = inferVisualAssetKind(src);
+  const label = assetKind === "video" ? "Animacao WebM / video" : assetKind === "lottie" ? "Lottie JSON" : "Midia";
+
+  return (
+    <div
+      className="overflow-hidden rounded-[12px] border"
+      style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}
+    >
+      <div style={{ height: "160px" }}>
+        <ContentImage
+          src={src}
+          alt={`Galeria ${index + 1}`}
+          className="h-full w-full object-cover"
+          style={{ backgroundColor: "#0f0f0f" }}
+        />
+      </div>
+      <div
+        className="flex items-center justify-between gap-2 border-t px-2 py-2"
+        style={{ borderColor: "#1e1e1e" }}
+      >
+        <div className="min-w-0">
+          <p className="truncate text-[#aaa]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            {label}
+          </p>
+          <p className="text-[#555]" style={{ fontSize: "10px", lineHeight: "15px" }}>
+            Sem reposicionamento manual
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onMoveBackward}
+            disabled={!canMoveBackward}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa] disabled:opacity-30"
+          >
+            <ChevronUp size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveForward}
+            disabled={!canMoveForward}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa] disabled:opacity-30"
+          >
+            <ChevronDown size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-red-400"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1235,7 +1315,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
       .filter(Boolean);
 
   const handleUpload = async (files: FileList | File[]) => {
-    const imageFiles = getImageFiles(files);
+    const imageFiles = Array.from(files).filter((file) => isSupportedVisualUpload(file));
     if (!imageFiles.length) return;
     setUploading(true);
     const uploadedImages: string[] = [];
@@ -1250,18 +1330,18 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           try {
             const originalDataUrl = await readFileAsDataUrl(file);
             uploadedImages.push(originalDataUrl);
-            toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
+            toast.info("Upload externo indisponivel. O asset foi mantido localmente sem compressao.");
           } catch {
-            toast.error("Nao foi possivel carregar a imagem.");
+            toast.error("Nao foi possivel carregar o asset.");
           }
         }
       }
 
       const addedCount = appendImages(uploadedImages);
       if (addedCount > 0) {
-        toast.success(addedCount === 1 ? "Imagem adicionada em qualidade original." : `${addedCount} imagens adicionadas.`);
+        toast.success(addedCount === 1 ? "Asset adicionado em qualidade original." : `${addedCount} assets adicionados.`);
       } else {
-        toast.info("As imagens selecionadas ja estavam na galeria.");
+        toast.info("Os assets selecionados ja estavam na galeria.");
       }
     } finally {
       setUploading(false);
@@ -1271,7 +1351,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
   const handleAddUrls = () => {
     const nextUrls = parseImageUrls(urlInput);
     if (!nextUrls.length) {
-      toast.error("Cole pelo menos uma URL de imagem.");
+      toast.error("Cole pelo menos uma URL de midia visual.");
       return;
     }
 
@@ -1324,12 +1404,12 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria de imagens</label>
+        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Galeria visual</label>
         <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-          Adicione imagens extras por upload ou URL para montar a galeria do case ou artigo.
+          Adicione assets extras por upload ou URL para montar a galeria do case ou artigo.
         </p>
         <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
-          Clique para ver inteira e use o menu de 3 pontos para reordenar, reposicionar ou remover.
+          Imagens continuam com reposicionamento. Videos e Lotties ficam centralizados para preservar performance e nitidez.
         </p>
       </div>
       <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
@@ -1337,7 +1417,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           <textarea
             value={urlInput}
             onChange={(event) => setUrlInput(event.target.value)}
-            placeholder={"Cole uma ou varias URLs de imagem\nUma por linha ou separadas por virgula"}
+            placeholder={"Cole uma ou varias URLs de imagem, WebM ou Lottie\nUma por linha ou separadas por virgula"}
             rows={3}
             className="min-h-[84px] flex-1 resize-none rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#666] focus:outline-none transition-colors"
             style={{ fontSize: "13px", lineHeight: "19.5px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
@@ -1366,19 +1446,32 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
       </div>
       <div className="grid grid-cols-2 gap-2">
         {images.map((img, i) => (
-          <ImagePositionEditorCompact
-            key={i}
-            src={img}
-            alt={`Galeria ${i + 1}`}
-            position={(positions && positions[i]) || "50% 50%"}
-            onChange={(pos) => handlePositionChange(i, pos)}
-            onRemove={() => handleRemove(i)}
-            height={160}
-            canMoveBackward={i > 0}
-            canMoveForward={i < images.length - 1}
-            onMoveBackward={() => handleMove(i, i - 1)}
-            onMoveForward={() => handleMove(i, i + 1)}
-          />
+          supportsPositionEditor(img) ? (
+            <ImagePositionEditorCompact
+              key={i}
+              src={img}
+              alt={`Galeria ${i + 1}`}
+              position={(positions && positions[i]) || "50% 50%"}
+              onChange={(pos) => handlePositionChange(i, pos)}
+              onRemove={() => handleRemove(i)}
+              height={160}
+              canMoveBackward={i > 0}
+              canMoveForward={i < images.length - 1}
+              onMoveBackward={() => handleMove(i, i - 1)}
+              onMoveForward={() => handleMove(i, i + 1)}
+            />
+          ) : (
+            <NonPositionableGalleryAssetCard
+              key={i}
+              src={img}
+              index={i}
+              onRemove={() => handleRemove(i)}
+              canMoveBackward={i > 0}
+              canMoveForward={i < images.length - 1}
+              onMoveBackward={() => handleMove(i, i - 1)}
+              onMoveForward={() => handleMove(i, i + 1)}
+            />
+          )
         ))}
         <button
           type="button"
@@ -1401,14 +1494,14 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
             {uploading ? "Enviando..." : dragOver ? "Solte para adicionar" : "Adicionar mais"}
           </span>
           <span className="text-[#444]" style={{ fontSize: "10px" }}>
-            Clique ou arraste imagens
+            Clique ou arraste assets
           </span>
         </button>
       </div>
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,application/json,.json,.lottie"
         multiple
         className="hidden"
         onChange={(e) => {
@@ -1761,21 +1854,21 @@ export function CMSEditor() {
       },
       {
         key: "images",
-        title: "Imagens",
+        title: "Midia visual",
         defaultOpen: false,
         content: (
           <>
         <ImageUrlField
-          label="Imagem de capa"
+          label="Capa visual"
           value={item.image}
           onChange={(value) => updateField("image", value)}
-          placeholder="Cole a URL ou envie do computador"
+          placeholder="Cole a URL ou envie WebM, Lottie, SVG, WebP..."
           galleryImages={item.galleryImages || []}
           onGalleryImagesChange={(imgs) => updateField("galleryImages", imgs)}
           galleryPositions={item.galleryPositions || []}
           onGalleryPositionsChange={(positions) => updateField("galleryPositions", positions)}
         />
-        {item.image && (
+        {item.image && supportsPositionEditor(item.image) && (
           <ImagePositionEditor
             src={item.image}
             position={item.imagePosition || "50% 50%"}
@@ -1783,6 +1876,11 @@ export function CMSEditor() {
             height={300}
             label="Reposicionar imagem de capa (altura fixa 525px no site)"
           />
+        )}
+        {item.image && !supportsPositionEditor(item.image) && (
+          <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
+          </p>
         )}
         <div className="space-y-1.5">
           <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Cor de fundo das imagens</label>
@@ -1962,21 +2060,21 @@ export function CMSEditor() {
       },
       {
         key: "images",
-        title: "Imagens",
+        title: "Midia visual",
         defaultOpen: false,
         content: (
           <>
         <ImageUrlField
-          label="Imagem de capa"
+          label="Capa visual"
           value={item.image || ""}
           onChange={(value) => updateField("image", value)}
-          placeholder="Cole a URL ou envie do computador"
+          placeholder="Cole a URL ou envie WebM, Lottie, SVG, WebP..."
           galleryImages={item.galleryImages || []}
           onGalleryImagesChange={(imgs) => updateField("galleryImages", imgs)}
           galleryPositions={item.galleryPositions || []}
           onGalleryPositionsChange={(positions) => updateField("galleryPositions", positions)}
         />
-        {item.image && (
+        {item.image && supportsPositionEditor(item.image) && (
           <ImagePositionEditor
             src={item.image}
             position={item.imagePosition || "50% 50%"}
@@ -1984,6 +2082,11 @@ export function CMSEditor() {
             height={300}
             label="Reposicionar imagem de capa (altura fixa 525px no site)"
           />
+        )}
+        {item.image && !supportsPositionEditor(item.image) && (
+          <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
+          </p>
         )}
         <div className="space-y-1.5">
           <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Cor de fundo das imagens</label>

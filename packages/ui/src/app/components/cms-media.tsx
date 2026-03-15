@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   Check,
   Copy,
+  FileJson2,
   Grid3X3,
   Image,
   List,
@@ -15,10 +16,14 @@ import { toast } from "sonner";
 import { copyToClipboard } from "./clipboard-utils";
 import { useCMS, type MediaItem } from "./cms-data";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
+import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload } from "./content-image";
 import { dataProvider } from "./data-provider";
 
-function isVideo(item: MediaItem) {
-  return item.kind === "video" || item.mimeType.startsWith("video/");
+function getMediaBadge(item: MediaItem) {
+  const assetKind = inferVisualAssetKind(item.url, item.mimeType);
+  if (assetKind === "video") return "WebM / Video";
+  if (assetKind === "lottie") return "Lottie JSON";
+  return "Imagem";
 }
 
 export function CMSMedia() {
@@ -42,7 +47,7 @@ export function CMSMedia() {
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) continue;
+        if (!isSupportedVisualUpload(file)) continue;
         const item = await dataProvider.uploadMedia(file, "public");
         addMediaItem(item);
         toast.success(`${file.name} carregado com sucesso.`);
@@ -116,7 +121,7 @@ export function CMSMedia() {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/*,video/*,application/json,.json,.lottie"
           multiple
           className="hidden"
           onChange={(event) => {
@@ -147,7 +152,7 @@ export function CMSMedia() {
           Arraste arquivos aqui ou clique para selecionar
         </p>
         <p style={{ fontSize: "11px", lineHeight: "16.5px", color: "#444" }}>
-          PNG, JPG, GIF, WebP — armazenado no Supabase Storage
+          WebM, Lottie JSON, SVG, WebP animado e imagens originais
         </p>
       </button>
 
@@ -210,14 +215,16 @@ export function CMSMedia() {
                 onClick={() => setSelectedMedia(item)}
                 className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-[#101010]"
               >
-                {isVideo(item) ? (
-                  <video src={item.url} className="h-full w-full object-cover" muted playsInline />
-                ) : (
-                  <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
-                )}
+                <ContentImage
+                  src={item.url}
+                  alt={item.name}
+                  mimeType={item.mimeType}
+                  className="h-full w-full object-cover"
+                  style={{ backgroundColor: "#101010" }}
+                />
                 <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/45" />
                 <div className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
-                  {item.visibility === "private" ? "Privado" : "Publico"}
+                  {item.visibility === "private" ? "Privado" : "Publico"} · {getMediaBadge(item)}
                 </div>
               </button>
 
@@ -261,7 +268,14 @@ export function CMSMedia() {
               }}
             >
               <button type="button" onClick={() => setSelectedMedia(item)} className="shrink-0">
-                {isVideo(item) ? (
+                {inferVisualAssetKind(item.url, item.mimeType) === "lottie" ? (
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-[10px]"
+                    style={{ backgroundColor: "#101010" }}
+                  >
+                    <FileJson2 size={14} className="text-[#888]" />
+                  </div>
+                ) : inferVisualAssetKind(item.url, item.mimeType) === "video" ? (
                   <div
                     className="flex h-10 w-10 items-center justify-center rounded-[10px]"
                     style={{ backgroundColor: "#101010" }}
@@ -269,7 +283,13 @@ export function CMSMedia() {
                     <Video size={14} className="text-[#888]" />
                   </div>
                 ) : (
-                  <img src={item.url} alt={item.name} className="h-10 w-10 rounded-[10px] object-cover" />
+                  <ContentImage
+                    src={item.url}
+                    alt={item.name}
+                    mimeType={item.mimeType}
+                    className="h-10 w-10 rounded-[10px] object-cover"
+                    style={{ backgroundColor: "#101010" }}
+                  />
                 )}
               </button>
               <div className="min-w-0 flex-1">
@@ -277,7 +297,7 @@ export function CMSMedia() {
                   {item.name}
                 </div>
                 <div style={{ fontSize: "11px", lineHeight: "16.5px", color: "#555" }}>
-                  {formatSize(item.size)} · {item.mimeType}
+                  {formatSize(item.size)} · {item.mimeType} · {getMediaBadge(item)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -314,23 +334,21 @@ export function CMSMedia() {
               <X size={18} />
             </button>
 
-            {isVideo(selectedMedia) ? (
-              <video src={selectedMedia.url} controls className="mb-4 w-full rounded-[10px]" style={{ maxHeight: "400px" }} />
-            ) : (
-              <img
-                src={selectedMedia.url}
-                alt={selectedMedia.name}
-                className="mb-4 w-full rounded-[10px] object-contain"
-                style={{ maxHeight: "400px" }}
-              />
-            )}
+            <ContentImage
+              src={selectedMedia.url}
+              alt={selectedMedia.name}
+              mimeType={selectedMedia.mimeType}
+              controls={inferVisualAssetKind(selectedMedia.url, selectedMedia.mimeType) === "video"}
+              className="mb-4 w-full rounded-[10px] object-contain"
+              style={{ maxHeight: "400px" }}
+            />
 
             <div className="space-y-2">
               <p className="text-[#fafafa]" style={{ fontSize: "14px", lineHeight: "21px" }}>
                 {selectedMedia.name}
               </p>
               <p style={{ fontSize: "12px", lineHeight: "18px", color: "#666" }}>
-                {selectedMedia.mimeType} · {formatSize(selectedMedia.size)} · {selectedMedia.visibility}
+                {selectedMedia.mimeType} · {formatSize(selectedMedia.size)} · {selectedMedia.visibility} · {getMediaBadge(selectedMedia)}
               </p>
               <div className="flex gap-2">
                 <button

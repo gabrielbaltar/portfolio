@@ -1,28 +1,16 @@
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { type ContentBlock } from "./cms-data";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { VideoPlayer } from "./video-player";
 import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock } from "./content-block-utils";
 import { CodeHighlight } from "./code-highlight";
+import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
 
 function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
-}
-
-/** Check if a URL points to an SVG */
-function isSvg(url: string): boolean {
-  if (!url) return false;
-  return url.toLowerCase().endsWith(".svg") || url.startsWith("data:image/svg+xml");
-}
-
-/** Check if a URL points to a GIF */
-function isGif(url: string): boolean {
-  if (!url) return false;
-  return url.toLowerCase().endsWith(".gif") || url.startsWith("data:image/gif");
 }
 
 function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" }> }) {
@@ -223,13 +211,11 @@ export function BlockRenderer({
           case "image": {
             const hasGallery = (block.galleryImages || []).filter(Boolean).length > 0;
             if (!block.url && !hasGallery) return null;
-            const svg = isSvg(block.url);
-            const gif = isGif(block.url);
             const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
             const alt = richTextToPlainText(block.caption) || "";
             const imageClassName = imagesClickable ? "cursor-pointer" : undefined;
             const openImage = () => {
-              if (!imagesClickable || !onImageClick) return;
+              if (!imagesClickable || !onImageClick || !canOpenInImageLightbox(block.url)) return;
               onImageClick(block.url, alt);
             };
             return (
@@ -241,24 +227,8 @@ export function BlockRenderer({
                     imagesClickable={imagesClickable}
                     onImageClick={onImageClick}
                   />
-                ) : svg ? (
-                  <img
-                    src={block.url}
-                    alt={alt}
-                    className={`mx-auto ${imageClassName || ""}`}
-                    onClick={openImage}
-                    style={{ maxHeight: "525px", maxWidth: "100%", objectFit: "contain", borderRadius: radius }}
-                  />
-                ) : gif ? (
-                  <img
-                    src={block.url}
-                    alt={alt}
-                    className={`w-full object-cover ${imageClassName || ""}`}
-                    onClick={openImage}
-                    style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
-                  />
                 ) : (
-                  <ImageWithFallback
+                  <ContentImage
                     src={block.url}
                     alt={alt}
                     className={`w-full object-cover ${imageClassName || ""}`}

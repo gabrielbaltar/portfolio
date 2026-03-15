@@ -7,7 +7,7 @@ import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { BlockRenderer } from "./block-renderer";
-import { ContentImage } from "./content-image";
+import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { ImageLightbox } from "./image-lightbox";
 import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
@@ -29,14 +29,16 @@ function ImageCard({
   position?: string;
   onClick?: () => void;
 }) {
+  const isLightboxable = canOpenInImageLightbox(src);
+
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={!src}
+      disabled={!src || !isLightboxable}
       className="block w-full bg-transparent border-none p-0 text-left disabled:cursor-default"
-      style={{ cursor: src ? "pointer" : "default" }}
-      aria-label={`Ampliar imagem: ${alt}`}
+      style={{ cursor: src && isLightboxable ? "pointer" : "default" }}
+      aria-label={isLightboxable ? `Ampliar imagem: ${alt}` : alt}
     >
       <ContentImage
         src={src}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, ExternalLink, Lock } from "lucide-react";
-import { ContentImage } from "./content-image";
+import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { buildBackTarget } from "./navigation-state";
 
 type ProjectPreviewCardProps = {
@@ -131,7 +131,7 @@ export function PreviewMediaSlider({
 
   const activeSlide = slides[activeIndex];
   const handleImageClick = () => {
-    if (!activeSlide.src || !onImageClick) return;
+    if (!activeSlide.src || !onImageClick || !canOpenInImageLightbox(activeSlide.src)) return;
     onImageClick(activeSlide.src);
   };
 

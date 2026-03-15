@@ -29,5 +29,8 @@
     "tsx": "^4.20.5",
     "typescript": "5.8.2",
     "vite": "6.3.5"
+  },
+  "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.18.6"
   }
 }

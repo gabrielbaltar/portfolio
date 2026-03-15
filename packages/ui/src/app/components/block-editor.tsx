@@ -23,6 +23,7 @@ import { ShowcaseBlockView } from "./showcase-blocks";
 import { VideoPlayer } from "./video-player";
 import { extractMuxPlaybackId, normalizeVideoInput } from "./video-source";
 import { PreviewMediaSlider } from "./content-preview-cards";
+import { ContentImage, canOpenInImageLightbox, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
 
 const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.ReactNode }[] = [
   { type: "paragraph", label: "Paragrafo", icon: <Type size={14} /> },
@@ -38,7 +39,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "user-flow", label: "Fluxo do usuario", icon: <ListOrdered size={14} /> },
   { type: "sitemap", label: "Sitemap", icon: <List size={14} /> },
   { type: "code", label: "Codigo", icon: <Code size={14} /> },
-  { type: "image", label: "Imagem", icon: <ImageIcon size={14} /> },
+  { type: "image", label: "Imagem / Animacao", icon: <ImageIcon size={14} /> },
   { type: "video", label: "Video / Mux", icon: <Video size={14} /> },
   { type: "quote", label: "Citacao", icon: <Quote size={14} /> },
   { type: "cta", label: "CTA / Botao", icon: <MousePointerClick size={14} /> },
@@ -51,7 +52,7 @@ const LABEL_MAP: Record<string, string> = {
   "unordered-list": "Lista", "ordered-list": "Lista numerada",
   "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
   "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
-  code: "Codigo", image: "Imagem", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
+  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
 };
 
 const DND_ITEM_TYPE = "CONTENT_BLOCK";
@@ -444,7 +445,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   }, [normalizeImageBlock]);
 
   const uploadImageAsset = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/") && file.type !== "image/svg+xml") return "";
+    if (!isSupportedVisualUpload(file)) return "";
 
     try {
       const uploaded = await dataProvider.uploadMedia(file, "public");
@@ -461,7 +462,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   ) => {
     if (!imageBlock) return;
 
-    const validFiles = Array.from(files).filter((file) => file.type.startsWith("image/") || file.type === "image/svg+xml");
+    const validFiles = Array.from(files).filter((file) => isSupportedVisualUpload(file));
     if (validFiles.length === 0) return;
 
     setUploading(true);
@@ -1314,7 +1315,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*,application/json,.json,.lottie"
                     multiple
                     className="hidden"
                     onChange={(event) => {
@@ -1330,14 +1331,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       <div className="w-5 h-5 border-2 border-[#555] border-t-white rounded-full animate-spin" />
                       <span className="text-[#888]" style={{ fontSize: "13px" }}>Carregando...</span>
                     </div>
-                  ) : (
-                    <>
-                      <Upload size={20} className="text-[#555]" />
-                      <span className="text-[#888]" style={{ fontSize: "13px" }}>Clique ou arraste uma ou varias imagens aqui</span>
-                      <span className="text-[#555]" style={{ fontSize: "11px" }}>A primeira vira capa e as demais entram no slider do bloco</span>
-                    </>
-                  )}
-                </div>
+                    ) : (
+                      <>
+                        <Upload size={20} className="text-[#555]" />
+                        <span className="text-[#888]" style={{ fontSize: "13px" }}>Clique ou arraste uma ou varias midias visuais aqui</span>
+                        <span className="text-[#555]" style={{ fontSize: "11px" }}>WebM, Lottie JSON, SVG, WebP e imagens. A primeira vira capa e as demais entram no slider do bloco</span>
+                      </>
+                    )}
+                  </div>
               ) : (
                 <div className="space-y-3">
                   <div
@@ -1348,7 +1349,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   >
                     <div className="border-b border-[#1f1f1f] px-3 py-2">
                       <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        {hasSlider ? `Slider ativo com ${galleryImages.length + 1} imagens` : "Imagem unica"}
+                        {hasSlider ? `Slider ativo com ${galleryImages.length + 1} assets` : "Asset unico"}
                       </span>
                     </div>
                     <div className="p-3">
@@ -1362,19 +1363,20 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                         frameClassName="rounded-lg"
                         frameStyle={{ borderRadius: `${block.borderRadius || 0}px` }}
                         disablePointerEvents={false}
-                        emptyLabel="Imagem"
+                        emptyLabel="Midia"
                         imageClassName="cursor-pointer"
-                        onImageClick={(src) =>
+                        onImageClick={(src) => {
+                          if (!canOpenInImageLightbox(src)) return;
                           setImageLightbox({
                             src,
                             alt: block.caption || "Imagem do bloco",
-                          })
-                        }
+                          });
+                        }}
                       />
                     </div>
                     {dragOver && (
                       <div className="border-t border-[#1f1f1f] px-3 py-2 text-center text-[#9a9a9a]" style={{ fontSize: "11px" }}>
-                        Solte aqui para adicionar as imagens ao slider sem trocar a capa
+                        Solte aqui para adicionar os assets ao slider sem trocar a capa
                       </div>
                     )}
                   </div>
@@ -1402,14 +1404,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       className="rounded-md bg-[#1a1a1a] px-3 py-2 text-white transition-colors hover:bg-red-500/80 cursor-pointer flex items-center gap-1.5"
                       style={{ fontSize: "12px" }}
                     >
-                      <X size={12} /> Remover imagem
+                      <X size={12} /> Remover asset
                     </button>
                   </div>
 
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*,application/json,.json,.lottie"
                     multiple
                     className="hidden"
                     onChange={(event) => {
@@ -1423,7 +1425,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   <input
                     ref={galleryFileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*,application/json,.json,.lottie"
                     multiple
                     className="hidden"
                     onChange={(event) => {
@@ -1439,14 +1441,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          Imagens do slider
+                          Assets do slider
                         </span>
                         <span className="text-[#555]" style={{ fontSize: "11px" }}>
                           A capa fica na visualizacao principal
                         </span>
                       </div>
                       <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
-                        Clique para ver inteira e use o menu de 3 pontos para reordenar, reposicionar ou remover.
+                        Imagens continuam com reposicionamento. WebM e Lottie usam enquadramento automatico para preservar fluidez.
                       </p>
                       <div className="grid grid-cols-2 gap-2 min-[980px]:grid-cols-3">
                         {imageSlides.map((slide, slideIndex) => (
@@ -1459,18 +1461,67 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                                 {slideIndex === 0 ? "Slide principal" : "Arraste para ordenar"}
                               </span>
                             </div>
-                            <ImagePositionEditorCompact
-                              src={slide.src}
-                              alt={`${block.caption || "Imagem"} ${slide.label}`}
-                              position={slide.position}
-                              onChange={(position) => handleImagePositionChange(slideIndex, position)}
-                              onRemove={() => (slideIndex === 0 ? removePrimaryImage() : removeGalleryImage(slideIndex - 1))}
-                              height={160}
-                              canMoveBackward={slideIndex > 0}
-                              canMoveForward={slideIndex < imageSlides.length - 1}
-                              onMoveBackward={() => handleSlideMove(slideIndex, slideIndex - 1)}
-                              onMoveForward={() => handleSlideMove(slideIndex, slideIndex + 1)}
-                            />
+                            {supportsPositionEditor(slide.src) ? (
+                              <ImagePositionEditorCompact
+                                src={slide.src}
+                                alt={`${block.caption || "Imagem"} ${slide.label}`}
+                                position={slide.position}
+                                onChange={(position) => handleImagePositionChange(slideIndex, position)}
+                                onRemove={() => (slideIndex === 0 ? removePrimaryImage() : removeGalleryImage(slideIndex - 1))}
+                                height={160}
+                                canMoveBackward={slideIndex > 0}
+                                canMoveForward={slideIndex < imageSlides.length - 1}
+                                onMoveBackward={() => handleSlideMove(slideIndex, slideIndex - 1)}
+                                onMoveForward={() => handleSlideMove(slideIndex, slideIndex + 1)}
+                              />
+                            ) : (
+                              <div
+                                className="overflow-hidden rounded-[12px] border"
+                                style={{ borderColor: "#2a2a2a", backgroundColor: "#101010" }}
+                              >
+                                <div style={{ height: "160px" }}>
+                                  <ContentImage
+                                    src={slide.src}
+                                    alt={`${block.caption || "Imagem"} ${slide.label}`}
+                                    className="h-full w-full object-cover"
+                                    style={{ backgroundColor: "#0f0f0f" }}
+                                  />
+                                </div>
+                                <div
+                                  className="flex items-center justify-between gap-2 border-t px-2 py-2"
+                                  style={{ borderColor: "#1e1e1e" }}
+                                >
+                                  <span className="text-[#555]" style={{ fontSize: "10px", lineHeight: "15px" }}>
+                                    Enquadramento automatico
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSlideMove(slideIndex, slideIndex - 1)}
+                                      disabled={slideIndex === 0}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa] disabled:opacity-30"
+                                    >
+                                      <ChevronUp size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSlideMove(slideIndex, slideIndex + 1)}
+                                      disabled={slideIndex === imageSlides.length - 1}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-[#fafafa] disabled:opacity-30"
+                                    >
+                                      <ChevronDown size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => (slideIndex === 0 ? removePrimaryImage() : removeGalleryImage(slideIndex - 1))}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-[#777] transition-colors hover:bg-[#1a1a1a] hover:text-red-400"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
