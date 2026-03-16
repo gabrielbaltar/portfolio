@@ -1,0 +1,76 @@
+NÍCIO DO ARQUIVO PROMPT-MASTER
+TÍTULO: PROMPT-MASTER — Regras e Estrutura para Geração de Case Studies de UI
+Este documento é a referência obrigatória para gerar case studies de portfólio. Sempre consulte este documento antes de gerar qualquer case.
+CONTEXTO DO DESIGNER
+Eu sou um designer de UI que trabalhou em consultoria. Minha realidade:
+
+Trabalhei apenas até o handoff — não acompanhei projetos pós-lançamento
+Não tenho acesso a métricas de resultado (conversão, retenção, receita)
+Meu escopo era focado em UI: telas, componentes, hierarquia visual, design systems
+Possuo estas documentações: telas finais (Figma/Sketch), wireframes e explorations, briefings/requisitos do cliente, apresentações de handoff
+
+PRINCÍPIOS DE STORYTELLING
+
+Nunca use a estrutura linear de Double Diamond como checklist. Isso gera narrativas genéricas.
+Use a Pirâmide de Freytag adaptada: exposição (contexto), ação crescente (desafio e restrições), clímax (decisões de design mais importantes), ação descendente (resultados), resolução (aprendizados).
+Histórias são 22x mais memoráveis que fatos isolados. Priorize narrativa envolvente.
+O case deve ser lido em 3 a 5 minutos. Total entre 800 e 1.500 palavras.
+
+AS 7 ESTRATÉGIAS DE IMPACTO SEM MÉTRICAS
+NUNCA invente métricas. NUNCA fabrique números. Use estas alternativas:
+
+Resultados de testes de usabilidade (mesmo informais): taxas de conclusão, tempo na tarefa, pontuação SUS.
+Hipóteses direcionais: "Este redesign tem como objetivo [X] ao [Y]".
+Melhorias objetivas contáveis: passos reduzidos, campos eliminados, cliques economizados.
+Evidências qualitativas: citações de usuários, feedback do cliente, observações da equipe.
+Cadeia lógica: ação de design → métrica de design → resultado de negócio.
+Resultados de processo: alinhamento alcançado, design system adotado, débito reduzido.
+O que você mediria se pudesse: descreva métricas e porquê.
+
+PRINCÍPIOS SOBRE CONSULTORIA
+
+Escopo limitado é especialização, não deficiência. Enquadre como força.
+Diversidade de clientes demonstra adaptabilidade.
+Trabalho pré-handoff é trabalho completo. Projetos não lançados são válidos.
+Seja transparente sobre o que aconteceu pós-handoff.
+Se houver NDA: anonimize mas preserve decisões de design.
+
+PRINCÍPIOS SOBRE DECISÕES DE UI
+
+O coração de um case de UI são as decisões de design anotadas.
+Para cada decisão: o que foi feito, por que, alternativa descartada, impacto esperado.
+Documente: lógica de layout, hierarquia visual, tipografia, cor/acessibilidade, estados de componentes, responsividade.
+Referencie restrições recebidas (pesquisa UX, personas, requisitos) e como moldaram a UI.
+
+ESTRUTURA OBRIGATÓRIA DO CASE (7 seções, nesta ordem)
+SEÇÃO 1 — HERO: DECLARAÇÃO DE IMPACTO
+Uma frase poderosa que enquadra o problema de negócio resolvido. Formato: "[Verbo de ação] + [o que] + [para quem] + [objetivo de negócio]". Exemplo: "Redesenhei a experiência de checkout de um e-commerce de moda para reduzir o abandono de carrinho e simplificar a jornada mobile." Deve convencer o recrutador a continuar lendo. Entre 20 e 40 palavras.
+SEÇÃO 2 — METADADOS DO PROJETO
+Bloco conciso com: papel, cliente/setor (anonimize se necessário), equipe, timeline, plataforma, entregáveis. Linguagem direta. Entre 40 e 80 palavras.
+SEÇÃO 3 — CONTEXTO E PROBLEMA
+História do projeto: quem era o cliente, situação, por que o projeto existiu. Conecte UI a objetivo de negócio. Nunca "Redesenhei a interface." Sempre "O cliente enfrentava [X] que impactava [Y]. Meu trabalho foi [Z]." Inclua restrições reais (prazo, marca rígida, limitações técnicas, acessibilidade). Entre 100 e 200 palavras.
+SEÇÃO 4 — DECISÕES DE DESIGN ANOTADAS (seção mais importante, até 500 palavras)
+Para cada decisão relevante: o que foi feito, por que, alternativa descartada, impacto esperado. Agrupe em 3 a 5 blocos temáticos (ex: "Hierarquia de informação", "Sistema de cores", "Navegação"). Escreva como se anotasse o design com setas e callouts. Se houver wireframes E telas finais, descreva a evolução.
+SEÇÃO 5 — PROCESSO E ITERAÇÃO
+Jornada da exploração ao design final. Descreva alternativas e tradeoffs. Mostre que a solução final não foi a primeira ideia. Se houver especificações de handoff, mencione como preparou o design para implementação. Entre 100 e 200 palavras.
+SEÇÃO 6 — IMPACTO E RESULTADOS
+Use as 7 estratégias de impacto sem métricas. NUNCA invente dados. Se não houver evidência nos documentos, use hipóteses direcionais, melhorias contáveis, cadeia lógica, e o que mediria se pudesse. Destaque feedback qualitativo se existir. Entre 80 e 200 palavras.
+SEÇÃO 7 — REFLEXÃO E APRENDIZADOS
+O que funcionou e por quê. O que faria diferente hoje. O que o projeto ensinou. Conecte aprendizados ao presente. Encerre com frase de síntese que reforce valor profissional. Entre 80 e 150 palavras.
+REGRAS DE ESCRITA
+
+Português do Brasil. Termos técnicos em inglês quando padrão (handoff, design system, stakeholder, sprint, token, breakpoint).
+Primeira pessoa. "Eu projetei", "Minha decisão". Nunca "Nós" quando o trabalho foi meu.
+Texto corrido e fluido, pronto para copiar no portfólio. Sem bullets, sem numeração, sem headers em markdown no texto final. Separe seções apenas com o título da seção em maiúsculas seguido do texto corrido.
+Tom confiante e profissional. Não use "apenas" ou "só" para minimizar trabalho.
+Seja específico. Troque "melhorei a interface" por "reduzi os campos do formulário de 12 para 5, agrupando informações por contexto de uso".
+Se alguma informação não existir nas documentações, sinalize com [PREENCHER: descrição do que inserir].
+Sugira onde inserir imagens: [INSERIR: screenshot da tela X mostrando Y].
+
+COMO PROCESSAR DOCUMENTAÇÕES
+Quando as fontes contiverem documentações de projeto:
+
+Identifique o que cada documento contém.
+Cruze informações entre documentos para encontrar: problema original, restrições, decisões de design, evolução entre versões, especificações de handoff.
+Gere o case study completo seguindo a estrutura das 7 seções.
+Ao final, gere "CHECKLIST DE MELHORIAS" com sugestões para tornar o case mais forte.

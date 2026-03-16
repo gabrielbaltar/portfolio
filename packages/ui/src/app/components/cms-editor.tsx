@@ -4,6 +4,7 @@ import { VersionHistoryPanel, saveVersion, getVersions } from "./version-history
 import { ImagePositionEditor, ImagePositionEditorCompact } from "./image-position-editor";
 import { VideoPlayer } from "./video-player";
 import { useState, useEffect, useCallback, useRef } from "react";
+import type { ContentListItem } from "@portfolio/core";
 import { ensureUniqueSlug, getPublicContentVisibilityKey, isReservedPageSlug, slugify } from "@portfolio/core";
 import { useParams, useNavigate, Link } from "react-router";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -11,7 +12,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   ArrowLeft, Save, Eye, Send,
   PanelLeft, Columns, Monitor, Smartphone,
-  ChevronDown, ChevronUp, Hash, Globe,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Hash, Globe,
   Plus, Upload, X, History, Lock, LockOpen, Video, Code, GripVertical, RotateCcw,
 } from "lucide-react";
 import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page, type SiteSettings } from "./cms-data";
@@ -29,6 +30,13 @@ import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-tex
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
+import {
+  appendChildListItem,
+  insertSiblingListItem,
+  outdentListItem,
+  removeListItem,
+  updateListItemText,
+} from "./list-block-utils";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
@@ -91,6 +99,14 @@ function readFileAsDataUrl(file: File) {
 
 function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
+}
+
+const CMS_UNORDERED_LIST_STYLE_TYPES = ["disc", "circle", "square"] as const;
+const CMS_ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as const;
+
+function getCmsListStyleType(ordered: boolean, depth: number) {
+  const styles = ordered ? CMS_ORDERED_LIST_STYLE_TYPES : CMS_UNORDERED_LIST_STYLE_TYPES;
+  return styles[depth % styles.length];
 }
 
 function getImageFiles(files: FileList | File[]) {
@@ -542,6 +558,127 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     );
   };
 
+  const renderNestedListItems = (
+    blockIndex: number,
+    block: Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>,
+    items: ContentListItem[],
+    path: number[] = [],
+    depth = 0,
+  ): React.ReactNode => {
+    const ListTag = block.type === "ordered-list" ? "ol" : "ul";
+    const lineHeight = getBlockLineHeight(block);
+
+    if (!items.length) return null;
+
+    return (
+      <ListTag
+        className={depth === 0 ? "pl-5 space-y-1" : "mt-2 pl-5 space-y-1"}
+        style={{ listStyleType: getCmsListStyleType(block.type === "ordered-list", depth) }}
+      >
+        {items.map((listItem, itemIndex) => {
+          const itemPath = [...path, itemIndex];
+          const children = listItem.children ?? [];
+
+          return (
+            <li key={itemPath.join("-")} className="text-[#999]" style={{ fontSize: "14px", lineHeight: `${lineHeight}px` }}>
+              {readOnly ? (
+                <RichTextContent value={listItem.text} placeholder="Item..." />
+              ) : (
+                <div className="flex items-start gap-2">
+                  <RichTextEditor
+                    value={listItem.text}
+                    onChange={(nextValue) =>
+                      updateBlock(blockIndex, (currentBlock) => {
+                        const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                        return { ...listBlock, items: updateListItemText(listBlock.items, itemPath, nextValue) };
+                      })
+                    }
+                    onEnter={() =>
+                      updateBlock(blockIndex, (currentBlock) => {
+                        const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                        return { ...listBlock, items: insertSiblingListItem(listBlock.items, itemPath) };
+                      })
+                    }
+                    onBackspaceEmpty={() =>
+                      updateBlock(blockIndex, (currentBlock) => {
+                        if (children.length > 0) return currentBlock;
+                        const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                        return { ...listBlock, items: removeListItem(listBlock.items, itemPath) };
+                      })
+                    }
+                    multiline={false}
+                    compact
+                    placeholder="Item..."
+                    containerClassName="flex-1"
+                    editorClassName="text-[#999] rounded px-1 -mx-1"
+                    editorStyle={{ fontSize: "14px", lineHeight: `${lineHeight}px` }}
+                  />
+                  <div className="flex shrink-0 items-center gap-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateBlock(blockIndex, (currentBlock) => {
+                          const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                          return { ...listBlock, items: insertSiblingListItem(listBlock.items, itemPath) };
+                        })
+                      }
+                      className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                      title="Adicionar item abaixo"
+                    >
+                      <Plus size={11} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateBlock(blockIndex, (currentBlock) => {
+                          const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                          return { ...listBlock, items: appendChildListItem(listBlock.items, itemPath) };
+                        })
+                      }
+                      className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                      title="Adicionar subitem"
+                    >
+                      <ChevronRight size={11} />
+                    </button>
+                    {depth > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBlock(blockIndex, (currentBlock) => {
+                            const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                            return { ...listBlock, items: outdentListItem(listBlock.items, itemPath) };
+                          })
+                        }
+                        className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                        title="Voltar um nivel"
+                      >
+                        <ChevronLeft size={11} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateBlock(blockIndex, (currentBlock) => {
+                          const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
+                          return { ...listBlock, items: removeListItem(listBlock.items, itemPath) };
+                        })
+                      }
+                      className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-red-400"
+                      title="Remover item"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {children.length > 0 && renderNestedListItems(blockIndex, block, children, itemPath, depth + 1)}
+            </li>
+          );
+        })}
+      </ListTag>
+    );
+  };
+
   const isCardPreviewContent = contentType === "projects" || contentType === "articles";
   const cardPreviewTitle =
     contentType === "projects"
@@ -756,51 +893,10 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                 );
               case "unordered-list":
               case "ordered-list": {
-                const ListTag = block.type === "ordered-list" ? "ol" : "ul";
                 return (
                   <div key={i} className="space-y-2">
                     {renderPreviewLineHeightControl(i, block)}
-                    <ListTag className="pl-5 space-y-1" style={{ listStyleType: block.type === "ordered-list" ? "decimal" : "disc" }}>
-                      {block.items.map((listItem: string, j: number) => (
-                        <li key={j} className="text-[#999]" style={{ fontSize: "14px", lineHeight: `${getBlockLineHeight(block)}px` }}>
-                          {readOnly ? (
-                            <RichTextContent value={listItem} placeholder="Item..." />
-                          ) : (
-                            <RichTextEditor
-                              value={listItem}
-                              onChange={(nextValue) =>
-                                updateBlock(i, (currentBlock) => {
-                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
-                                  const nextItems = [...listBlock.items];
-                                  nextItems[j] = nextValue;
-                                  return { ...listBlock, items: nextItems };
-                                })
-                              }
-                              onEnter={() =>
-                                updateBlock(i, (currentBlock) => {
-                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
-                                  const nextItems = [...listBlock.items];
-                                  nextItems.splice(j + 1, 0, "");
-                                  return { ...listBlock, items: nextItems };
-                                })
-                              }
-                              onBackspaceEmpty={() =>
-                                updateBlock(i, (currentBlock) => {
-                                  const listBlock = currentBlock as Extract<ContentBlock, { type: "unordered-list" | "ordered-list" }>;
-                                  if (listBlock.items.length <= 1) return listBlock;
-                                  return { ...listBlock, items: listBlock.items.filter((_, itemIndex: number) => itemIndex !== j) };
-                                })
-                              }
-                              multiline={false}
-                              compact
-                              placeholder="Item..."
-                              editorClassName="text-[#999] rounded px-1 -mx-1"
-                              editorStyle={{ fontSize: "14px", lineHeight: `${getBlockLineHeight(block)}px` }}
-                            />
-                          )}
-                        </li>
-                      ))}
-                    </ListTag>
+                    {renderNestedListItems(i, block, block.items)}
                   </div>
                 );
               }

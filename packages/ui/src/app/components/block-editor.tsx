@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useCMS, type ContentBlock } from "./cms-data";
+import type { ContentListItem } from "@portfolio/core";
 import {
   Plus, Trash2, GripVertical, Type, Heading1, Heading2, Heading3,
-  List, ListOrdered, ImageIcon, Minus, ChevronUp, ChevronDown,
+  List, ListOrdered, ImageIcon, Minus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Upload, X, Quote, MousePointerClick, Code, Video, Palette,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -24,6 +25,15 @@ import { VideoPlayer } from "./video-player";
 import { extractMuxPlaybackId, normalizeVideoInput } from "./video-source";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, canOpenInImageLightbox, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
+import {
+  appendChildListItem,
+  createEmptyListItem,
+  insertSiblingListItem,
+  outdentListItem,
+  removeListItem,
+  updateListItemText,
+  type ListItemPath,
+} from "./list-block-utils";
 
 const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.ReactNode }[] = [
   { type: "paragraph", label: "Paragrafo", icon: <Type size={14} /> },
@@ -68,8 +78,8 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
     case "heading1": return { type: "heading1", text: "" };
     case "heading2": return { type: "heading2", text: "" };
     case "heading3": return { type: "heading3", text: "" };
-    case "unordered-list": return { type: "unordered-list", items: [""] };
-    case "ordered-list": return { type: "ordered-list", items: [""] };
+    case "unordered-list": return { type: "unordered-list", items: [createEmptyListItem()] };
+    case "ordered-list": return { type: "ordered-list", items: [createEmptyListItem()] };
     case "style-guide":
       return {
         type: "style-guide",
@@ -217,49 +227,109 @@ function ListBlockEditor({
   ordered,
   lineHeight,
 }: {
-  items: string[];
-  onChange: (items: string[]) => void;
+  items: ContentListItem[];
+  onChange: (items: ContentListItem[]) => void;
   ordered: boolean;
   lineHeight: number;
 }) {
+  const renderListItem = (item: ContentListItem, path: ListItemPath, depth: number, index: number): React.ReactNode => {
+    const children = item.children ?? [];
+
+    return (
+      <div key={path.join("-")} className="space-y-2">
+        <div className="flex items-start gap-2">
+          <span className="w-5 shrink-0 pt-2 text-right text-[#555]" style={{ fontSize: "13px" }}>
+            {ordered ? `${index + 1}.` : "\u2022"}
+          </span>
+          <div className="flex-1 space-y-2">
+            <div className="flex items-start gap-2">
+              <RichTextEditor
+                value={item.text}
+                onChange={(nextItem) => onChange(updateListItemText(items, path, nextItem))}
+                onEnter={() => onChange(insertSiblingListItem(items, path))}
+                onBackspaceEmpty={() => {
+                  if (children.length > 0) return;
+                  onChange(removeListItem(items, path));
+                }}
+                multiline={false}
+                compact
+                placeholder={depth > 0 ? "Subitem da lista..." : "Item da lista..."}
+                containerClassName="flex-1"
+                editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
+                editorStyle={{ fontSize: "14px", minHeight: "36px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", lineHeight: `${lineHeight}px` }}
+                placeholderClassName="px-2.5 py-1.5"
+              />
+              <div className="flex shrink-0 items-center gap-1 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onChange(insertSiblingListItem(items, path))}
+                  className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                  title="Adicionar item abaixo"
+                >
+                  <Plus size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(appendChildListItem(items, path))}
+                  className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                  title="Adicionar subitem"
+                >
+                  <ChevronRight size={12} />
+                </button>
+                {depth > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onChange(outdentListItem(items, path))}
+                    className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white"
+                    title="Voltar um nivel"
+                  >
+                    <ChevronLeft size={12} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onChange(removeListItem(items, path))}
+                  className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-red-400"
+                  title="Remover item"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+
+            {children.length > 0 && (
+              <div className="ml-3 border-l border-[#262626] pl-4">
+                <div className="space-y-2">
+                  {children.map((child, childIndex) => renderListItem(child, [...path, childIndex], depth + 1, childIndex))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-1.5">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="text-[#555] w-5 text-right shrink-0" style={{ fontSize: "13px" }}>
-            {ordered ? `${i + 1}.` : "\u2022"}
-          </span>
-          <RichTextEditor
-            value={item}
-            onChange={(nextItem) => {
-              const nextItems = [...items];
-              nextItems[i] = nextItem;
-              onChange(nextItems);
-            }}
-            onEnter={() => {
-              const nextItems = [...items];
-              nextItems.splice(i + 1, 0, "");
-              onChange(nextItems);
-            }}
-            onBackspaceEmpty={() => {
-              if (items.length > 1) {
-                onChange(items.filter((_, j) => j !== i));
-              }
-            }}
-            multiline={false}
-            compact
-            placeholder="Item da lista..."
-            containerClassName="flex-1"
-            editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
-            editorStyle={{ fontSize: "14px", minHeight: "36px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", lineHeight: `${lineHeight}px` }}
-            placeholderClassName="px-2.5 py-1.5"
-          />
-          <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-[#555] hover:text-red-400 cursor-pointer shrink-0">
-            <Trash2 size={12} />
-          </button>
-        </div>
-      ))}
-      <button onClick={() => onChange([...items, ""])} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer ml-7" style={{ fontSize: "12px" }}>
+      {items.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => onChange([createEmptyListItem()])}
+          className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer ml-7"
+          style={{ fontSize: "12px" }}
+        >
+          <Plus size={12} /> Adicionar primeiro item
+        </button>
+      ) : (
+        items.map((item, index) => renderListItem(item, [index], 0, index))
+      )}
+      <button
+        type="button"
+        onClick={() => onChange([...items, createEmptyListItem()])}
+        className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer ml-7"
+        style={{ fontSize: "12px" }}
+      >
         <Plus size={12} /> Adicionar item
       </button>
     </div>

@@ -30,7 +30,11 @@ export const legacySeedData: CMSData = {
         { type: "heading2", text: "Funcionalidades" },
         {
           type: "unordered-list",
-          items: ["Design de Interface", "Desenvolvimento Web", "Gerenciamento de Conteudo"],
+          items: [
+            { text: "Design de Interface", children: [] },
+            { text: "Desenvolvimento Web", children: [] },
+            { text: "Gerenciamento de Conteudo", children: [] },
+          ],
         },
       ],
       imageBgColor: "",
@@ -327,7 +331,14 @@ export const legacySeedData: CMSData = {
         { type: "heading1", text: "O Futuro do Design Web" },
         { type: "paragraph", text: "O design web esta em constante evolucao, e 2024 promete trazer mudancas significativas." },
         { type: "heading2", text: "Tendencias Principais" },
-        { type: "unordered-list", items: ["Design com IA", "Micro-interacoes", "Design Sustentavel"] },
+        {
+          type: "unordered-list",
+          items: [
+            { text: "Design com IA", children: [] },
+            { text: "Micro-interacoes", children: [] },
+            { text: "Design Sustentavel", children: [] },
+          ],
+        },
       ],
       status: "published",
       tags: ["design", "trends"],

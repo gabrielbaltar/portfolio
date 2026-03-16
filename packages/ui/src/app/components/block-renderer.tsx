@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { type ContentBlock } from "./cms-data";
+import type { ContentListItem } from "@portfolio/core";
 import { VideoPlayer } from "./video-player";
 import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock } from "./content-block-utils";
 import { CodeHighlight } from "./code-highlight";
@@ -11,6 +12,55 @@ import { PreviewMediaSlider } from "./content-preview-cards";
 
 function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
+}
+
+const UNORDERED_LIST_STYLE_TYPES = ["disc", "circle", "square"] as const;
+const ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as const;
+
+function getListStyleType(ordered: boolean, depth: number) {
+  const styles = ordered ? ORDERED_LIST_STYLE_TYPES : UNORDERED_LIST_STYLE_TYPES;
+  return styles[depth % styles.length];
+}
+
+function ListBlockView({
+  items,
+  ordered,
+  lineHeight,
+  depth = 0,
+}: {
+  items: ContentListItem[];
+  ordered: boolean;
+  lineHeight: number;
+  depth?: number;
+}) {
+  const ListTag = ordered ? "ol" : "ul";
+
+  if (!items.length) return null;
+
+  return (
+    <ListTag
+      className={depth === 0 ? "pl-5 space-y-1.5" : "mt-2 pl-5 space-y-1.5"}
+      style={{ listStyleType: getListStyleType(ordered, depth) }}
+    >
+      {items.map((item, index) => (
+        <li
+          key={`${depth}-${index}-${item.text}`}
+          className="font-['Inter',sans-serif]"
+          style={{ fontSize: "15px", lineHeight: `${lineHeight}px`, color: "var(--text-secondary, #a6a6a6)" }}
+        >
+          <RichTextContent value={item.text} />
+          {(item.children ?? []).length > 0 && (
+            <ListBlockView
+              items={item.children ?? []}
+              ordered={ordered}
+              lineHeight={lineHeight}
+              depth={depth + 1}
+            />
+          )}
+        </li>
+      ))}
+    </ListTag>
+  );
 }
 
 function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" }> }) {
@@ -179,33 +229,9 @@ export function BlockRenderer({
               </p>
             );
           case "unordered-list":
-            return (
-              <ul key={i} className="pl-5 space-y-1.5" style={{ listStyleType: "disc" }}>
-                {block.items.map((item, j) => (
-                  <li
-                    key={j}
-                    className="font-['Inter',sans-serif]"
-                    style={{ fontSize: "15px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-secondary, #a6a6a6)" }}
-                  >
-                    <RichTextContent value={item} />
-                  </li>
-                ))}
-              </ul>
-            );
+            return <ListBlockView key={i} items={block.items} ordered={false} lineHeight={blockLineHeight || 24} />;
           case "ordered-list":
-            return (
-              <ol key={i} className="pl-5 space-y-1.5" style={{ listStyleType: "decimal" }}>
-                {block.items.map((item, j) => (
-                  <li
-                    key={j}
-                    className="font-['Inter',sans-serif]"
-                    style={{ fontSize: "15px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-secondary, #a6a6a6)" }}
-                  >
-                    <RichTextContent value={item} />
-                  </li>
-                ))}
-              </ol>
-            );
+            return <ListBlockView key={i} items={block.items} ordered lineHeight={blockLineHeight || 24} />;
           case "code":
             return <CodeBlockView key={i} block={block} />;
           case "image": {

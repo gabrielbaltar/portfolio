@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
 import { translateBatchToLanguage } from "./translation-service";
+import type { ContentListItem } from "@portfolio/core";
 import {
   applyRichTextTranslation,
   collectRichTextTranslation,
@@ -100,6 +101,14 @@ function collectBlockTexts(
   addText: (path: string, text: string) => void,
   addRichText: (path: string, text: string) => void,
 ) {
+  const collectListItemTexts = (items: ContentListItem[], baseListPath: string) => {
+    items.forEach((item, itemIndex) => {
+      const itemPath = `${baseListPath}.${itemIndex}`;
+      addRichText(`${itemPath}.text`, item.text);
+      collectListItemTexts(item.children ?? [], `${itemPath}.children`);
+    });
+  };
+
   blocks?.forEach((block, index) => {
     const blockPath = `${basePath}.${index}`;
 
@@ -173,7 +182,7 @@ function collectBlockTexts(
     }
 
     if ("items" in block && Array.isArray(block.items)) {
-      block.items.forEach((item, itemIndex) => addRichText(`${blockPath}.items.${itemIndex}`, item));
+      collectListItemTexts(block.items, `${blockPath}.items`);
     }
 
     if ("caption" in block && typeof block.caption === "string") {

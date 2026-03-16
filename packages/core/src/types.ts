@@ -77,13 +77,18 @@ export interface SitemapSection {
   children: string[];
 }
 
+export interface ContentListItem {
+  text: string;
+  children?: ContentListItem[];
+}
+
 export type ContentBlock =
   | { type: "paragraph"; text: string; lineHeight?: number }
   | { type: "heading1"; text: string; lineHeight?: number }
   | { type: "heading2"; text: string; lineHeight?: number }
   | { type: "heading3"; text: string; lineHeight?: number }
-  | { type: "unordered-list"; items: string[]; lineHeight?: number }
-  | { type: "ordered-list"; items: string[]; lineHeight?: number }
+  | { type: "unordered-list"; items: ContentListItem[]; lineHeight?: number }
+  | { type: "ordered-list"; items: ContentListItem[]; lineHeight?: number }
   | { type: "style-guide"; title: string; summary: string; principles: StyleGuidePrinciple[] }
   | { type: "color-palette"; title: string; colors: ColorPaletteItem[] }
   | { type: "typography"; title: string; fonts: TypographyItem[] }

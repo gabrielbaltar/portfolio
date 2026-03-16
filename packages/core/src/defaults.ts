@@ -3,6 +3,8 @@ import type {
   BlogPost,
   CMSData,
   Certification,
+  ContentBlock,
+  ContentListItem,
   Education,
   Experience,
   MediaItem,
@@ -135,11 +137,61 @@ export function createEmptyCMSData(): CMSData {
   };
 }
 
+function normalizeListItems(items: unknown): ContentListItem[] {
+  if (!Array.isArray(items)) return [];
+
+  return items.map((item) => {
+    if (typeof item === "string") {
+      return {
+        text: item,
+        children: [],
+      };
+    }
+
+    if (item && typeof item === "object") {
+      const text = typeof (item as { text?: unknown }).text === "string" ? (item as { text: string }).text : "";
+      const children = normalizeListItems((item as { children?: unknown }).children);
+      return {
+        text,
+        children,
+      };
+    }
+
+    return {
+      text: "",
+      children: [],
+    };
+  });
+}
+
+function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
+  return (blocks ?? []).map((block) => {
+    if (block.type !== "unordered-list" && block.type !== "ordered-list") {
+      return block;
+    }
+
+    return {
+      ...block,
+      items: normalizeListItems(block.items),
+    };
+  });
+}
+
 export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMSData {
   const empty = createEmptyCMSData();
   const siteSettings = { ...empty.siteSettings, ...(data?.siteSettings ?? {}) };
-  const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder);
-  const blogPosts = applyExplicitOrder(data?.blogPosts ?? empty.blogPosts, siteSettings.blogPostOrder);
+  const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder).map((project) => ({
+    ...project,
+    contentBlocks: normalizeContentBlocks(project.contentBlocks),
+  }));
+  const blogPosts = applyExplicitOrder(data?.blogPosts ?? empty.blogPosts, siteSettings.blogPostOrder).map((post) => ({
+    ...post,
+    contentBlocks: normalizeContentBlocks(post.contentBlocks),
+  }));
+  const pages = (data?.pages ?? empty.pages).map((page) => ({
+    ...page,
+    contentBlocks: normalizeContentBlocks(page.contentBlocks),
+  }));
 
   return {
     ...empty,
@@ -154,7 +206,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     awards: data?.awards ?? empty.awards,
     recommendations: data?.recommendations ?? empty.recommendations,
     blogPosts,
-    pages: data?.pages ?? empty.pages,
+    pages,
     media: data?.media ?? empty.media,
   };
 }

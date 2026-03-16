@@ -10,6 +10,7 @@ import { type ContentBlock } from "./cms-data";
 import { dataProvider } from "./data-provider";
 import { richTextToPlainText } from "./rich-text";
 import { getShowcaseBlockSummary, isShowcaseBlock } from "./showcase-blocks";
+import { countListItems } from "./list-block-utils";
 
 // --- Version types ---
 export interface ContentVersion {
@@ -80,7 +81,7 @@ function getBlockSummary(block: ContentBlock): string {
     return `${label}: ${preview}${preview.length >= 60 ? "..." : ""}`;
   }
   if ("items" in block) {
-    return `${label}: ${(block as any).items.length} itens`;
+    return `${label}: ${countListItems((block as any).items)} itens`;
   }
   if ("code" in block && block.type === "code") {
     const preview = block.code.substring(0, 60);
