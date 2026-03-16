@@ -12,8 +12,8 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v5";
-const LEGACY_TRANSLATED_DATA_CACHE_KEYS = ["portfolio_translated_cms_cache_v4"];
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v6";
+const LEGACY_TRANSLATED_DATA_CACHE_KEYS = ["portfolio_translated_cms_cache_v5", "portfolio_translated_cms_cache_v4"];
 let translatedCacheHydrated = false;
 
 function hashString(value: string) {

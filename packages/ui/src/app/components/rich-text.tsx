@@ -3,6 +3,7 @@ import {
   Bold,
   Check,
   Italic,
+  Languages,
   Link2,
   Palette,
   Sparkles,
@@ -264,6 +265,18 @@ function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
       return;
     }
 
+    const noTranslateLabel = node.dataset.noTranslate
+      ? normalizeInlineTagLabel(node.textContent || "")
+      : "";
+    if (noTranslateLabel) {
+      const span = doc.createElement("span");
+      span.setAttribute("data-no-translate", "true");
+      span.setAttribute("contenteditable", "false");
+      span.textContent = noTranslateLabel;
+      appendNode(target, span);
+      return;
+    }
+
     const iconName = node.dataset.inlineIcon as InlineIconName | undefined;
     if (iconName && iconName in INLINE_ICON_COMPONENTS) {
       const span = doc.createElement("span");
@@ -380,6 +393,24 @@ function renderNode(node: Node, key: string, theme: Theme): ReactNode {
       </span>
     );
   }
+  if (tagName === "span" && node.dataset.noTranslate) {
+    const protectedLabel = normalizeInlineTagLabel(node.textContent || "");
+    if (!protectedLabel) return null;
+    return (
+      <span
+        key={key}
+        data-no-translate="true"
+        className="mx-[0.08em] inline-flex items-center rounded-md border border-dashed px-1.5 py-0.5 align-middle text-[0.88em] font-medium leading-none"
+        style={{
+          borderColor: "var(--border-primary, #2A2A2A)",
+          backgroundColor: "var(--bg-tertiary, rgba(255,255,255,0.04))",
+          color: "var(--text-primary, #fafafa)",
+        }}
+      >
+        {protectedLabel}
+      </span>
+    );
+  }
   if (tagName === "span" && node.dataset.inlineIcon) {
     const iconName = node.dataset.inlineIcon as InlineIconName;
     const Icon = INLINE_ICON_COMPONENTS[iconName];
@@ -485,7 +516,7 @@ function restoreRange(range: Range | null) {
 
 function isPlainStyleSpan(element: HTMLElement) {
   if (element.tagName.toLowerCase() !== "span") return false;
-  if (element.dataset.inlineTag || element.dataset.inlineIcon) return false;
+  if (element.dataset.inlineTag || element.dataset.inlineIcon || element.dataset.noTranslate) return false;
   return !element.getAttribute("style");
 }
 
@@ -509,6 +540,16 @@ function findInlineTagElement(node: Node | null, root?: HTMLElement | null) {
   return element as HTMLElement;
 }
 
+function findNoTranslateElement(node: Node | null, root?: HTMLElement | null) {
+  if (!node) return null;
+  const element =
+    node instanceof HTMLElement
+      ? (node.matches("[data-no-translate='true']") ? node : node.closest("[data-no-translate='true']"))
+      : node.parentElement?.closest("[data-no-translate='true']");
+  if (!element || (root && !root.contains(element))) return null;
+  return element as HTMLElement;
+}
+
 function getSelectedInlineTag(selection: Selection | null, root?: HTMLElement | null) {
   if (!selection || selection.rangeCount === 0) return null;
   const range = selection.getRangeAt(0);
@@ -528,6 +569,31 @@ function getSelectedInlineTag(selection: Selection | null, root?: HTMLElement | 
   if (endContainer instanceof Element) {
     const endCandidate = endContainer.childNodes[range.endOffset - 1] ?? endContainer.childNodes[range.endOffset] ?? null;
     const endTag = findInlineTagElement(endCandidate, root);
+    if (endTag) return endTag;
+  }
+
+  return null;
+}
+
+function getSelectedNoTranslate(selection: Selection | null, root?: HTMLElement | null) {
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+
+  const directMatch = findNoTranslateElement(range.startContainer, root) ?? findNoTranslateElement(range.endContainer, root);
+  if (directMatch) return directMatch;
+
+  const startContainer = range.startContainer;
+  const endContainer = range.endContainer;
+
+  if (startContainer instanceof Element) {
+    const startCandidate = startContainer.childNodes[range.startOffset] ?? startContainer.childNodes[range.startOffset - 1] ?? null;
+    const startTag = findNoTranslateElement(startCandidate, root);
+    if (startTag) return startTag;
+  }
+
+  if (endContainer instanceof Element) {
+    const endCandidate = endContainer.childNodes[range.endOffset - 1] ?? endContainer.childNodes[range.endOffset] ?? null;
+    const endTag = findNoTranslateElement(endCandidate, root);
     if (endTag) return endTag;
   }
 
@@ -764,6 +830,17 @@ export function RichTextEditor({
     commitValue({ syncDom: true });
   };
 
+  const handleProtectFromTranslation = () => {
+    focusEditor();
+    const selection = window.getSelection();
+    const selectedText = normalizeInlineTagLabel(selection?.toString() || "");
+    if (!selection || selectedText === "") return;
+    insertHtmlAtSelection(
+      `<span data-no-translate="true" contenteditable="false">${escapeHtml(selectedText)}</span>`,
+    );
+    commitValue({ syncDom: true });
+  };
+
   const handleRemoveTag = () => {
     focusEditor();
     const selection = window.getSelection();
@@ -772,6 +849,24 @@ export function RichTextEditor({
 
     const textNode = document.createTextNode(inlineTag.dataset.inlineTagLabel || inlineTag.textContent || "");
     inlineTag.replaceWith(textNode);
+
+    const nextRange = document.createRange();
+    nextRange.setStart(textNode, textNode.textContent?.length ?? 0);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+
+    commitValue({ syncDom: true });
+  };
+
+  const handleRemoveNoTranslate = () => {
+    focusEditor();
+    const selection = window.getSelection();
+    const protectedTerm = getSelectedNoTranslate(selection, editorRef.current);
+    if (!selection || !protectedTerm) return;
+
+    const textNode = document.createTextNode(protectedTerm.textContent || "");
+    protectedTerm.replaceWith(textNode);
 
     const nextRange = document.createRange();
     nextRange.setStart(textNode, textNode.textContent?.length ?? 0);
@@ -815,11 +910,19 @@ export function RichTextEditor({
       const root = editorRef.current;
       if (!root) return;
       const selectedTag = getSelectedInlineTag(window.getSelection(), root);
+      const selectedNoTranslate = getSelectedNoTranslate(window.getSelection(), root);
       root.querySelectorAll<HTMLElement>("[data-inline-tag='true']").forEach((node) => {
         if (node === selectedTag) {
           node.setAttribute("data-inline-tag-selected", "true");
         } else {
           node.removeAttribute("data-inline-tag-selected");
+        }
+      });
+      root.querySelectorAll<HTMLElement>("[data-no-translate='true']").forEach((node) => {
+        if (node === selectedNoTranslate) {
+          node.setAttribute("data-no-translate-selected", "true");
+        } else {
+          node.removeAttribute("data-no-translate-selected");
         }
       });
     };
@@ -903,6 +1006,24 @@ export function RichTextEditor({
             }}
           >
             <span className="text-[10px] font-semibold leading-none">#×</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Proteger seleção contra tradução"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              handleProtectFromTranslation();
+            }}
+          >
+            <Languages size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            label="Remover proteção de tradução"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              handleRemoveNoTranslate();
+            }}
+          >
+            <span className="text-[10px] font-semibold leading-none">EN×</span>
           </ToolbarButton>
           <div className="relative">
             <ToolbarButton
@@ -1070,14 +1191,14 @@ export function RichTextEditor({
           aria-label={placeholder || "Editor de texto"}
           spellCheck
           onMouseDown={(event) => {
-            const inlineTag = (event.target as HTMLElement).closest("[data-inline-tag='true']");
-            if (!inlineTag || !editorRef.current?.contains(inlineTag)) return;
+            const protectedInline = (event.target as HTMLElement).closest("[data-inline-tag='true'], [data-no-translate='true']");
+            if (!protectedInline || !editorRef.current?.contains(protectedInline)) return;
             event.preventDefault();
             focusEditor();
             const selection = window.getSelection();
             if (!selection) return;
             const range = document.createRange();
-            range.selectNode(inlineTag);
+            range.selectNode(protectedInline);
             selection.removeAllRanges();
             selection.addRange(range);
           }}

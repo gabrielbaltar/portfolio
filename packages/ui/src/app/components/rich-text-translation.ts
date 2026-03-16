@@ -32,6 +32,8 @@ function walkTranslatableNodes(root: ParentNode, visit: (node: RichTextNodeVisit
       return;
     }
 
+    if (node.dataset.noTranslate === "true") return;
+
     if (node.dataset.inlineIcon) return;
 
     Array.from(node.childNodes).forEach(walk);

@@ -2,8 +2,9 @@
 
 export type TranslationLanguage = "pt" | "en";
 
-const CACHE_KEY = "portfolio_translations_cache_v5";
+const CACHE_KEY = "portfolio_translations_cache_v6";
 const LEGACY_CACHE_KEYS = [
+  "portfolio_translations_cache_v5",
   "portfolio_translations_cache_v4",
   "portfolio_translations_cache_v3",
   "portfolio_translations_cache",
@@ -125,7 +126,12 @@ function prepareProtectedTerms(text: string) {
     return placeholder;
   };
 
-  let preparedText = text.replace(/-\[([^\]]+)\]/g, (_match, phrase: string) => {
+  let preparedText = text.replace(/\[\[([^[\]]+)\]\]/g, (_match, phrase: string) => {
+    const normalized = phrase.trim();
+    return normalized ? makePlaceholder(normalized) : phrase;
+  });
+
+  preparedText = preparedText.replace(/-\[([^\]]+)\]/g, (_match, phrase: string) => {
     const normalized = phrase.trim();
     return normalized ? makePlaceholder(normalized) : phrase;
   });

@@ -80,3 +80,27 @@ body,
   background: #1f1f1f;
   color: #ffffff;
 }
+
+.rich-text-editor [data-no-translate="true"] {
+  display: inline-flex;
+  align-items: center;
+  margin-inline: 0.08em;
+  border: 1px dashed #3a3a3a;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f5f5;
+  padding: 0.18em 0.45em;
+  line-height: 1;
+  font-size: 0.88em;
+  font-weight: 500;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.rich-text-editor [data-no-translate="true"][data-no-translate-selected="true"] {
+  border-color: #8cf5ae;
+  background: rgba(140, 245, 174, 0.12);
+  color: #ffffff;
+}
