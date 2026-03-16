@@ -1602,11 +1602,11 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
             </div>
           );
         })()}
-        {block.type === "image" && imageLightbox && (
+        {block.type === "image" && (
           <ImageLightbox
             open={Boolean(imageLightbox)}
-            src={imageLightbox.src}
-            alt={imageLightbox.alt}
+            src={imageLightbox?.src || ""}
+            alt={imageLightbox?.alt || ""}
             onClose={() => setImageLightbox(null)}
           />
         )}
