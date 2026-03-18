@@ -6,6 +6,7 @@ import { VideoPlayer } from "./video-player";
 import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock } from "./content-block-utils";
 import { CodeHighlight } from "./code-highlight";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
+import { getLightboxOriginRect, type LightboxOriginRect } from "./image-lightbox";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
@@ -145,7 +146,7 @@ function ImageBlockSlider({
   block: Extract<ContentBlock, { type: "image" }>;
   alt: string;
   imagesClickable: boolean;
-  onImageClick?: (src: string, alt: string) => void;
+  onImageClick?: (src: string, alt: string, originRect?: LightboxOriginRect | null) => void;
 }) {
   const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
 
@@ -161,7 +162,7 @@ function ImageBlockSlider({
       frameStyle={{ borderRadius: radius }}
       imageClassName={imagesClickable ? "cursor-pointer" : ""}
       disablePointerEvents={!imagesClickable}
-      onImageClick={imagesClickable && onImageClick ? (src) => onImageClick(src, alt) : undefined}
+      onImageClick={imagesClickable && onImageClick ? (src, originRect) => onImageClick(src, alt, originRect) : undefined}
       emptyLabel="Sem imagem"
     />
   );
@@ -174,7 +175,7 @@ export function BlockRenderer({
 }: {
   blocks: ContentBlock[];
   imagesClickable?: boolean;
-  onImageClick?: (src: string, alt: string) => void;
+  onImageClick?: (src: string, alt: string, originRect?: LightboxOriginRect | null) => void;
 }) {
   if (!blocks || blocks.length === 0) return null;
 
@@ -240,9 +241,9 @@ export function BlockRenderer({
             const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
             const alt = richTextToPlainText(block.caption) || "";
             const imageClassName = imagesClickable ? "cursor-pointer" : undefined;
-            const openImage = () => {
+            const openImage: React.MouseEventHandler<HTMLElement> = (event) => {
               if (!imagesClickable || !onImageClick || !canOpenInImageLightbox(block.url)) return;
-              onImageClick(block.url, alt);
+              onImageClick(block.url, alt, getLightboxOriginRect(event.currentTarget));
             };
             return (
               <figure key={i} className="my-8">

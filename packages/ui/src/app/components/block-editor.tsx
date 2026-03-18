@@ -18,7 +18,7 @@ import {
 } from "./content-block-utils";
 import { LineHeightControl } from "./line-height-control";
 import { ImagePositionEditorCompact } from "./image-position-editor";
-import { ImageLightbox } from "./image-lightbox";
+import { ImageLightbox, type LightboxOriginRect } from "./image-lightbox";
 import { RichTextEditor } from "./rich-text";
 import { ShowcaseBlockView } from "./showcase-blocks";
 import { VideoPlayer } from "./video-player";
@@ -448,7 +448,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const [dragOverIconIndex, setDragOverIconIndex] = useState<number | null>(null);
   const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
   const imageBlock = block.type === "image" ? block : null;
-  const [imageLightbox, setImageLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [imageLightbox, setImageLightbox] = useState<{ src: string; alt: string; originRect?: LightboxOriginRect | null } | null>(null);
 
   const moveItem = useCallback(<T,>(items: T[], fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return items;
@@ -1435,11 +1435,12 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                         disablePointerEvents={false}
                         emptyLabel="Midia"
                         imageClassName="cursor-pointer"
-                        onImageClick={(src) => {
+                        onImageClick={(src, originRect) => {
                           if (!canOpenInImageLightbox(src)) return;
                           setImageLightbox({
                             src,
                             alt: block.caption || "Imagem do bloco",
+                            originRect,
                           });
                         }}
                       />
@@ -1607,6 +1608,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
             open={Boolean(imageLightbox)}
             src={imageLightbox?.src || ""}
             alt={imageLightbox?.alt || ""}
+            originRect={imageLightbox?.originRect}
             onClose={() => setImageLightbox(null)}
           />
         )}

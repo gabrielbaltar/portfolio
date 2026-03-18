@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Move, Check, RotateCcw, Expand, MoreVertical, Trash2, ArrowUp, ArrowDown } from "lucide-react";
-import { ImageLightbox } from "./image-lightbox";
+import { getLightboxOriginRect, ImageLightbox, type LightboxOriginRect } from "./image-lightbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -282,6 +282,7 @@ export function ImagePositionEditorCompact({
   const [editing, setEditing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxOriginRect, setLightboxOriginRect] = useState<LightboxOriginRect | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number }>(() => parsePosition(position));
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
@@ -343,6 +344,11 @@ export function ImagePositionEditorCompact({
     ? "opacity-100"
     : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100";
 
+  const openLightbox = useCallback((target: EventTarget | null) => {
+    setLightboxOriginRect(getLightboxOriginRect(target));
+    setLightboxOpen(true);
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -354,7 +360,7 @@ export function ImagePositionEditorCompact({
       onMouseDown={handleMouseDown}
       onClick={(event) => {
         if (event.defaultPrevented || editing) return;
-        setLightboxOpen(true);
+        openLightbox(event.currentTarget);
       }}
     >
       <img
@@ -418,7 +424,7 @@ export function ImagePositionEditorCompact({
                   onSelect={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    setLightboxOpen(true);
+                    openLightbox(containerRef.current);
                     setActionsOpen(false);
                   }}
                 >
@@ -502,6 +508,7 @@ export function ImagePositionEditorCompact({
         open={lightboxOpen}
         src={src}
         alt={alt || "Imagem ampliada"}
+        originRect={lightboxOriginRect}
         onClose={() => setLightboxOpen(false)}
       />
     </div>

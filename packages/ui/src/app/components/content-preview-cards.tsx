@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, ExternalLink, Lock } from "lucide-react";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
+import { getLightboxOriginRect, type LightboxOriginRect } from "./image-lightbox";
 import { buildBackTarget } from "./navigation-state";
 
 type ProjectPreviewCardProps = {
@@ -98,7 +99,7 @@ export function PreviewMediaSlider({
   emptyLabel?: string;
   frameStyle?: CSSProperties;
   disablePointerEvents?: boolean;
-  onImageClick?: (src: string) => void;
+  onImageClick?: (src: string, originRect?: LightboxOriginRect | null) => void;
 }) {
   const slides = useMemo(
     () => buildSlides(image, imagePosition, galleryImages, galleryPositions),
@@ -142,9 +143,9 @@ export function PreviewMediaSlider({
   };
 
   const activeSlide = slides[activeIndex];
-  const handleImageClick = () => {
+  const handleImageClick: React.MouseEventHandler<HTMLElement> = (event) => {
     if (!activeSlide.src || !onImageClick || !canOpenInImageLightbox(activeSlide.src)) return;
-    onImageClick(activeSlide.src);
+    onImageClick(activeSlide.src, getLightboxOriginRect(event.currentTarget));
   };
 
   return (

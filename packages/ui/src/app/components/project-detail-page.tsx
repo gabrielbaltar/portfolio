@@ -8,7 +8,7 @@ import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { BlockRenderer } from "./block-renderer";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
-import { ImageLightbox } from "./image-lightbox";
+import { getLightboxOriginRect, ImageLightbox, type LightboxOriginRect } from "./image-lightbox";
 import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
@@ -27,7 +27,7 @@ function ImageCard({
   alt: string;
   className?: string;
   position?: string;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }) {
   const isLightboxable = canOpenInImageLightbox(src);
 
@@ -73,7 +73,7 @@ export function ProjectDetailPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string; originRect?: LightboxOriginRect | null } | null>(null);
   const backTo = getBackTarget(location.state, "/projects");
   const socialLinks = getProfileSocialLinks(profile);
 
@@ -196,9 +196,9 @@ export function ProjectDetailPage() {
 
   const heroImage = project.image || "";
   const gallery = (project.galleryImages || []).filter(Boolean);
-  const openImageLightbox = (src: string, alt: string) => {
+  const openImageLightbox = (src: string, alt: string, originRect?: LightboxOriginRect | null) => {
     if (!src) return;
-    setLightboxImage({ src, alt });
+    setLightboxImage({ src, alt, originRect });
   };
 
   // Metadata columns
@@ -307,7 +307,7 @@ export function ProjectDetailPage() {
           src={heroImage}
           alt={project.title}
           position={project.imagePosition || "50% 50%"}
-          onClick={() => openImageLightbox(heroImage, project.title)}
+          onClick={(event) => openImageLightbox(heroImage, project.title, getLightboxOriginRect(event.currentTarget))}
         />
       </ScrollReveal>
 
@@ -327,7 +327,7 @@ export function ProjectDetailPage() {
                 src={img}
                 alt={`${project.title} gallery ${i + 1}`}
                 position={project.galleryPositions?.[i] || "50% 50%"}
-                onClick={() => openImageLightbox(img, `${project.title} gallery ${i + 1}`)}
+                onClick={(event) => openImageLightbox(img, `${project.title} gallery ${i + 1}`, getLightboxOriginRect(event.currentTarget))}
               />
             </ScrollReveal>
           ))}
@@ -338,6 +338,7 @@ export function ProjectDetailPage() {
         open={Boolean(lightboxImage)}
         src={lightboxImage?.src || ""}
         alt={lightboxImage?.alt || ""}
+        originRect={lightboxImage?.originRect}
         onClose={() => setLightboxImage(null)}
       />
 

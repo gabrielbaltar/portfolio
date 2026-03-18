@@ -1,6 +1,6 @@
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { ImageIcon } from "lucide-react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type MouseEventHandler, useEffect, useRef, useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 interface ContentImageProps {
@@ -11,7 +11,7 @@ interface ContentImageProps {
   position?: string;
   emptyLabel?: string;
   iconSize?: number;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLElement>;
   mimeType?: string | null;
   autoPlay?: boolean;
   loop?: boolean;
