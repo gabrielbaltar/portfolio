@@ -35,12 +35,12 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
       {open && src ? (
         <motion.div
           key="lightbox-overlay"
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4 backdrop-blur-xl md:p-8"
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 backdrop-blur-md md:p-8"
           style={{ backgroundColor: "rgba(32, 32, 34, 0.72)" }}
-          initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-          animate={{ opacity: 1, backdropFilter: "blur(18px)" }}
-          exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-          transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           onClick={(event) => {
             event.stopPropagation();
             onClose();
@@ -61,36 +61,43 @@ export function ImageLightbox({ open, src, alt, onClose }: ImageLightboxProps) {
               border: "1px solid rgba(255,255,255,0.14)",
               backgroundColor: "rgba(70, 70, 74, 0.48)",
               backdropFilter: "blur(14px)",
+              willChange: "transform, opacity",
             }}
-            initial={{ opacity: 0, scale: 0.88, y: -10 }}
+            initial={{ opacity: 0, scale: 0.94, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: -10 }}
-            transition={{ duration: 0.22, delay: 0.04, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, scale: 0.96, y: -6 }}
+            transition={{ duration: 0.2, delay: 0.02, ease: [0.16, 1, 0.3, 1] }}
             aria-label="Fechar imagem"
           >
             <X size={18} />
           </motion.button>
 
-          <motion.img
-            src={src}
-            alt={alt}
-            className="max-h-[88vh] max-w-[92vw] select-none object-contain"
-            style={{
-              WebkitTouchCallout: "none",
-              userSelect: "none",
-            }}
-            initial={{ opacity: 0, scale: 0.92, y: 24 }}
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, scale: 0.975, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 18 }}
+            exit={{ opacity: 0, scale: 0.985, y: 10 }}
             transition={{
-              opacity: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-              scale: { type: "spring", stiffness: 320, damping: 28, mass: 0.85 },
-              y: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+              opacity: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
+              scale: { type: "spring", stiffness: 420, damping: 34, mass: 0.72 },
+              y: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
             }}
+            style={{ willChange: "transform, opacity" }}
             onClick={(event) => event.stopPropagation()}
-            onContextMenu={(event) => event.preventDefault()}
-            onDragStart={(event) => event.preventDefault()}
-          />
+          >
+            <motion.img
+              src={src}
+              alt={alt}
+              className="max-h-[88vh] max-w-[92vw] select-none object-contain"
+              style={{
+                WebkitTouchCallout: "none",
+                userSelect: "none",
+                transform: "translateZ(0)",
+              }}
+              onContextMenu={(event) => event.preventDefault()}
+              onDragStart={(event) => event.preventDefault()}
+            />
+          </motion.div>
         </motion.div>
       ) : null}
     </AnimatePresence>

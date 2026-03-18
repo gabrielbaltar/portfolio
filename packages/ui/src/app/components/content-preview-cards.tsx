@@ -111,6 +111,18 @@ export function PreviewMediaSlider({
     setActiveIndex((current) => Math.min(current, slides.length - 1));
   }, [slides.length]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    slides.forEach((slide) => {
+      if (!slide.src || !canOpenInImageLightbox(slide.src)) return;
+
+      const image = new window.Image();
+      image.decoding = "async";
+      image.src = slide.src;
+    });
+  }, [slides]);
+
   const goToPrevious = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -141,14 +153,28 @@ export function PreviewMediaSlider({
         className={`relative overflow-hidden ${frameClassName}`}
         style={{ aspectRatio, ...frameStyle }}
       >
-        <ContentImage
-          src={activeSlide.src}
-          alt={title}
-          emptyLabel={emptyLabel}
-          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
-          position={activeSlide.position}
-          onClick={handleImageClick}
-        />
+        <div
+          className="flex h-full will-change-transform"
+          style={{
+            transform: `translate3d(-${activeIndex * 100}%, 0, 0)`,
+            transition: hasMultipleSlides ? "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+          }}
+        >
+          {slides.map((slide, index) => (
+            <div key={slide.key} className="h-full w-full shrink-0 overflow-hidden">
+              <ContentImage
+                src={slide.src}
+                alt={title}
+                emptyLabel={emptyLabel}
+                className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
+                position={slide.position}
+                onClick={index === activeIndex ? handleImageClick : undefined}
+                autoPlay={index === activeIndex}
+                loop={index === activeIndex}
+              />
+            </div>
+          ))}
+        </div>
 
         {hasMultipleSlides && (
           <>
@@ -156,7 +182,7 @@ export function PreviewMediaSlider({
               <button
                 type="button"
                 onClick={goToPrevious}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform duration-200 hover:scale-[1.06]"
                 style={{
                   backgroundColor: "rgba(5, 5, 7, 0.68)",
                   backdropFilter: "blur(12px)",
@@ -170,7 +196,7 @@ export function PreviewMediaSlider({
               <button
                 type="button"
                 onClick={goToNext}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-[1.03]"
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform duration-200 hover:scale-[1.06]"
                 style={{
                   backgroundColor: "rgba(5, 5, 7, 0.68)",
                   backdropFilter: "blur(12px)",
@@ -197,7 +223,7 @@ export function PreviewMediaSlider({
                     key={slide.key}
                     type="button"
                     onClick={(event) => goToSlide(event, index)}
-                    className="cursor-pointer rounded-full transition-all"
+                    className="cursor-pointer rounded-full transition-all duration-200"
                     style={{
                       width: index === activeIndex ? "20px" : "8px",
                       height: "6px",
