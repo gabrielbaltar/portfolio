@@ -29,6 +29,7 @@ export interface ResolvedEmbed {
 const DEFAULT_EMBED_ALLOW = "accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share";
 const MIN_EMBED_HEIGHT = 280;
 const MAX_EMBED_HEIGHT = 960;
+const DEFAULT_FIGMA_EMBED_HOST = "share";
 
 function clampHeight(value: number) {
   return Math.max(MIN_EMBED_HEIGHT, Math.min(MAX_EMBED_HEIGHT, Math.round(value)));
@@ -129,6 +130,70 @@ function extractMiroBoardPath(pathname: string) {
   return match?.[1] ?? null;
 }
 
+function isFigmaEmbedV1Url(url: URL) {
+  return url.hostname.endsWith("figma.com") && url.pathname === "/embed" && url.searchParams.has("url");
+}
+
+function migrateFigmaEmbedV1Url(url: URL) {
+  const innerUrlValue = url.searchParams.get("url");
+  const embedHost = url.searchParams.get("embed_host") || DEFAULT_FIGMA_EMBED_HOST;
+  const decodedInnerUrl = normalizeHttpUrl(innerUrlValue);
+
+  if (!decodedInnerUrl) {
+    return null;
+  }
+
+  const migratedUrl = new URL(decodedInnerUrl.toString());
+  migratedUrl.hostname = "embed.figma.com";
+
+  const mergedParams = new URLSearchParams(migratedUrl.search);
+
+  url.searchParams.forEach((value, key) => {
+    if (key === "url" || key === "embed_origin") return;
+    mergedParams.set(key.replace(/_/g, "-"), value);
+  });
+
+  if (!mergedParams.has("embed-host")) {
+    mergedParams.set("embed-host", embedHost);
+  }
+
+  migratedUrl.search = mergedParams.toString();
+
+  return {
+    embedUrl: migratedUrl.toString(),
+    sourceUrl: decodedInnerUrl.toString(),
+  };
+}
+
+function buildFigmaEmbedV2Url(url: URL) {
+  if (url.hostname === "embed.figma.com") {
+    const embedUrl = new URL(url.toString());
+    if (!embedUrl.searchParams.has("embed-host")) {
+      embedUrl.searchParams.set("embed-host", DEFAULT_FIGMA_EMBED_HOST);
+    }
+    const sourceUrl = new URL(embedUrl.toString());
+    sourceUrl.hostname = "www.figma.com";
+    sourceUrl.searchParams.delete("embed-host");
+    return {
+      embedUrl: embedUrl.toString(),
+      sourceUrl: sourceUrl.toString(),
+    };
+  }
+
+  if (isFigmaEmbedV1Url(url)) {
+    return migrateFigmaEmbedV1Url(url);
+  }
+
+  const embedUrl = new URL(url.toString());
+  embedUrl.hostname = "embed.figma.com";
+  embedUrl.searchParams.set("embed-host", embedUrl.searchParams.get("embed-host") || DEFAULT_FIGMA_EMBED_HOST);
+
+  return {
+    embedUrl: embedUrl.toString(),
+    sourceUrl: url.toString(),
+  };
+}
+
 export function resolveEmbed(input: string, configuredHeight?: number): ResolvedEmbed {
   const parsedInput = parseEmbedInput(input);
   const normalizedUrl = normalizeHttpUrl(parsedInput.src);
@@ -149,23 +214,15 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
   const sourceUrl = normalizedUrl.toString();
 
   if (host.endsWith("figma.com")) {
-    if (normalizedUrl.pathname.startsWith("/embed")) {
-      return {
-        provider: "figma",
-        providerLabel: "Figma",
-        embedUrl: sourceUrl,
-        sourceUrl: normalizedUrl.searchParams.get("url") || sourceUrl,
-        height: clampHeight(preferredHeight ?? 560),
-      };
-    }
+    const figmaEmbed = buildFigmaEmbedV2Url(normalizedUrl);
 
     return {
       provider: "figma",
       providerLabel: "Figma",
-      embedUrl: `https://www.figma.com/embed?embed_host=portfolio&url=${encodeURIComponent(sourceUrl)}`,
-      sourceUrl,
+      embedUrl: figmaEmbed?.embedUrl ?? null,
+      sourceUrl: figmaEmbed?.sourceUrl ?? sourceUrl,
       height: clampHeight(preferredHeight ?? 560),
-      helpText: "Aceita links de arquivo, design ou prototipo compartilhados do Figma.",
+      helpText: "Aceita links de arquivo, design, board ou prototipo compartilhados do Figma. Arquivos privados exigem login e cookies liberados.",
     };
   }
 
