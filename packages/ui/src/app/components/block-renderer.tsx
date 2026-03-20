@@ -6,6 +6,7 @@ import { VideoPlayer } from "./video-player";
 import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock } from "./content-block-utils";
 import { CodeHighlight } from "./code-highlight";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
+import { ContentEmbed } from "./content-embed";
 import { getLightboxOriginRect, type LightboxOriginRect } from "./image-lightbox";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
@@ -376,27 +377,7 @@ export function BlockRenderer({
               </div>
             );
           case "embed":
-            return (
-              <figure key={i} className="my-8">
-                <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--bg-secondary, #0F1012)", border: "1px solid var(--border-primary, #2A2A2A)" }}>
-                  <iframe
-                    src={(block as any).url}
-                    className="w-full"
-                    style={{ height: "400px", border: "none" }}
-                    title={(block as any).caption || "Embed"}
-                    allowFullScreen
-                  />
-                </div>
-                {(block as any).caption && (
-                  <figcaption
-                    className="mt-2 text-center font-['Inter',sans-serif]"
-                    style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
-                  >
-                    <RichTextContent value={(block as any).caption} />
-                  </figcaption>
-                )}
-              </figure>
-            );
+            return <ContentEmbed key={i} block={block} />;
           default:
             return null;
         }

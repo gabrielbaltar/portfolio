@@ -26,6 +26,7 @@ import {
 } from "./content-block-utils";
 import { LineHeightControl } from "./line-height-control";
 import { CodeHighlight } from "./code-highlight";
+import { ContentEmbed } from "./content-embed";
 import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
@@ -1061,12 +1062,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                   </div>
                 );
               case "embed":
-                return (
-                  <div key={i} className="rounded-lg py-6 text-center" style={{ backgroundColor: "#141414", border: "1px dashed #2a2a2a" }}>
-                    <Code size={16} className="text-[#555] mx-auto mb-1" />
-                    <span className="text-[#555] block" style={{ fontSize: "12px" }}>{(block as any).url || "Embed"}</span>
-                  </div>
-                );
+                return <ContentEmbed key={i} block={block} preview />;
               default:
                 return null;
             }

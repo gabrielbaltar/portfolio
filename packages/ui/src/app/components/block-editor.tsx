@@ -17,6 +17,7 @@ import {
   isAdjustableLineHeightBlock,
 } from "./content-block-utils";
 import { LineHeightControl } from "./line-height-control";
+import { ContentEmbed, resolveEmbed } from "./content-embed";
 import { ImagePositionEditorCompact } from "./image-position-editor";
 import { ImageLightbox, type LightboxOriginRect } from "./image-lightbox";
 import { RichTextEditor } from "./rich-text";
@@ -53,7 +54,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "video", label: "Video / Mux", icon: <Video size={14} /> },
   { type: "quote", label: "Citacao", icon: <Quote size={14} /> },
   { type: "cta", label: "CTA / Botao", icon: <MousePointerClick size={14} /> },
-  { type: "embed", label: "Embed", icon: <Code size={14} /> },
+  { type: "embed", label: "Embed / Prototipo", icon: <Code size={14} /> },
   { type: "divider", label: "Divisor", icon: <Minus size={14} /> },
 ];
 
@@ -62,7 +63,7 @@ const LABEL_MAP: Record<string, string> = {
   "unordered-list": "Lista", "ordered-list": "Lista numerada",
   "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
   "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
-  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
+  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed / Prototipo",
 };
 
 const DND_ITEM_TYPE = "CONTENT_BLOCK";
@@ -1934,25 +1935,81 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
         )}
 
         {block.type === "embed" && (
-          <div className="space-y-2">
-            <input
-              value={(block as any).url}
-              onChange={(e) => onChange({ ...block, url: e.target.value } as ContentBlock)}
-              className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#fafafa] focus:outline-none focus:border-[#555]"
-              style={{ fontSize: "13px" }}
-              placeholder="URL do embed (YouTube, Vimeo, etc)..."
-            />
-            <RichTextEditor
-              value={(block as any).caption}
-              onChange={(caption) => onChange({ ...block, caption } as ContentBlock)}
-              multiline={false}
-              compact
-              placeholder="Legenda (opcional)..."
-              editorClassName="w-full rounded px-2.5 py-1.5 text-[#aaa]"
-              editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
-              placeholderClassName="px-2.5 py-1.5"
-            />
-          </div>
+          (() => {
+            const embedBlock = block as Extract<ContentBlock, { type: "embed" }>;
+            const resolvedEmbed = resolveEmbed(embedBlock.url, embedBlock.height);
+            const currentHeight = embedBlock.height ?? resolvedEmbed.height;
+
+            return (
+              <div className="space-y-3">
+                <textarea
+                  value={embedBlock.url}
+                  onChange={(e) => onChange({ ...embedBlock, url: e.target.value } as ContentBlock)}
+                  className="min-h-[92px] w-full resize-y rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-2 text-[#fafafa] focus:outline-none focus:border-[#555]"
+                  style={{ fontSize: "13px", lineHeight: "20px" }}
+                  placeholder={"Cole a URL publica ou o iframe completo.\nEx.: Figma, Notion, Miro, Loom, YouTube, Vimeo..."}
+                />
+
+                <div className="flex flex-wrap items-center gap-2 px-1">
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-1"
+                    style={{ fontSize: "11px", lineHeight: "14px", backgroundColor: "#141414", color: "#888", border: "1px solid #242424" }}
+                  >
+                    {resolvedEmbed.providerLabel}
+                  </span>
+                  {resolvedEmbed.sourceUrl && (
+                    <a
+                      href={resolvedEmbed.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#666] transition-colors hover:text-[#aaa]"
+                      style={{ fontSize: "11px" }}
+                    >
+                      Abrir original
+                    </a>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[#666] shrink-0" style={{ fontSize: "11px" }}>Altura</span>
+                  <input
+                    type="range"
+                    min={280}
+                    max={960}
+                    step={10}
+                    value={currentHeight}
+                    onChange={(e) => onChange({ ...embedBlock, height: Number(e.target.value) } as ContentBlock)}
+                    className="flex-1 h-1 cursor-pointer"
+                    style={{ accentColor: "#00ff3c" }}
+                  />
+                  <span className="text-[#555] w-12 text-right tabular-nums" style={{ fontSize: "11px" }}>
+                    {currentHeight}px
+                  </span>
+                </div>
+
+                {resolvedEmbed.helpText && (
+                  <p className="px-1 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                    {resolvedEmbed.helpText}
+                  </p>
+                )}
+
+                {embedBlock.url.trim() ? (
+                  <ContentEmbed block={{ ...embedBlock, height: currentHeight }} preview />
+                ) : null}
+
+                <RichTextEditor
+                  value={embedBlock.caption}
+                  onChange={(caption) => onChange({ ...embedBlock, caption } as ContentBlock)}
+                  multiline={false}
+                  compact
+                  placeholder="Legenda (opcional)..."
+                  editorClassName="w-full rounded px-2.5 py-1.5 text-[#aaa]"
+                  editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+                  placeholderClassName="px-2.5 py-1.5"
+                />
+              </div>
+            );
+          })()
         )}
       </div>
     </div>

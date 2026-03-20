@@ -101,7 +101,7 @@ export type ContentBlock =
   | { type: "divider"; spacing?: number }
   | { type: "quote"; text: string; author: string; lineHeight?: number }
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
-  | { type: "embed"; url: string; caption: string };
+  | { type: "embed"; url: string; caption: string; height?: number };
 
 export interface TimestampedEntity {
   createdAt: string;
