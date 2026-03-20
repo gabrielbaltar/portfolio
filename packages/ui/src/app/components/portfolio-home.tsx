@@ -161,7 +161,10 @@ export function PortfolioHome() {
                 )}
                 {profile.available ? (
                   <p className="flex items-center justify-center sm:justify-start gap-2 mt-2" style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: "var(--accent-green, #22c55e)" }} />
+                    <span className="availability-indicator" aria-hidden="true">
+                      <span className="availability-indicator__glow" />
+                      <span className="availability-indicator__core" />
+                    </span>
                     {profile.availableText}
                   </p>
                 ) : profile.currentJobTitle || profile.currentCompany ? (
