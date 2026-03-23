@@ -53,8 +53,8 @@ export function BlogPage() {
                   href={`/blog/${post.slug}`}
                   title={post.title}
                   description={post.description}
-                  image={post.image}
-                  imagePosition={(post as any).imagePosition || "50% 50%"}
+                  image={post.cardImage || post.image}
+                  imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
                   publisher={post.publisher}
                   date={post.date}
                   category={(post as any).category}

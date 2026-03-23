@@ -270,6 +270,22 @@ export function ProjectDetailPage() {
           </motion.p>
         )}
 
+        {heroImage && (
+          <motion.div
+            className="mt-8"
+            initial={{ y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <ImageCard
+              src={heroImage}
+              alt={project.title}
+              position={project.imagePosition || "50% 50%"}
+              onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
+            />
+          </motion.div>
+        )}
+
         {/* Visit Website link */}
         {project.link && project.link !== "#" && (
           <motion.a
@@ -317,16 +333,6 @@ export function ProjectDetailPage() {
           ))}
         </motion.div>
       </div>
-
-      {/* Hero Image */}
-      <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-10">
-        <ImageCard
-          src={heroImage}
-          alt={project.title}
-          position={project.imagePosition || "50% 50%"}
-          onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
-        />
-      </ScrollReveal>
 
       {/* Content blocks */}
       {project.contentBlocks && project.contentBlocks.length > 0 && (
@@ -385,8 +391,8 @@ export function ProjectDetailPage() {
                 href={`/projects/${p.slug}`}
                 title={cardCopy.title}
                 subtitle={cardCopy.subtitle}
-                image={p.image || ""}
-                imagePosition={p.imagePosition || "50% 50%"}
+                image={p.cardImage || p.image || ""}
+                imagePosition={p.cardImagePosition || p.imagePosition || "50% 50%"}
                 locked={Boolean(p.password && p.password.trim() !== "")}
               />
             );

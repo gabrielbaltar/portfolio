@@ -689,6 +689,10 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     contentType === "projects"
       ? (item.cardSubtitle || "").trim()
       : (item.subtitle || item.description || "").trim();
+  const cardPreviewImage = item.cardImage || item.image;
+  const cardPreviewImagePosition = item.cardImagePosition || item.imagePosition || "50% 50%";
+  const detailPreviewImage = item.image || "";
+  const detailPreviewImagePosition = item.imagePosition || "50% 50%";
 
   return (
     <div
@@ -753,11 +757,11 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               >
                 <div style={{ aspectRatio: contentType === "projects" ? "700 / 525" : "3 / 2" }}>
                   <ContentImage
-                    src={item.image}
+                    src={cardPreviewImage}
                     alt={cardPreviewTitle || item.title || "Preview"}
                     emptyLabel="Sem capa"
                     className="h-full w-full object-cover"
-                    position={item.imagePosition || "50% 50%"}
+                    position={cardPreviewImagePosition}
                   />
                 </div>
               </div>
@@ -787,19 +791,6 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
           </div>
         )}
 
-        {/* Cover image */}
-        {item.image && (
-          <div className="mb-8 overflow-hidden rounded-[12px]" style={{ backgroundColor: item.imageBgColor || "transparent" }}>
-            <ContentImage
-              src={item.image}
-              alt={item.title}
-              className="w-full object-cover"
-              position={item.imagePosition || "50% 50%"}
-              style={{ maxHeight: "220px" }}
-            />
-          </div>
-        )}
-
         {/* Tags */}
         {item.tags && item.tags.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-1.5">
@@ -825,6 +816,19 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
             { fontSize: "15px", lineHeight: "24px" }
           )
         }
+
+        {/* Cover image */}
+        {detailPreviewImage && (
+          <div className="mb-8 overflow-hidden rounded-[12px]" style={{ backgroundColor: item.imageBgColor || "transparent" }}>
+            <ContentImage
+              src={detailPreviewImage}
+              alt={item.title}
+              className="w-full object-cover"
+              position={detailPreviewImagePosition}
+              style={{ maxHeight: "220px" }}
+            />
+          </div>
+        )}
 
         {/* Meta info for projects */}
         {contentType === "projects" && (
@@ -1123,6 +1127,7 @@ function ImageUrlField({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const hasGallerySupport = Boolean(onGalleryImagesChange);
 
   const appendToGallery = (incomingImages: string[]) => {
     if (!onGalleryImagesChange) return 0;
@@ -1271,9 +1276,13 @@ function ImageUrlField({
           )}
         </div>
         <p className="mt-2 px-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-          {dragOver
-            ? "Solte aqui para atualizar a capa e enviar o restante para a galeria."
-            : "Arraste uma ou varias capas visuais aqui. A primeira vira capa e as demais vao para a galeria."}
+          {hasGallerySupport
+            ? dragOver
+              ? "Solte aqui para atualizar a capa e enviar o restante para a galeria."
+              : "Arraste uma ou varias capas visuais aqui. A primeira vira capa e as demais vao para a galeria."
+            : dragOver
+              ? "Solte aqui para atualizar esta imagem."
+              : "Arraste uma imagem visual aqui para atualizar este campo."}
         </p>
       </div>
       <input
@@ -1958,7 +1967,27 @@ export function CMSEditor() {
         content: (
           <>
         <ImageUrlField
-          label="Capa visual"
+          label="Imagem do card"
+          value={item.cardImage || ""}
+          onChange={(value) => updateField("cardImage", value)}
+          placeholder="Cole a URL ou envie a imagem usada no card"
+        />
+        {item.cardImage && supportsPositionEditor(item.cardImage) && (
+          <ImagePositionEditor
+            src={item.cardImage}
+            position={item.cardImagePosition || item.imagePosition || "50% 50%"}
+            onChange={(pos) => updateField("cardImagePosition", pos)}
+            height={300}
+            label="Reposicionar imagem do card"
+          />
+        )}
+        {item.cardImage && !supportsPositionEditor(item.cardImage) && (
+          <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
+          </p>
+        )}
+        <ImageUrlField
+          label="Imagem principal da pagina"
           value={item.image}
           onChange={(value) => updateField("image", value)}
           placeholder="Cole a URL ou envie WebM, Lottie, SVG, WebP..."
@@ -1973,7 +2002,7 @@ export function CMSEditor() {
             position={item.imagePosition || "50% 50%"}
             onChange={(pos) => updateField("imagePosition", pos)}
             height={300}
-            label="Reposicionar imagem de capa (altura fixa 525px no site)"
+            label="Reposicionar imagem principal da pagina (altura fixa 525px no site)"
           />
         )}
         {item.image && !supportsPositionEditor(item.image) && (
@@ -1981,6 +2010,9 @@ export function CMSEditor() {
             Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
           </p>
         )}
+        <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          A imagem do card aparece apenas na home e nas listagens. A imagem principal da pagina fica abaixo do titulo e subtitulo no detalhe do projeto.
+        </p>
         <div className="space-y-1.5">
           <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Cor de fundo das imagens</label>
           <div className="flex items-center gap-2">
@@ -2164,7 +2196,27 @@ export function CMSEditor() {
         content: (
           <>
         <ImageUrlField
-          label="Capa visual"
+          label="Imagem do card"
+          value={item.cardImage || ""}
+          onChange={(value) => updateField("cardImage", value)}
+          placeholder="Cole a URL ou envie a imagem usada no card"
+        />
+        {item.cardImage && supportsPositionEditor(item.cardImage) && (
+          <ImagePositionEditor
+            src={item.cardImage}
+            position={item.cardImagePosition || item.imagePosition || "50% 50%"}
+            onChange={(pos) => updateField("cardImagePosition", pos)}
+            height={300}
+            label="Reposicionar imagem do card"
+          />
+        )}
+        {item.cardImage && !supportsPositionEditor(item.cardImage) && (
+          <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
+          </p>
+        )}
+        <ImageUrlField
+          label="Imagem principal da pagina"
           value={item.image || ""}
           onChange={(value) => updateField("image", value)}
           placeholder="Cole a URL ou envie WebM, Lottie, SVG, WebP..."
@@ -2179,7 +2231,7 @@ export function CMSEditor() {
             position={item.imagePosition || "50% 50%"}
             onChange={(pos) => updateField("imagePosition", pos)}
             height={300}
-            label="Reposicionar imagem de capa (altura fixa 525px no site)"
+            label="Reposicionar imagem principal da pagina (altura fixa 525px no site)"
           />
         )}
         {item.image && !supportsPositionEditor(item.image) && (
@@ -2187,6 +2239,9 @@ export function CMSEditor() {
             Este formato usa enquadramento automatico para preservar nitidez e performance. O reposicionamento manual continua disponivel apenas para imagens.
           </p>
         )}
+        <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          A imagem do card aparece apenas na home e nas listagens. A imagem principal da pagina fica abaixo do titulo e subtitulo no detalhe do artigo.
+        </p>
         <div className="space-y-1.5">
           <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Cor de fundo das imagens</label>
           <div className="flex items-center gap-2">

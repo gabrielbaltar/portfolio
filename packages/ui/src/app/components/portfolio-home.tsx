@@ -294,8 +294,8 @@ export function PortfolioHome() {
                     href={`/projects/${project.slug || project.id}`}
                     title={cardCopy.title}
                     subtitle={cardCopy.subtitle}
-                    image={project.image}
-                    imagePosition={(project as any).imagePosition || "50% 50%"}
+                    image={project.cardImage || project.image}
+                    imagePosition={project.cardImagePosition || project.imagePosition || "50% 50%"}
                     locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
                   />
                 </motion.div>
@@ -546,8 +546,8 @@ export function PortfolioHome() {
               href={`/blog/${post.slug || post.id}`}
               title={post.title}
               description={post.description}
-              image={post.image}
-              imagePosition={(post as any).imagePosition || "50% 50%"}
+              image={post.cardImage || post.image}
+              imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
               publisher={post.publisher}
               date={post.date}
               category={(post as any).category}

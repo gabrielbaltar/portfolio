@@ -101,8 +101,8 @@ export function ProjectsPage() {
                     href={`/projects/${(project as any).slug || project.id}`}
                     title={cardCopy.title}
                     subtitle={cardCopy.subtitle}
-                    image={project.image}
-                    imagePosition={(project as any).imagePosition || "50% 50%"}
+                    image={project.cardImage || project.image}
+                    imagePosition={project.cardImagePosition || project.imagePosition || "50% 50%"}
                     locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
                   />
                 </motion.div>

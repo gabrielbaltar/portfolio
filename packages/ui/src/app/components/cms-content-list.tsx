@@ -575,6 +575,8 @@ export function CMSContentList() {
         services: "",
         client: "",
         year: new Date().getFullYear().toString(),
+        cardImage: "",
+        cardImagePosition: "50% 50%",
         image: "",
         imagePosition: "50% 50%",
         galleryImages: [],
@@ -605,6 +607,8 @@ export function CMSContentList() {
         publisher: "",
         date: new Date().toLocaleDateString("pt-BR"),
         description: "",
+        cardImage: "",
+        cardImagePosition: "50% 50%",
         image: "",
         imagePosition: "50% 50%",
         galleryImages: [],
@@ -844,10 +848,14 @@ export function CMSContentList() {
                 className="flex min-h-[365px] flex-col overflow-hidden rounded-[14px] border"
                 style={{ backgroundColor: "#242424", borderColor: "#363636" }}
               >
-                {"image" in item && item.image ? (
+                {"image" in item && (((item as Project | BlogPost).cardImage || item.image)) ? (
                   <div
                     className="h-40 w-full bg-cover bg-center"
-                    style={{ backgroundImage: `url(${item.image})`, backgroundColor: "#141414" }}
+                    style={{
+                      backgroundImage: `url(${(item as Project | BlogPost).cardImage || item.image})`,
+                      backgroundColor: "#141414",
+                      backgroundPosition: (item as Project | BlogPost).cardImagePosition || item.imagePosition || "50% 50%",
+                    }}
                   />
                 ) : (
                   <div className="flex h-40 w-full items-center justify-center bg-[#141414]">

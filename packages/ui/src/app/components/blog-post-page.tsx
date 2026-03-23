@@ -339,6 +339,22 @@ export function BlogPostPage() {
           </motion.p>
         )}
 
+        {heroImage && (
+          <motion.div
+            className="mt-8"
+            initial={{ y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.14, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <ImageCard
+              src={heroImage}
+              alt={post.title}
+              position={post.imagePosition || "50% 50%"}
+              onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
+            />
+          </motion.div>
+        )}
+
         {/* Description */}
         <motion.p
           className="mt-4 max-w-[600px]"
@@ -413,20 +429,6 @@ export function BlogPostPage() {
           </motion.div>
         )}
 
-        {/* Hero Image */}
-        <motion.div
-          className="mt-8"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <ImageCard
-            src={heroImage}
-            alt={post.title}
-            position={post.imagePosition || "50% 50%"}
-            onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
-          />
-        </motion.div>
       </div>
 
       {/* ======== ARTICLE BODY ======== */}
@@ -534,8 +536,8 @@ export function BlogPostPage() {
                     href={`/blog/${relatedPost.slug}`}
                     title={relatedPost.title}
                     description={relatedPost.description}
-                    image={relatedPost.image || ""}
-                    imagePosition={(relatedPost as any).imagePosition || "50% 50%"}
+                    image={relatedPost.cardImage || relatedPost.image || ""}
+                    imagePosition={relatedPost.cardImagePosition || relatedPost.imagePosition || "50% 50%"}
                     publisher={relatedPost.publisher}
                     date={relatedPost.date}
                     category={(relatedPost as any).category}

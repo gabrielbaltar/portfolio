@@ -163,6 +163,8 @@ export interface Project extends TimestampedEntity {
   services: string;
   client: string;
   year: string;
+  cardImage?: string;
+  cardImagePosition?: string;
   image: string;
   imageBgColor?: string;
   imagePosition?: string;
@@ -188,6 +190,8 @@ export interface BlogPost extends TimestampedEntity {
   publisher: string;
   date: string;
   description: string;
+  cardImage?: string;
+  cardImagePosition?: string;
   image: string;
   imageBgColor?: string;
   imagePosition?: string;
