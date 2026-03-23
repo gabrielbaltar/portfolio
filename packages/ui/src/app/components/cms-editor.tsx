@@ -794,6 +794,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               src={item.image}
               alt={item.title}
               className="w-full object-cover"
+              position={item.imagePosition || "50% 50%"}
               style={{ maxHeight: "220px" }}
             />
           </div>
@@ -970,10 +971,11 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                         emptyLabel="Imagem"
                       />
                     ) : (
-                      <img
+                      <ContentImage
                         src={block.url}
                         alt={richTextToPlainText(block.caption) || ""}
                         className="w-full rounded-lg object-cover max-h-[300px]"
+                        position={block.position || "50% 50%"}
                         style={{ borderRadius: `${block.borderRadius ?? 8}px` }}
                       />
                     )}
@@ -1082,7 +1084,12 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
             <div className="grid grid-cols-2 gap-2">
               {item.galleryImages.map((img: string, idx: number) => (
                 <div key={idx} className="rounded-lg overflow-hidden" style={{ aspectRatio: "16/10" }}>
-                  <ContentImage src={img} alt={`Galeria ${idx + 1}`} className="w-full h-full object-cover" />
+                  <ContentImage
+                    src={img}
+                    alt={`Galeria ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    position={item.galleryPositions?.[idx] || "50% 50%"}
+                  />
                 </div>
               ))}
             </div>
