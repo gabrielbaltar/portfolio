@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 export interface LightboxOriginRect {
@@ -273,7 +273,10 @@ export function ImageLightbox({
               }}
               aria-label={zoomLevel === 1 ? "Ativar zoom 2x" : "Voltar para zoom 1x"}
             >
-              <span style={{ fontSize: "12px", lineHeight: "16px" }}>{zoomLevel}x</span>
+              <span className="flex items-center gap-1.5" style={{ fontSize: "12px", lineHeight: "16px" }}>
+                <Search size={14} />
+                {zoomLevel}x
+              </span>
             </button>
             <motion.button
               type="button"
@@ -387,7 +390,7 @@ export function ImageLightbox({
             >
               <div
                 ref={scrollContainerRef}
-                className="absolute inset-0 overflow-auto"
+                className="image-lightbox-scroll absolute inset-0 overflow-auto"
                 style={{ overscrollBehavior: "contain" }}
               >
                 <div className="flex min-h-full min-w-full items-center justify-center p-4 md:p-6">
