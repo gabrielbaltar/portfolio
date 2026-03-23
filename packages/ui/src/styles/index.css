@@ -84,8 +84,8 @@ body,
 .availability-indicator {
   position: relative;
   display: inline-flex;
-  width: 0.625rem;
-  height: 0.625rem;
+  width: 0.5rem;
+  height: 0.5rem;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -106,9 +106,9 @@ body,
 }
 
 .availability-indicator__glow {
-  inset: -0.3rem;
+  inset: -0.22rem;
   opacity: 0.14;
-  filter: blur(0.3rem);
+  filter: blur(0.24rem);
   animation: availability-dot-glow 2.6s ease-in-out infinite;
 }
 
@@ -116,14 +116,14 @@ body,
   0%,
   100% {
     opacity: 0.82;
-    transform: scale(0.88);
-    filter: drop-shadow(0 0 0.12rem var(--accent-green, #22c55e));
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 0.1rem var(--accent-green, #22c55e));
   }
 
   50% {
     opacity: 1;
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 0.4rem var(--accent-green, #22c55e));
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 0.24rem var(--accent-green, #22c55e));
   }
 }
 
@@ -131,12 +131,12 @@ body,
   0%,
   100% {
     opacity: 0.08;
-    transform: scale(0.82);
+    transform: scale(0.86);
   }
 
   50% {
-    opacity: 0.26;
-    transform: scale(1.18);
+    opacity: 0.22;
+    transform: scale(1.06);
   }
 }
 
@@ -149,7 +149,7 @@ body,
   .availability-indicator__core {
     opacity: 1;
     transform: scale(1);
-    filter: drop-shadow(0 0 0.24rem var(--accent-green, #22c55e));
+    filter: drop-shadow(0 0 0.18rem var(--accent-green, #22c55e));
   }
 
   .availability-indicator__glow {

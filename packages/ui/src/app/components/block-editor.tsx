@@ -1947,7 +1947,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   onChange={(e) => onChange({ ...embedBlock, url: e.target.value } as ContentBlock)}
                   className="min-h-[92px] w-full resize-y rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-2 text-[#fafafa] focus:outline-none focus:border-[#555]"
                   style={{ fontSize: "13px", lineHeight: "20px" }}
-                  placeholder={"Cole a URL publica ou o iframe completo.\nEx.: Figma, Notion, Miro, Loom, YouTube, Vimeo..."}
+                  placeholder={"Cole a URL publica ou o iframe completo.\nEx.: Figma, Figma Sites, pagina web, Notion, Miro, Loom, YouTube, Vimeo..."}
                 />
 
                 <div className="flex flex-wrap items-center gap-2 px-1">

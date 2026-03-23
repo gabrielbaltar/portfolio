@@ -5,12 +5,16 @@ import { RichTextContent, richTextToPlainText } from "./rich-text";
 type EmbedBlock = Extract<ContentBlock, { type: "embed" }>;
 type EmbedProvider =
   | "figma"
+  | "figma-site"
   | "miro"
   | "notion"
   | "youtube"
   | "vimeo"
   | "loom"
+  | "website"
   | "generic";
+
+type EmbedRenderMode = "standard" | "browser";
 
 export interface ParsedEmbedInput {
   src: string | null;
@@ -23,6 +27,8 @@ export interface ResolvedEmbed {
   embedUrl: string | null;
   sourceUrl: string | null;
   height: number;
+  renderMode: EmbedRenderMode;
+  hostLabel: string;
   helpText?: string;
 }
 
@@ -33,6 +39,10 @@ const DEFAULT_FIGMA_EMBED_HOST = "share";
 
 function clampHeight(value: number) {
   return Math.max(MIN_EMBED_HEIGHT, Math.min(MAX_EMBED_HEIGHT, Math.round(value)));
+}
+
+function stripCommonHostPrefix(hostname: string) {
+  return hostname.replace(/^www\./i, "");
 }
 
 function parsePixelDimension(value: string | null | undefined) {
@@ -91,7 +101,7 @@ function normalizeHttpUrl(rawValue: string | null) {
 }
 
 function matchYouTubeVideoId(url: URL) {
-  const host = url.hostname.replace(/^www\./, "");
+  const host = stripCommonHostPrefix(url.hostname);
   if (host === "youtu.be") {
     return url.pathname.split("/").filter(Boolean)[0] ?? null;
   }
@@ -106,7 +116,7 @@ function matchYouTubeVideoId(url: URL) {
 }
 
 function matchVimeoVideoId(url: URL) {
-  const host = url.hostname.replace(/^www\./, "");
+  const host = stripCommonHostPrefix(url.hostname);
   if (host === "player.vimeo.com" && url.pathname.startsWith("/video/")) {
     return url.pathname.split("/")[2] ?? null;
   }
@@ -117,7 +127,7 @@ function matchVimeoVideoId(url: URL) {
 }
 
 function matchLoomVideoId(url: URL) {
-  const host = url.hostname.replace(/^www\./, "");
+  const host = stripCommonHostPrefix(url.hostname);
   if (host !== "loom.com") return null;
 
   const [, section, id] = url.pathname.split("/");
@@ -194,6 +204,13 @@ function buildFigmaEmbedV2Url(url: URL) {
   };
 }
 
+function buildAddressBarLabel(url: URL) {
+  const host = stripCommonHostPrefix(url.hostname);
+  const pathname = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+  const candidate = `${host}${pathname}`;
+  return candidate.length <= 54 ? candidate : host;
+}
+
 export function resolveEmbed(input: string, configuredHeight?: number): ResolvedEmbed {
   const parsedInput = parseEmbedInput(input);
   const normalizedUrl = normalizeHttpUrl(parsedInput.src);
@@ -206,12 +223,15 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: null,
       sourceUrl: null,
       height: clampHeight(preferredHeight ?? 520),
+      renderMode: "standard",
+      hostLabel: "",
       helpText: "Cole um link publico ou o codigo completo do iframe.",
     };
   }
 
-  const host = normalizedUrl.hostname.replace(/^www\./, "").toLowerCase();
+  const host = stripCommonHostPrefix(normalizedUrl.hostname).toLowerCase();
   const sourceUrl = normalizedUrl.toString();
+  const hostLabel = buildAddressBarLabel(normalizedUrl);
 
   if (host.endsWith("figma.com")) {
     const figmaEmbed = buildFigmaEmbedV2Url(normalizedUrl);
@@ -222,7 +242,22 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: figmaEmbed?.embedUrl ?? null,
       sourceUrl: figmaEmbed?.sourceUrl ?? sourceUrl,
       height: clampHeight(preferredHeight ?? 560),
+      renderMode: "standard",
+      hostLabel,
       helpText: "Aceita links de arquivo, design, board ou prototipo compartilhados do Figma. Arquivos privados exigem login e cookies liberados.",
+    };
+  }
+
+  if (host.endsWith("figma.site")) {
+    return {
+      provider: "figma-site",
+      providerLabel: "Figma Site",
+      embedUrl: sourceUrl,
+      sourceUrl,
+      height: clampHeight(preferredHeight ?? 760),
+      renderMode: "browser",
+      hostLabel,
+      helpText: "Use o link publicado do Figma Sites para permitir navegacao dentro do frame. Se a pagina nao abrir, o dominio publicado bloqueia iframe.",
     };
   }
 
@@ -240,6 +275,8 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
         embedUrl,
         sourceUrl,
         height: clampHeight(preferredHeight ?? 600),
+        renderMode: "standard",
+        hostLabel,
         helpText: "Boards publicas ou com permissao de visualizacao funcionam melhor no embed.",
       };
     }
@@ -252,6 +289,8 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: sourceUrl,
       sourceUrl,
       height: clampHeight(preferredHeight ?? 640),
+      renderMode: "standard",
+      hostLabel,
       helpText: "Use o link publicado do site ou cole o iframe copiado em 'Embed this page'.",
     };
   }
@@ -264,6 +303,8 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: `https://www.youtube.com/embed/${youTubeVideoId}`,
       sourceUrl,
       height: clampHeight(preferredHeight ?? 420),
+      renderMode: "standard",
+      hostLabel,
     };
   }
 
@@ -275,6 +316,8 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: `https://player.vimeo.com/video/${vimeoVideoId}`,
       sourceUrl,
       height: clampHeight(preferredHeight ?? 420),
+      renderMode: "standard",
+      hostLabel,
     };
   }
 
@@ -286,16 +329,20 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       embedUrl: `https://www.loom.com/embed/${loomVideoId}`,
       sourceUrl,
       height: clampHeight(preferredHeight ?? 420),
+      renderMode: "standard",
+      hostLabel,
     };
   }
 
   return {
-    provider: "generic",
-    providerLabel: host.split(".")[0] || "Embed",
+    provider: "website",
+    providerLabel: "Pagina web",
     embedUrl: sourceUrl,
     sourceUrl,
-    height: clampHeight(preferredHeight ?? 520),
-    helpText: "Se o provider bloquear iframe, cole a URL de embed ou o codigo completo do iframe.",
+    height: clampHeight(preferredHeight ?? 720),
+    renderMode: "browser",
+    hostLabel,
+    helpText: "Cole um link publico para emular uma pagina web dentro do case. A interacao funciona quando o dominio permite iframe; se bloquear, use a URL de embed do provider.",
   };
 }
 
@@ -309,7 +356,8 @@ export function ContentEmbed({
   showCaption?: boolean;
 }) {
   const resolved = resolveEmbed(block.url, block.height);
-  const frameHeight = preview ? Math.min(resolved.height, 420) : resolved.height;
+  const frameHeight = preview ? Math.min(resolved.height, resolved.renderMode === "browser" ? 460 : 420) : resolved.height;
+  const usesBrowserChrome = resolved.renderMode === "browser";
 
   if (!resolved.embedUrl || !resolved.sourceUrl) {
     return (
@@ -321,7 +369,7 @@ export function ContentEmbed({
         }}
       >
         <span className="block text-[#666]" style={{ fontSize: "13px" }}>
-          Cole um link publico ou o iframe do Figma, Notion, Miro e similares.
+          Cole um link publico ou o iframe do Figma, Figma Sites, paginas web, Notion, Miro e similares.
         </span>
       </div>
     );
@@ -336,34 +384,71 @@ export function ContentEmbed({
           border: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)",
         }}
       >
-        <div
-          className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
-          style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
-        >
-          <span
-            className="inline-flex items-center rounded-full px-2.5 py-1"
-            style={{
-              fontSize: "11px",
-              lineHeight: "14px",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              backgroundColor: preview ? "#181818" : "var(--bg-primary, #111111)",
-              color: preview ? "#888" : "var(--text-secondary, #6f6f6f)",
-            }}
+        {usesBrowserChrome ? (
+          <div
+            className="flex flex-wrap items-center gap-3 px-4 py-3"
+            style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
           >
-            {resolved.providerLabel}
-          </span>
-          <a
-            href={resolved.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
-            style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
+            <div className="flex items-center gap-1.5" aria-hidden="true">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+            </div>
+            <div
+              className="min-w-0 flex-1 rounded-full px-3 py-1.5"
+              style={{
+                backgroundColor: preview ? "#171717" : "var(--bg-primary, #111111)",
+                border: preview ? "1px solid #232323" : "1px solid var(--border-primary, #2A2A2A)",
+              }}
+            >
+              <span
+                className="block truncate"
+                style={{ fontSize: "11px", lineHeight: "14px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
+              >
+                {resolved.hostLabel}
+              </span>
+            </div>
+            <a
+              href={resolved.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
+              style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
+            >
+              <ExternalLink size={13} />
+              Abrir original
+            </a>
+          </div>
+        ) : (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
+            style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
           >
-            <ExternalLink size={13} />
-            Abrir original
-          </a>
-        </div>
+            <span
+              className="inline-flex items-center rounded-full px-2.5 py-1"
+              style={{
+                fontSize: "11px",
+                lineHeight: "14px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                backgroundColor: preview ? "#181818" : "var(--bg-primary, #111111)",
+                color: preview ? "#888" : "var(--text-secondary, #6f6f6f)",
+              }}
+            >
+              {resolved.providerLabel}
+            </span>
+            <a
+              href={resolved.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
+              style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
+            >
+              <ExternalLink size={13} />
+              Abrir original
+            </a>
+          </div>
+        )}
         <iframe
           src={resolved.embedUrl}
           title={richTextToPlainText(block.caption) || `${resolved.providerLabel} embed`}
