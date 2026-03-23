@@ -222,7 +222,20 @@ export function ImageLightbox({
       if (!slide.src) return;
       const image = new window.Image();
       image.decoding = "async";
+      image.onload = () => {
+        if (!image.naturalWidth || !image.naturalHeight) return;
+        setImageAspectRatios((current) => {
+          if (current[slide.src] === image.naturalWidth / image.naturalHeight) return current;
+          return {
+            ...current,
+            [slide.src]: image.naturalWidth / image.naturalHeight,
+          };
+        });
+      };
       image.src = slide.src;
+      if ("decode" in image) {
+        void image.decode().catch(() => {});
+      }
     });
   }, [normalizedSlides, open]);
 
@@ -286,7 +299,7 @@ export function ImageLightbox({
   const startRadius = Math.max(16, Math.min(28, Math.min(startRect.width, startRect.height) * 0.08));
   const endRadius = Math.max(20, Math.min(28, Math.min(modalRect.width, modalRect.height) * 0.03));
   const initialImageTransform = buildFrameTransform(startRect, modalRect);
-  const slideTravel = Math.max(64, Math.min(116, modalRect.width * 0.14));
+  const slideTravel = Math.max(84, Math.min(168, modalRect.width * 0.2));
 
   useEffect(() => {
     if (!open) return;
@@ -368,7 +381,7 @@ export function ImageLightbox({
         borderRadius: activeSlide.originRect ? startRadius : endRadius + 4,
       }
     : {
-        opacity: 0.32,
+        opacity: 0.42,
         x: slideDirection > 0 ? slideTravel : -slideTravel,
         y: 0,
         scaleX: 1,
@@ -395,7 +408,7 @@ export function ImageLightbox({
           borderRadius: endRadius + 4,
         }
       : {
-          opacity: 0.18,
+          opacity: 0.12,
           x: slideDirection > 0 ? -slideTravel : slideTravel,
           y: 0,
           scaleX: 1,
@@ -413,7 +426,7 @@ export function ImageLightbox({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
           onClick={closeLightbox}
           onContextMenu={(event) => event.preventDefault()}
           role="dialog"
@@ -519,14 +532,14 @@ export function ImageLightbox({
                   border: "none",
                   borderRadius: `${Math.max(18, Math.min(24, Math.min(modalRect.width, modalRect.height) * 0.03))}px`,
                 }}
-              initial={{ opacity: 0, scale: 0.992, y: 8, boxShadow: "0 16px 42px rgba(0,0,0,0.18)" }}
-              animate={{ opacity: 1, scale: 1, y: 0, boxShadow: "0 26px 76px rgba(0,0,0,0.26)" }}
-              exit={{ opacity: 0, scale: 0.992, y: 6, boxShadow: "0 16px 42px rgba(0,0,0,0.18)" }}
+              initial={{ opacity: 0, scale: 0.996, y: 4, boxShadow: "0 14px 34px rgba(0,0,0,0.14)" }}
+              animate={{ opacity: 1, scale: 1, y: 0, boxShadow: "0 22px 56px rgba(0,0,0,0.22)" }}
+              exit={{ opacity: 0, scale: 0.996, y: 4, boxShadow: "0 14px 34px rgba(0,0,0,0.14)" }}
               transition={{
-                opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-                scale: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-                y: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-                boxShadow: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.14, ease: [0.22, 1, 0.36, 1] },
+                scale: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
+                y: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
+                boxShadow: { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
               }}
               onClick={(event) => event.stopPropagation()}
             >
@@ -555,19 +568,19 @@ export function ImageLightbox({
                       exit={imageExitState}
                       transition={{
                         x: slideDirection === 0
-                          ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
-                          : { duration: 0.19, ease: [0.22, 1, 0.36, 1] },
+                          ? { duration: 0.18, ease: [0.2, 0.9, 0.2, 1] }
+                          : { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
                         y: slideDirection === 0
-                          ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
+                          ? { duration: 0.18, ease: [0.2, 0.9, 0.2, 1] }
                           : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
                         scaleX: slideDirection === 0
-                          ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
+                          ? { duration: 0.18, ease: [0.2, 0.9, 0.2, 1] }
                           : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
                         scaleY: slideDirection === 0
-                          ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
+                          ? { duration: 0.18, ease: [0.2, 0.9, 0.2, 1] }
                           : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
-                        opacity: { duration: slideDirection === 0 ? 0.18 : 0.16, ease: [0.22, 1, 0.36, 1] },
-                        borderRadius: { duration: slideDirection === 0 ? 0.24 : 0.14, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: slideDirection === 0 ? 0.14 : 0.17, ease: [0.22, 1, 0.36, 1] },
+                        borderRadius: { duration: slideDirection === 0 ? 0.18 : 0.14, ease: [0.22, 1, 0.36, 1] },
                       }}
                     >
                       <div
