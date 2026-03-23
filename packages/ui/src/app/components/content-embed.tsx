@@ -254,7 +254,7 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
       providerLabel: "Figma Site",
       embedUrl: sourceUrl,
       sourceUrl,
-      height: clampHeight(preferredHeight ?? 760),
+      height: clampHeight(preferredHeight ?? 620),
       renderMode: "browser",
       hostLabel,
       helpText: "Use o link publicado do Figma Sites para permitir navegacao dentro do frame. Se a pagina nao abrir, o dominio publicado bloqueia iframe.",
@@ -339,7 +339,7 @@ export function resolveEmbed(input: string, configuredHeight?: number): Resolved
     providerLabel: "Pagina web",
     embedUrl: sourceUrl,
     sourceUrl,
-    height: clampHeight(preferredHeight ?? 720),
+    height: clampHeight(preferredHeight ?? 560),
     renderMode: "browser",
     hostLabel,
     helpText: "Cole um link publico para emular uma pagina web dentro do case. A interacao funciona quando o dominio permite iframe; se bloquear, use a URL de embed do provider.",
@@ -356,8 +356,7 @@ export function ContentEmbed({
   showCaption?: boolean;
 }) {
   const resolved = resolveEmbed(block.url, block.height);
-  const frameHeight = preview ? Math.min(resolved.height, resolved.renderMode === "browser" ? 460 : 420) : resolved.height;
-  const usesBrowserChrome = resolved.renderMode === "browser";
+  const frameHeight = preview ? Math.min(resolved.height, resolved.renderMode === "browser" ? 360 : 420) : resolved.height;
 
   if (!resolved.embedUrl || !resolved.sourceUrl) {
     return (
@@ -384,46 +383,11 @@ export function ContentEmbed({
           border: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)",
         }}
       >
-        {usesBrowserChrome ? (
-          <div
-            className="flex flex-wrap items-center gap-3 px-4 py-3"
-            style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
-          >
-            <div className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-            </div>
-            <div
-              className="min-w-0 flex-1 rounded-full px-3 py-1.5"
-              style={{
-                backgroundColor: preview ? "#171717" : "var(--bg-primary, #111111)",
-                border: preview ? "1px solid #232323" : "1px solid var(--border-primary, #2A2A2A)",
-              }}
-            >
-              <span
-                className="block truncate"
-                style={{ fontSize: "11px", lineHeight: "14px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
-              >
-                {resolved.hostLabel}
-              </span>
-            </div>
-            <a
-              href={resolved.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
-              style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
-            >
-              <ExternalLink size={13} />
-              Abrir original
-            </a>
-          </div>
-        ) : (
-          <div
-            className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
-            style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
-          >
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 px-4 py-2"
+          style={{ borderBottom: preview ? "1px solid #1e1e1e" : "1px solid var(--border-primary, #2A2A2A)" }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
             <span
               className="inline-flex items-center rounded-full px-2.5 py-1"
               style={{
@@ -437,18 +401,26 @@ export function ContentEmbed({
             >
               {resolved.providerLabel}
             </span>
-            <a
-              href={resolved.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
-              style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
-            >
-              <ExternalLink size={13} />
-              Abrir original
-            </a>
+            {resolved.renderMode === "browser" && (
+              <span
+                className="truncate"
+                style={{ fontSize: "11px", lineHeight: "14px", color: preview ? "#666" : "var(--text-secondary, #6f6f6f)", maxWidth: preview ? "140px" : "220px" }}
+              >
+                {resolved.hostLabel}
+              </span>
+            )}
           </div>
-        )}
+          <a
+            href={resolved.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 transition-opacity hover:opacity-80"
+            style={{ fontSize: "12px", color: preview ? "#888" : "var(--text-secondary, #6f6f6f)" }}
+          >
+            <ExternalLink size={13} />
+            Abrir original
+          </a>
+        </div>
         <iframe
           src={resolved.embedUrl}
           title={richTextToPlainText(block.caption) || `${resolved.providerLabel} embed`}
