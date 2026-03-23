@@ -8,7 +8,7 @@ import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
 import { BlockRenderer } from "./block-renderer";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
-import { getLightboxOriginRect, ImageLightbox, type LightboxOriginRect } from "./image-lightbox";
+import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
 import { ProjectPreviewCard } from "./content-preview-cards";
 import { usePassword } from "./password-context";
 import { copyToClipboard } from "./clipboard-utils";
@@ -73,7 +73,7 @@ export function ProjectDetailPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string; originRect?: LightboxOriginRect | null } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<LightboxOpenPayload | null>(null);
   const backTo = getBackTarget(location.state, "/projects");
   const socialLinks = getProfileSocialLinks(profile);
 
@@ -196,9 +196,25 @@ export function ProjectDetailPage() {
 
   const heroImage = project.image || "";
   const gallery = (project.galleryImages || []).filter(Boolean);
-  const openImageLightbox = (src: string, alt: string, originRect?: LightboxOriginRect | null) => {
-    if (!src) return;
-    setLightboxImage({ src, alt, originRect });
+  const projectGallerySlides: LightboxSlide[] = [
+    ...(heroImage ? [{ src: heroImage, alt: project.title }] : []),
+    ...gallery.map((img, index) => ({
+      src: img,
+      alt: `${project.title} gallery ${index + 1}`,
+    })),
+  ];
+
+  const openProjectGalleryLightbox = (index: number, originRect?: LightboxOriginRect | null) => {
+    const selectedSlide = projectGallerySlides[index];
+    if (!selectedSlide?.src) return;
+
+    setLightboxImage({
+      slides: projectGallerySlides.map((slide, slideIndex) => ({
+        ...slide,
+        originRect: slideIndex === index ? originRect ?? null : null,
+      })),
+      index,
+    });
   };
 
   // Metadata columns
@@ -307,14 +323,14 @@ export function ProjectDetailPage() {
           src={heroImage}
           alt={project.title}
           position={project.imagePosition || "50% 50%"}
-          onClick={(event) => openImageLightbox(heroImage, project.title, getLightboxOriginRect(event.currentTarget))}
+          onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
         />
       </ScrollReveal>
 
       {/* Content blocks */}
       {project.contentBlocks && project.contentBlocks.length > 0 && (
         <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-12">
-          <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={openImageLightbox} />
+          <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
         </ScrollReveal>
       )}
 
@@ -327,7 +343,7 @@ export function ProjectDetailPage() {
                 src={img}
                 alt={`${project.title} gallery ${i + 1}`}
                 position={project.galleryPositions?.[i] || "50% 50%"}
-                onClick={(event) => openImageLightbox(img, `${project.title} gallery ${i + 1}`, getLightboxOriginRect(event.currentTarget))}
+                onClick={(event) => openProjectGalleryLightbox(i + 1, getLightboxOriginRect(event.currentTarget))}
               />
             </ScrollReveal>
           ))}
@@ -336,9 +352,11 @@ export function ProjectDetailPage() {
 
       <ImageLightbox
         open={Boolean(lightboxImage)}
-        src={lightboxImage?.src || ""}
-        alt={lightboxImage?.alt || ""}
-        originRect={lightboxImage?.originRect}
+        src={lightboxImage?.slides[lightboxImage?.index || 0]?.src || ""}
+        alt={lightboxImage?.slides[lightboxImage?.index || 0]?.alt || ""}
+        originRect={lightboxImage?.slides[lightboxImage?.index || 0]?.originRect}
+        slides={lightboxImage?.slides}
+        initialIndex={lightboxImage?.index || 0}
         onClose={() => setLightboxImage(null)}
       />
 

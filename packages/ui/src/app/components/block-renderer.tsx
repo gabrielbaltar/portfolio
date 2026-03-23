@@ -7,7 +7,7 @@ import { getBlockLineHeight, getCodeLanguageLabel, isAdjustableLineHeightBlock }
 import { CodeHighlight } from "./code-highlight";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { ContentEmbed } from "./content-embed";
-import { getLightboxOriginRect, type LightboxOriginRect } from "./image-lightbox";
+import { getLightboxOriginRect, type LightboxOpenPayload } from "./image-lightbox";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
@@ -147,7 +147,7 @@ function ImageBlockSlider({
   block: Extract<ContentBlock, { type: "image" }>;
   alt: string;
   imagesClickable: boolean;
-  onImageClick?: (src: string, alt: string, originRect?: LightboxOriginRect | null) => void;
+  onImageClick?: (payload: LightboxOpenPayload) => void;
 }) {
   const radius = block.borderRadius != null ? `${block.borderRadius}px` : "0px";
 
@@ -163,7 +163,7 @@ function ImageBlockSlider({
       frameStyle={{ borderRadius: radius }}
       imageClassName={imagesClickable ? "cursor-pointer" : ""}
       disablePointerEvents={!imagesClickable}
-      onImageClick={imagesClickable && onImageClick ? (src, originRect) => onImageClick(src, alt, originRect) : undefined}
+      onImageClick={imagesClickable ? onImageClick : undefined}
       emptyLabel="Sem imagem"
     />
   );
@@ -176,7 +176,7 @@ export function BlockRenderer({
 }: {
   blocks: ContentBlock[];
   imagesClickable?: boolean;
-  onImageClick?: (src: string, alt: string, originRect?: LightboxOriginRect | null) => void;
+  onImageClick?: (payload: LightboxOpenPayload) => void;
 }) {
   if (!blocks || blocks.length === 0) return null;
 
@@ -244,7 +244,14 @@ export function BlockRenderer({
             const imageClassName = imagesClickable ? "cursor-pointer" : undefined;
             const openImage: React.MouseEventHandler<HTMLElement> = (event) => {
               if (!imagesClickable || !onImageClick || !canOpenInImageLightbox(block.url)) return;
-              onImageClick(block.url, alt, getLightboxOriginRect(event.currentTarget));
+              onImageClick({
+                slides: [{
+                  src: block.url,
+                  alt,
+                  originRect: getLightboxOriginRect(event.currentTarget),
+                }],
+                index: 0,
+              });
             };
             return (
               <figure key={i} className="my-8">
