@@ -68,6 +68,15 @@ function fitImageToFrame(aspectRatio: number, frameWidth: number, frameHeight: n
   };
 }
 
+function buildFrameTransform(fromRect: LightboxOriginRect, toRect: LightboxOriginRect) {
+  return {
+    x: fromRect.left - toRect.left,
+    y: fromRect.top - toRect.top,
+    scaleX: Math.max(0.01, fromRect.width / Math.max(1, toRect.width)),
+    scaleY: Math.max(0.01, fromRect.height / Math.max(1, toRect.height)),
+  };
+}
+
 export function getLightboxOriginRect(target: EventTarget | null): LightboxOriginRect | null {
   if (!(target instanceof Element)) return null;
 
@@ -226,6 +235,7 @@ export function ImageLightbox({
   const renderedImageHeight = fittedImageSize.height * zoomLevel;
   const startRadius = Math.max(18, Math.min(30, Math.min(startRect.width, startRect.height) * 0.08));
   const endRadius = Math.max(22, Math.min(30, Math.min(targetRect.width, targetRect.height) * 0.03));
+  const initialFrameTransform = buildFrameTransform(startRect, targetRect);
 
   const goToPrevious = () => {
     if (!hasMultipleSlides) return;
@@ -354,38 +364,51 @@ export function ImageLightbox({
           <div className="pointer-events-none fixed inset-0 z-[121]">
             <motion.div
               className="pointer-events-auto absolute overflow-hidden"
-              initial={{
-                top: startRect.top,
-                left: startRect.left,
-                width: startRect.width,
-                height: startRect.height,
-                borderRadius: startRadius,
-                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
-              }}
-              animate={{
+              style={{
                 top: targetRect.top,
                 left: targetRect.left,
                 width: targetRect.width,
                 height: targetRect.height,
-                borderRadius: endRadius,
-                boxShadow: "0 30px 90px rgba(0,0,0,0.34)",
-              }}
-              exit={{
-                top: startRect.top,
-                left: startRect.left,
-                width: startRect.width,
-                height: startRect.height,
-                borderRadius: startRadius,
-                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
-              }}
-              transition={{
-                duration: 0.3,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-              style={{
-                willChange: "top, left, width, height, border-radius, box-shadow",
+                willChange: "transform, border-radius, box-shadow, opacity",
+                transformOrigin: "top left",
                 backgroundColor: "rgba(10, 10, 12, 0.82)",
                 border: "1px solid rgba(255,255,255,0.08)",
+              }}
+              initial={{
+                x: initialFrameTransform.x,
+                y: initialFrameTransform.y,
+                scaleX: initialFrameTransform.scaleX,
+                scaleY: initialFrameTransform.scaleY,
+                borderRadius: startRadius,
+                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
+                opacity: 0.92,
+              }}
+              animate={{
+                x: 0,
+                y: 0,
+                scaleX: 1,
+                scaleY: 1,
+                borderRadius: endRadius,
+                boxShadow: "0 34px 100px rgba(0,0,0,0.36)",
+                opacity: 1,
+              }}
+              exit={{
+                x: initialFrameTransform.x,
+                y: initialFrameTransform.y,
+                scaleX: initialFrameTransform.scaleX,
+                scaleY: initialFrameTransform.scaleY,
+                borderRadius: startRadius,
+                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
+                opacity: 0.92,
+              }}
+              transition={{
+                x: { type: "spring", stiffness: 260, damping: 26, mass: 0.92 },
+                y: { type: "spring", stiffness: 260, damping: 26, mass: 0.92 },
+                scaleX: { type: "spring", stiffness: 240, damping: 28, mass: 0.96 },
+                scaleY: { type: "spring", stiffness: 240, damping: 28, mass: 0.96 },
+                borderRadius: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+                boxShadow: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
               }}
             >
               <div
