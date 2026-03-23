@@ -143,7 +143,9 @@ export function PreviewMediaSlider({
   };
 
   const activeSlide = slides[activeIndex];
-  const handleImageClick: React.MouseEventHandler<HTMLElement> = (event) => {
+  const canOpenActiveSlide = Boolean(activeSlide.src && onImageClick && canOpenInImageLightbox(activeSlide.src));
+
+  const handleFrameClick: React.MouseEventHandler<HTMLDivElement> = (event) => {
     if (!activeSlide.src || !onImageClick || !canOpenInImageLightbox(activeSlide.src)) return;
     const clickedRect = getLightboxOriginRect(event.currentTarget);
     onImageClick({
@@ -159,8 +161,9 @@ export function PreviewMediaSlider({
   return (
     <div className={disablePointerEvents ? "pointer-events-none" : undefined}>
       <div
-        className={`relative overflow-hidden ${frameClassName}`}
+        className={`relative overflow-hidden ${frameClassName} ${canOpenActiveSlide ? "cursor-pointer" : ""}`}
         style={{ aspectRatio, ...frameStyle }}
+        onClick={handleFrameClick}
       >
         <div
           className="flex h-full will-change-transform"
@@ -177,7 +180,6 @@ export function PreviewMediaSlider({
                 emptyLabel={emptyLabel}
                 className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
                 position={slide.position}
-                onClick={index === activeIndex ? handleImageClick : undefined}
                 autoPlay={index === activeIndex}
                 loop={index === activeIndex}
               />
@@ -248,7 +250,7 @@ export function PreviewMediaSlider({
 
         {hasMultipleSlides && (
           <div
-            className="absolute inset-x-0 bottom-0 h-20"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
             style={{ background: "linear-gradient(180deg, rgba(11, 11, 13, 0) 0%, rgba(11, 11, 13, 0.6) 100%)" }}
           />
         )}

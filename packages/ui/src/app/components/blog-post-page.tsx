@@ -1,6 +1,6 @@
 import { useParams, Link, useLocation } from "react-router";
 import { ArrowLeft, ExternalLink, Copy, Phone, Lock, Tag, Clock, User } from "lucide-react";
-import { ContentImage } from "./content-image";
+import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { motion } from "motion/react";
@@ -16,17 +16,41 @@ import { ArticlePreviewCard } from "./content-preview-cards";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent } from "./site-visibility";
+import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
 
-function ImageCard({ src, alt, className = "", position = "50% 50%" }: { src: string; alt: string; className?: string; position?: string }) {
+function ImageCard({
+  src,
+  alt,
+  className = "",
+  position = "50% 50%",
+  onClick,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  position?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+}) {
+  const isLightboxable = canOpenInImageLightbox(src);
+
   return (
-    <ContentImage
-      src={src}
-      alt={alt}
-      emptyLabel="Sem imagem"
-      className={`w-full rounded-2xl object-cover ${className}`}
-      position={position}
-      style={{ height: "525px", maxHeight: "525px" }}
-    />
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!src || !isLightboxable}
+      className="block w-full border-none bg-transparent p-0 text-left disabled:cursor-default"
+      style={{ cursor: src && isLightboxable ? "pointer" : "default" }}
+      aria-label={isLightboxable ? `Ampliar imagem: ${alt}` : alt}
+    >
+      <ContentImage
+        src={src}
+        alt={alt}
+        emptyLabel="Sem imagem"
+        className={`w-full rounded-2xl object-cover ${className}`}
+        position={position}
+        style={{ height: "525px", maxHeight: "525px", cursor: src && isLightboxable ? "pointer" : "default" }}
+      />
+    </button>
   );
 }
 
@@ -54,6 +78,7 @@ export function BlogPostPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<LightboxOpenPayload | null>(null);
   const backTo = getBackTarget(location.state, "/blog");
   const socialLinks = getProfileSocialLinks(profile);
 
@@ -208,6 +233,27 @@ export function BlogPostPage() {
   const hasLegacyContent = Boolean(post.content && post.content.trim());
   const galleryImages = (post.galleryImages || []).filter(Boolean);
   const hasGallery = galleryImages.length > 0;
+  const articleGallerySlides: LightboxSlide[] = [
+    ...(heroImage ? [{ src: heroImage, alt: post.title }] : []),
+    ...galleryImages.map((img, index) => ({
+      src: img,
+      alt: `${post.title} gallery ${index + 1}`,
+    })),
+  ];
+  const articleGalleryOffset = heroImage ? 1 : 0;
+
+  const openArticleGalleryLightbox = (index: number, originRect?: LightboxOriginRect | null) => {
+    const selectedSlide = articleGallerySlides[index];
+    if (!selectedSlide?.src) return;
+
+    setLightboxImage({
+      slides: articleGallerySlides.map((slide, slideIndex) => ({
+        ...slide,
+        originRect: slideIndex === index ? originRect ?? null : null,
+      })),
+      index,
+    });
+  };
 
   // Metadata
   const meta = [
@@ -378,6 +424,7 @@ export function BlogPostPage() {
             src={heroImage}
             alt={post.title}
             position={post.imagePosition || "50% 50%"}
+            onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
           />
         </motion.div>
       </div>
@@ -387,7 +434,7 @@ export function BlogPostPage() {
         {hasContentBlocks ? (
           <ScrollReveal>
             <div className="max-w-[640px]">
-              <BlockRenderer blocks={post.contentBlocks} />
+              <BlockRenderer blocks={post.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
             </div>
           </ScrollReveal>
         ) : hasLegacyContent ? (
@@ -438,11 +485,22 @@ export function BlogPostPage() {
                 src={img}
                 alt={`${post.title} gallery ${i + 1}`}
                 position={post.galleryPositions?.[i] || "50% 50%"}
+                onClick={(event) => openArticleGalleryLightbox(i + articleGalleryOffset, getLightboxOriginRect(event.currentTarget))}
               />
             </ScrollReveal>
           ))}
         </div>
       )}
+
+      <ImageLightbox
+        open={Boolean(lightboxImage)}
+        src={lightboxImage?.slides[lightboxImage?.index || 0]?.src || ""}
+        alt={lightboxImage?.slides[lightboxImage?.index || 0]?.alt || ""}
+        originRect={lightboxImage?.slides[lightboxImage?.index || 0]?.originRect}
+        slides={lightboxImage?.slides}
+        initialIndex={lightboxImage?.index || 0}
+        onClose={() => setLightboxImage(null)}
+      />
 
       {/* ======== READ MORE ARTICLES ======== */}
       {otherPosts.length > 0 && (

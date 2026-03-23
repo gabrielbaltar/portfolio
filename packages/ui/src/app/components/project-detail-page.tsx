@@ -203,6 +203,7 @@ export function ProjectDetailPage() {
       alt: `${project.title} gallery ${index + 1}`,
     })),
   ];
+  const projectGalleryOffset = heroImage ? 1 : 0;
 
   const openProjectGalleryLightbox = (index: number, originRect?: LightboxOriginRect | null) => {
     const selectedSlide = projectGallerySlides[index];
@@ -343,7 +344,7 @@ export function ProjectDetailPage() {
                 src={img}
                 alt={`${project.title} gallery ${i + 1}`}
                 position={project.galleryPositions?.[i] || "50% 50%"}
-                onClick={(event) => openProjectGalleryLightbox(i + 1, getLightboxOriginRect(event.currentTarget))}
+                onClick={(event) => openProjectGalleryLightbox(i + projectGalleryOffset, getLightboxOriginRect(event.currentTarget))}
               />
             </ScrollReveal>
           ))}

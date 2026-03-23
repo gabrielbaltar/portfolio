@@ -263,13 +263,29 @@ export function BlockRenderer({
                     onImageClick={onImageClick}
                   />
                 ) : (
-                  <ContentImage
-                    src={block.url}
-                    alt={alt}
-                    className={`w-full object-cover ${imageClassName || ""}`}
-                    onClick={openImage}
-                    style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
-                  />
+                  imagesClickable && canOpenInImageLightbox(block.url) ? (
+                    <button
+                      type="button"
+                      onClick={openImage}
+                      className="block w-full border-none bg-transparent p-0 text-left"
+                      style={{ cursor: "pointer", borderRadius: radius }}
+                      aria-label={alt ? `Ampliar imagem: ${alt}` : "Ampliar imagem"}
+                    >
+                      <ContentImage
+                        src={block.url}
+                        alt={alt}
+                        className={`w-full object-cover ${imageClassName || ""}`}
+                        style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
+                      />
+                    </button>
+                  ) : (
+                    <ContentImage
+                      src={block.url}
+                      alt={alt}
+                      className={`w-full object-cover ${imageClassName || ""}`}
+                      style={{ height: "525px", maxHeight: "525px", objectPosition: block.position || "50% 50%", borderRadius: radius }}
+                    />
+                  )
                 )}
                 {block.caption && (
                   <figcaption

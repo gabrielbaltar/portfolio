@@ -30,11 +30,15 @@ interface ImageLightboxProps {
   initialIndex?: number;
 }
 
+function clampValue(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function clampOriginRect(rect: LightboxOriginRect, viewportWidth: number, viewportHeight: number): LightboxOriginRect {
-  const left = Math.max(0, Math.min(rect.left, Math.max(0, viewportWidth - 1)));
-  const top = Math.max(0, Math.min(rect.top, Math.max(0, viewportHeight - 1)));
-  const width = Math.max(1, Math.min(rect.width, Math.max(1, viewportWidth - left)));
-  const height = Math.max(1, Math.min(rect.height, Math.max(1, viewportHeight - top)));
+  const left = clampValue(rect.left, 0, Math.max(0, viewportWidth - 1));
+  const top = clampValue(rect.top, 0, Math.max(0, viewportHeight - 1));
+  const width = clampValue(rect.width, 1, Math.max(1, viewportWidth - left));
+  const height = clampValue(rect.height, 1, Math.max(1, viewportHeight - top));
 
   return { top, left, width, height };
 }
@@ -77,6 +81,26 @@ function buildFrameTransform(fromRect: LightboxOriginRect, toRect: LightboxOrigi
   };
 }
 
+function centerRectWithinFrame(frame: LightboxOriginRect, contentWidth: number, contentHeight: number): LightboxOriginRect {
+  return {
+    top: frame.top + (frame.height - contentHeight) / 2,
+    left: frame.left + (frame.width - contentWidth) / 2,
+    width: contentWidth,
+    height: contentHeight,
+  };
+}
+
+function clampPanOffset(
+  offset: { x: number; y: number },
+  maxPanX: number,
+  maxPanY: number,
+) {
+  return {
+    x: clampValue(offset.x, -maxPanX, maxPanX),
+    y: clampValue(offset.y, -maxPanY, maxPanY),
+  };
+}
+
 export function getLightboxOriginRect(target: EventTarget | null): LightboxOriginRect | null {
   if (!(target instanceof Element)) return null;
 
@@ -108,7 +132,15 @@ export function ImageLightbox({
   const [slideDirection, setSlideDirection] = useState(0);
   const [zoomLevel, setZoomLevel] = useState<1 | 2>(1);
   const [imageAspectRatios, setImageAspectRatios] = useState<Record<string, number>>({});
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   const normalizedSlides = useMemo(() => {
     const fromGallery = (slides || []).filter((slide) => slide.src.trim() !== "");
@@ -121,6 +153,13 @@ export function ImageLightbox({
   const safeIndex = Math.max(0, Math.min(currentIndex, Math.max(0, normalizedSlides.length - 1)));
   const activeSlide = normalizedSlides[safeIndex] || null;
 
+  const closeLightbox = () => {
+    dragStateRef.current = null;
+    setIsDragging(false);
+    setSlideDirection(0);
+    onClose();
+  };
+
   useEffect(() => {
     if (!open) return;
 
@@ -131,7 +170,7 @@ export function ImageLightbox({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        closeLightbox();
         return;
       }
 
@@ -139,12 +178,14 @@ export function ImageLightbox({
 
       if (event.key === "ArrowRight") {
         event.preventDefault();
+        setPanOffset({ x: 0, y: 0 });
         setSlideDirection(1);
         setCurrentIndex((current) => (current + 1) % normalizedSlides.length);
       }
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
+        setPanOffset({ x: 0, y: 0 });
         setSlideDirection(-1);
         setCurrentIndex((current) => (current - 1 + normalizedSlides.length) % normalizedSlides.length);
       }
@@ -181,25 +222,15 @@ export function ImageLightbox({
     setCurrentIndex(boundedIndex);
     setSlideDirection(0);
     setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
   }, [initialIndex, normalizedSlides, open]);
 
   useEffect(() => {
     if (!open) return;
-    setZoomLevel(1);
-  }, [open, safeIndex]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const frameId = window.requestAnimationFrame(() => {
-      container.scrollLeft = Math.max(0, (container.scrollWidth - container.clientWidth) / 2);
-      container.scrollTop = Math.max(0, (container.scrollHeight - container.clientHeight) / 2);
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
+    dragStateRef.current = null;
+    setIsDragging(false);
+    setPanOffset({ x: 0, y: 0 });
   }, [open, safeIndex, zoomLevel]);
 
   const resolvedAspectRatio = activeSlide
@@ -215,54 +246,163 @@ export function ImageLightbox({
     [viewport.height, viewport.width],
   );
 
-  const startRect = useMemo(() => {
-    if (activeSlide?.originRect) return clampOriginRect(activeSlide.originRect, viewport.width, viewport.height);
-
-    return {
-      top: targetRect.top + 12,
-      left: targetRect.left + 12,
-      width: Math.max(1, targetRect.width - 24),
-      height: Math.max(1, targetRect.height - 24),
-    };
-  }, [activeSlide?.originRect, targetRect.height, targetRect.left, targetRect.top, targetRect.width, viewport.height, viewport.width]);
-
   const fittedImageSize = useMemo(
     () => fitImageToFrame(resolvedAspectRatio, targetRect.width, targetRect.height),
     [resolvedAspectRatio, targetRect.height, targetRect.width],
   );
 
+  const imageTargetRect = useMemo(
+    () => centerRectWithinFrame(targetRect, fittedImageSize.width, fittedImageSize.height),
+    [fittedImageSize.height, fittedImageSize.width, targetRect],
+  );
+
+  const startRect = useMemo(() => {
+    if (activeSlide?.originRect) return clampOriginRect(activeSlide.originRect, viewport.width, viewport.height);
+
+    return {
+      top: imageTargetRect.top + 10,
+      left: imageTargetRect.left + 10,
+      width: Math.max(1, imageTargetRect.width - 20),
+      height: Math.max(1, imageTargetRect.height - 20),
+    };
+  }, [activeSlide?.originRect, imageTargetRect, viewport.height, viewport.width]);
+
   const renderedImageWidth = fittedImageSize.width * zoomLevel;
   const renderedImageHeight = fittedImageSize.height * zoomLevel;
-  const startRadius = Math.max(18, Math.min(30, Math.min(startRect.width, startRect.height) * 0.08));
-  const endRadius = Math.max(22, Math.min(30, Math.min(targetRect.width, targetRect.height) * 0.03));
-  const initialFrameTransform = buildFrameTransform(startRect, targetRect);
+  const maxPanX = Math.max(0, (renderedImageWidth - targetRect.width) / 2);
+  const maxPanY = Math.max(0, (renderedImageHeight - targetRect.height) / 2);
+  const isPannable = maxPanX > 0.5 || maxPanY > 0.5;
+  const startRadius = Math.max(16, Math.min(28, Math.min(startRect.width, startRect.height) * 0.08));
+  const endRadius = Math.max(20, Math.min(28, Math.min(imageTargetRect.width, imageTargetRect.height) * 0.03));
+  const initialImageTransform = buildFrameTransform(startRect, imageTargetRect);
+
+  useEffect(() => {
+    if (!open) return;
+    setPanOffset((current) => clampPanOffset(current, maxPanX, maxPanY));
+  }, [maxPanX, maxPanY, open]);
 
   const goToPrevious = () => {
     if (!hasMultipleSlides) return;
+    dragStateRef.current = null;
+    setIsDragging(false);
+    setPanOffset({ x: 0, y: 0 });
     setSlideDirection(-1);
     setCurrentIndex((current) => (current - 1 + normalizedSlides.length) % normalizedSlides.length);
   };
 
   const goToNext = () => {
     if (!hasMultipleSlides) return;
+    dragStateRef.current = null;
+    setIsDragging(false);
+    setPanOffset({ x: 0, y: 0 });
     setSlideDirection(1);
     setCurrentIndex((current) => (current + 1) % normalizedSlides.length);
   };
 
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPannable) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: panOffset.x,
+      panY: panOffset.y,
+    };
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setPanOffset(
+      clampPanOffset(
+        {
+          x: dragState.panX + (event.clientX - dragState.startX),
+          y: dragState.panY + (event.clientY - dragState.startY),
+        },
+        maxPanX,
+        maxPanY,
+      ),
+    );
+  };
+
+  const finishPointerInteraction = (event?: React.PointerEvent<HTMLDivElement>) => {
+    if (event && dragStateRef.current && dragStateRef.current.pointerId === event.pointerId && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    dragStateRef.current = null;
+    setIsDragging(false);
+  };
+
   if (!activeSlide) return null;
+
+  const imageEnterState = slideDirection === 0
+    ? {
+        opacity: activeSlide.originRect ? 0.76 : 0,
+        x: activeSlide.originRect ? initialImageTransform.x : 0,
+        y: activeSlide.originRect ? initialImageTransform.y : 12,
+        scaleX: activeSlide.originRect ? initialImageTransform.scaleX : 0.985,
+        scaleY: activeSlide.originRect ? initialImageTransform.scaleY : 0.985,
+        borderRadius: activeSlide.originRect ? startRadius : endRadius + 4,
+      }
+    : {
+        opacity: 0,
+        x: slideDirection > 0 ? 56 : -56,
+        y: 0,
+        scaleX: 0.985,
+        scaleY: 0.985,
+        borderRadius: endRadius,
+      };
+
+  const imageExitState = slideDirection === 0 && activeSlide.originRect
+    ? {
+        opacity: 0.82,
+        x: initialImageTransform.x,
+        y: initialImageTransform.y,
+        scaleX: initialImageTransform.scaleX,
+        scaleY: initialImageTransform.scaleY,
+        borderRadius: startRadius,
+      }
+    : slideDirection === 0
+      ? {
+          opacity: 0,
+          x: 0,
+          y: 10,
+          scaleX: 0.985,
+          scaleY: 0.985,
+          borderRadius: endRadius + 4,
+        }
+      : {
+          opacity: 0,
+          x: slideDirection > 0 ? -44 : 44,
+          y: 0,
+          scaleX: 0.985,
+          scaleY: 0.985,
+          borderRadius: endRadius,
+        };
 
   return (
     <AnimatePresence>
       {open ? (
         <motion.div
           key="lightbox-overlay"
-          className="fixed inset-0 z-[120] overflow-hidden backdrop-blur-sm"
-          style={{ backgroundColor: "rgba(16, 16, 18, 0.74)" }}
+          className="fixed inset-0 z-[120] overflow-hidden"
+          style={{ backgroundColor: "rgba(10, 10, 12, 0.8)", backdropFilter: "blur(8px)" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          onClick={() => onClose()}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          onClick={closeLightbox}
           onContextMenu={(event) => event.preventDefault()}
           role="dialog"
           aria-modal="true"
@@ -275,10 +415,10 @@ export function ImageLightbox({
                 event.stopPropagation();
                 setZoomLevel((current) => (current === 1 ? 2 : 1));
               }}
-              className="flex h-10 min-w-[52px] cursor-pointer items-center justify-center rounded-full px-3 text-white transition-colors"
+              className="flex h-10 min-w-[52px] items-center justify-center rounded-full px-3 text-white transition-colors"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
-                backgroundColor: "rgba(70, 70, 74, 0.48)",
+                backgroundColor: "rgba(48, 48, 52, 0.5)",
                 backdropFilter: "blur(14px)",
               }}
               aria-label={zoomLevel === 1 ? "Ativar zoom 2x" : "Voltar para zoom 1x"}
@@ -288,27 +428,22 @@ export function ImageLightbox({
                 {zoomLevel}x
               </span>
             </button>
-            <motion.button
+            <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                onClose();
+                closeLightbox();
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
-                backgroundColor: "rgba(70, 70, 74, 0.48)",
+                backgroundColor: "rgba(48, 48, 52, 0.5)",
                 backdropFilter: "blur(14px)",
-                willChange: "transform, opacity",
               }}
-              initial={{ opacity: 0, scale: 0.98, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: -4 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
               aria-label="Fechar imagem"
             >
               <X size={18} />
-            </motion.button>
+            </button>
           </div>
 
           {hasMultipleSlides && (
@@ -319,10 +454,10 @@ export function ImageLightbox({
                   event.stopPropagation();
                   goToPrevious();
                 }}
-                className="absolute left-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors cursor-pointer md:left-6"
+                className="absolute left-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors md:left-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
-                  backgroundColor: "rgba(70, 70, 74, 0.48)",
+                  backgroundColor: "rgba(48, 48, 52, 0.5)",
                   backdropFilter: "blur(14px)",
                 }}
                 aria-label="Mostrar imagem anterior"
@@ -335,10 +470,10 @@ export function ImageLightbox({
                   event.stopPropagation();
                   goToNext();
                 }}
-                className="absolute right-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors cursor-pointer md:right-6"
+                className="absolute right-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors md:right-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
-                  backgroundColor: "rgba(70, 70, 74, 0.48)",
+                  backgroundColor: "rgba(48, 48, 52, 0.5)",
                   backdropFilter: "blur(14px)",
                 }}
                 aria-label="Mostrar proxima imagem"
@@ -349,7 +484,7 @@ export function ImageLightbox({
                 className="absolute bottom-4 left-1/2 z-[123] -translate-x-1/2 rounded-full px-3 py-1.5 text-white md:bottom-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(18, 18, 20, 0.54)",
+                  backgroundColor: "rgba(16, 16, 18, 0.56)",
                   backdropFilter: "blur(14px)",
                   fontSize: "12px",
                   lineHeight: "16px",
@@ -369,86 +504,115 @@ export function ImageLightbox({
                 left: targetRect.left,
                 width: targetRect.width,
                 height: targetRect.height,
-                willChange: "transform, border-radius, box-shadow, opacity",
-                transformOrigin: "top left",
-                backgroundColor: "rgba(10, 10, 12, 0.82)",
+                willChange: "transform, opacity, border-radius, box-shadow",
+                transformOrigin: "center center",
+                backgroundColor: "rgba(10, 10, 12, 0.9)",
                 border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: `${Math.max(22, Math.min(30, Math.min(targetRect.width, targetRect.height) * 0.03))}px`,
               }}
-              initial={{
-                x: initialFrameTransform.x,
-                y: initialFrameTransform.y,
-                scaleX: initialFrameTransform.scaleX,
-                scaleY: initialFrameTransform.scaleY,
-                borderRadius: startRadius,
-                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
-                opacity: 0.92,
-              }}
-              animate={{
-                x: 0,
-                y: 0,
-                scaleX: 1,
-                scaleY: 1,
-                borderRadius: endRadius,
-                boxShadow: "0 34px 100px rgba(0,0,0,0.36)",
-                opacity: 1,
-              }}
-              exit={{
-                x: initialFrameTransform.x,
-                y: initialFrameTransform.y,
-                scaleX: initialFrameTransform.scaleX,
-                scaleY: initialFrameTransform.scaleY,
-                borderRadius: startRadius,
-                boxShadow: "0 10px 32px rgba(0,0,0,0.16)",
-                opacity: 0.92,
-              }}
+              initial={{ opacity: 0, scale: 0.985, y: 10, boxShadow: "0 18px 52px rgba(0,0,0,0.2)" }}
+              animate={{ opacity: 1, scale: 1, y: 0, boxShadow: "0 34px 100px rgba(0,0,0,0.34)" }}
+              exit={{ opacity: 0, scale: 0.985, y: 8, boxShadow: "0 18px 52px rgba(0,0,0,0.2)" }}
               transition={{
-                x: { type: "spring", stiffness: 260, damping: 26, mass: 0.92 },
-                y: { type: "spring", stiffness: 260, damping: 26, mass: 0.92 },
-                scaleX: { type: "spring", stiffness: 240, damping: 28, mass: 0.96 },
-                scaleY: { type: "spring", stiffness: 240, damping: 28, mass: 0.96 },
-                borderRadius: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
-                boxShadow: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
-                opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                scale: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+                y: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+                boxShadow: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
               }}
+              onClick={(event) => event.stopPropagation()}
             >
-              <div
-                ref={scrollContainerRef}
-                className="image-lightbox-scroll absolute inset-0 overflow-auto"
-                style={{ overscrollBehavior: "contain" }}
-              >
-                <div className="flex min-h-full min-w-full items-center justify-center p-4 md:p-6">
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
                   <AnimatePresence initial={false} mode="wait" custom={slideDirection}>
                     <motion.div
                       key={activeSlide.src}
                       custom={slideDirection}
                       className="relative shrink-0"
-                      style={{ width: `${renderedImageWidth}px`, height: `${renderedImageHeight}px` }}
-                      initial={{ opacity: 0, x: slideDirection === 0 ? 0 : slideDirection > 0 ? 28 : -28 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: slideDirection > 0 ? -20 : 20 }}
-                      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                      onClick={(event) => event.stopPropagation()}
+                      style={{
+                        width: `${fittedImageSize.width}px`,
+                        height: `${fittedImageSize.height}px`,
+                        willChange: "transform, opacity, border-radius",
+                        transformOrigin: "center center",
+                      }}
+                      initial={imageEnterState}
+                      animate={{
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        scaleX: 1,
+                        scaleY: 1,
+                        borderRadius: endRadius,
+                      }}
+                      exit={imageExitState}
+                      transition={{
+                        x: slideDirection === 0
+                          ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
+                          : { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                        y: slideDirection === 0
+                          ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
+                          : { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+                        scaleX: slideDirection === 0
+                          ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
+                          : { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                        scaleY: slideDirection === 0
+                          ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
+                          : { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+                        borderRadius: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                      }}
                     >
-                      <img
-                        src={activeSlide.src}
-                        alt={activeSlide.alt}
-                        className="h-full w-full select-none object-contain"
+                      <div
+                        className="relative h-full w-full overflow-hidden"
                         style={{
-                          WebkitTouchCallout: "none",
-                          userSelect: "none",
-                          transform: "translateZ(0)",
+                          cursor: isPannable ? (isDragging ? "grabbing" : "grab") : "default",
+                          touchAction: isPannable ? "none" : "auto",
+                          borderRadius: `${endRadius}px`,
                         }}
-                        onLoad={(event) => {
-                          const { naturalWidth, naturalHeight } = event.currentTarget;
-                          if (!naturalWidth || !naturalHeight) return;
-                          setImageAspectRatios((current) => ({
-                            ...current,
-                            [activeSlide.src]: naturalWidth / naturalHeight,
-                          }));
-                        }}
-                        onContextMenu={(event) => event.preventDefault()}
-                        onDragStart={(event) => event.preventDefault()}
-                      />
+                        onClick={(event) => event.stopPropagation()}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={finishPointerInteraction}
+                        onPointerCancel={finishPointerInteraction}
+                        onLostPointerCapture={finishPointerInteraction}
+                      >
+                        <motion.div
+                          className="h-full w-full"
+                          style={{ transformOrigin: "center center" }}
+                          animate={{
+                            x: panOffset.x,
+                            y: panOffset.y,
+                            scale: zoomLevel,
+                          }}
+                          transition={isDragging
+                            ? { duration: 0 }
+                            : {
+                                x: { type: "spring", stiffness: 340, damping: 36, mass: 0.9 },
+                                y: { type: "spring", stiffness: 340, damping: 36, mass: 0.9 },
+                                scale: { type: "spring", stiffness: 300, damping: 34, mass: 0.92 },
+                              }}
+                        >
+                          <img
+                            src={activeSlide.src}
+                            alt={activeSlide.alt}
+                            className="h-full w-full select-none object-contain"
+                            style={{
+                              WebkitTouchCallout: "none",
+                              userSelect: "none",
+                              transform: "translateZ(0)",
+                            }}
+                            onLoad={(event) => {
+                              const { naturalWidth, naturalHeight } = event.currentTarget;
+                              if (!naturalWidth || !naturalHeight) return;
+                              setImageAspectRatios((current) => ({
+                                ...current,
+                                [activeSlide.src]: naturalWidth / naturalHeight,
+                              }));
+                            }}
+                            onContextMenu={(event) => event.preventDefault()}
+                            onDragStart={(event) => event.preventDefault()}
+                          />
+                        </motion.div>
+                      </div>
                     </motion.div>
                   </AnimatePresence>
                 </div>
