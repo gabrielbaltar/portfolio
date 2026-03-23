@@ -286,7 +286,7 @@ export function ImageLightbox({
   const startRadius = Math.max(16, Math.min(28, Math.min(startRect.width, startRect.height) * 0.08));
   const endRadius = Math.max(20, Math.min(28, Math.min(modalRect.width, modalRect.height) * 0.03));
   const initialImageTransform = buildFrameTransform(startRect, modalRect);
-  const slideTravel = Math.max(72, Math.min(132, modalRect.width * 0.16));
+  const slideTravel = Math.max(64, Math.min(116, modalRect.width * 0.14));
 
   useEffect(() => {
     if (!open) return;
@@ -368,7 +368,7 @@ export function ImageLightbox({
         borderRadius: activeSlide.originRect ? startRadius : endRadius + 4,
       }
     : {
-        opacity: 0.38,
+        opacity: 0.32,
         x: slideDirection > 0 ? slideTravel : -slideTravel,
         y: 0,
         scaleX: 1,
@@ -395,7 +395,7 @@ export function ImageLightbox({
           borderRadius: endRadius + 4,
         }
       : {
-          opacity: 0.24,
+          opacity: 0.18,
           x: slideDirection > 0 ? -slideTravel : slideTravel,
           y: 0,
           scaleX: 1,
@@ -556,18 +556,18 @@ export function ImageLightbox({
                       transition={{
                         x: slideDirection === 0
                           ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
-                          : { duration: 0.16, ease: [0.16, 1, 0.3, 1] },
+                          : { duration: 0.19, ease: [0.22, 1, 0.36, 1] },
                         y: slideDirection === 0
                           ? { type: "spring", stiffness: 290, damping: 31, mass: 0.92 }
-                          : { duration: 0.14, ease: [0.16, 1, 0.3, 1] },
+                          : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
                         scaleX: slideDirection === 0
                           ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
-                          : { duration: 0.14, ease: [0.16, 1, 0.3, 1] },
+                          : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
                         scaleY: slideDirection === 0
                           ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
-                          : { duration: 0.14, ease: [0.16, 1, 0.3, 1] },
-                        opacity: { duration: slideDirection === 0 ? 0.18 : 0.12, ease: [0.16, 1, 0.3, 1] },
-                        borderRadius: { duration: slideDirection === 0 ? 0.24 : 0.12, ease: [0.16, 1, 0.3, 1] },
+                          : { duration: 0.16, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: slideDirection === 0 ? 0.18 : 0.16, ease: [0.22, 1, 0.36, 1] },
+                        borderRadius: { duration: slideDirection === 0 ? 0.24 : 0.14, ease: [0.22, 1, 0.36, 1] },
                       }}
                     >
                       <div
