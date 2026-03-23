@@ -108,6 +108,13 @@ export interface TimestampedEntity {
   updatedAt: string;
 }
 
+export interface TextAppearance {
+  fontSize?: number;
+  lineHeight?: number;
+  fontWeight?: number;
+  color?: string;
+}
+
 export interface SortableEntity {
   sortOrder: number;
 }
@@ -159,6 +166,8 @@ export interface Project extends TimestampedEntity {
   id: string;
   title: string;
   subtitle: string;
+  titleAppearance?: TextAppearance;
+  subtitleAppearance?: TextAppearance;
   category: string;
   services: string;
   client: string;
@@ -187,6 +196,8 @@ export interface BlogPost extends TimestampedEntity {
   id: string;
   title: string;
   subtitle?: string;
+  titleAppearance?: TextAppearance;
+  subtitleAppearance?: TextAppearance;
   publisher: string;
   date: string;
   description: string;

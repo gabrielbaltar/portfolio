@@ -20,6 +20,7 @@ import {
   type Recommendation,
   type SiteSettings,
   type StackItem,
+  type TextAppearance,
 } from "@portfolio/core";
 import { dataProvider } from "./data-provider";
 
@@ -39,6 +40,7 @@ export type {
   Recommendation,
   SiteSettings,
   StackItem,
+  TextAppearance,
 } from "@portfolio/core";
 
 type CMSMode = "public" | "cms";

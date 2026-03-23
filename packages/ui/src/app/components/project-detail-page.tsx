@@ -15,6 +15,7 @@ import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
+import { PROJECT_SUBTITLE_APPEARANCE_DEFAULTS, PROJECT_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
 
 function ImageCard({
   src,
@@ -225,6 +226,8 @@ export function ProjectDetailPage() {
     { label: t("clientLabel"), value: project.client || "Não informado" },
     { label: t("yearLabel"), value: project.year || "Não informado" },
   ];
+  const titleStyle = resolveTextAppearanceStyle(project.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS);
+  const subtitleStyle = resolveTextAppearanceStyle(project.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS);
 
   return (
     <div className="min-h-screen font-['Inter',sans-serif]" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
@@ -250,7 +253,7 @@ export function ProjectDetailPage() {
         {/* Title */}
         <motion.h1
           className="mt-4"
-          style={{ fontSize: "28px", lineHeight: "36px", color: "var(--text-primary, #EDEDED)" }}
+          style={titleStyle}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
@@ -261,7 +264,7 @@ export function ProjectDetailPage() {
         {project.subtitle && (
           <motion.p
             className="mt-2"
-            style={{ fontSize: "18px", lineHeight: "26px", color: "var(--text-secondary, #A6A6A6)" }}
+            style={subtitleStyle}
             initial={{ y: 15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.14, ease: [0.25, 0.1, 0.25, 1] }}

@@ -17,6 +17,7 @@ import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
 import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
+import { ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS, ARTICLE_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
 
 function ImageCard({
   src,
@@ -261,6 +262,8 @@ export function BlogPostPage() {
     post.category ? { label: t("categoryLabel"), value: post.category, icon: Tag } : null,
     post.services ? { label: t("topicsLabel"), value: post.services, icon: Tag } : null,
   ].filter(Boolean) as { label: string; value: string; icon: typeof User }[];
+  const titleStyle = resolveTextAppearanceStyle(post.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS);
+  const subtitleStyle = resolveTextAppearanceStyle(post.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
 
   return (
     <div
@@ -288,7 +291,7 @@ export function BlogPostPage() {
         {/* Title */}
         <motion.h1
           className="mt-4"
-          style={{ fontSize: "26px", lineHeight: "31.2px", color: "var(--text-primary, #fafafa)" }}
+          style={titleStyle}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
@@ -300,7 +303,7 @@ export function BlogPostPage() {
         {post.subtitle && (
           <motion.p
             className="mt-2"
-            style={{ fontSize: "18px", lineHeight: "26px", color: "var(--text-secondary, #ababab)" }}
+            style={subtitleStyle}
             initial={{ y: 15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.12, ease: [0.25, 0.1, 0.25, 1] }}

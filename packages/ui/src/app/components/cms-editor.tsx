@@ -15,7 +15,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Hash, Globe,
   Plus, Upload, X, History, Lock, LockOpen, Video, Code, GripVertical, RotateCcw,
 } from "lucide-react";
-import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page, type SiteSettings } from "./cms-data";
+import { useCMS, type ContentBlock, type ContentStatus, type Project, type BlogPost, type Page, type SiteSettings, type TextAppearance } from "./cms-data";
 import { dataProvider } from "./data-provider";
 import {
   clampBlockLineHeight,
@@ -31,6 +31,13 @@ import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-tex
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
+import {
+  ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS,
+  ARTICLE_TITLE_APPEARANCE_DEFAULTS,
+  PROJECT_SUBTITLE_APPEARANCE_DEFAULTS,
+  PROJECT_TITLE_APPEARANCE_DEFAULTS,
+  resolveTextAppearanceStyle,
+} from "./text-appearance";
 import {
   appendChildListItem,
   insertSiblingListItem,
@@ -182,6 +189,171 @@ function TextArea({ label, value, onChange, rows = 3, placeholder = "" }: {
         className="w-full resize-none rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#ababab] focus:outline-none transition-colors"
         style={{ minHeight: rows === 3 ? "76.5px" : undefined, fontSize: "13px", lineHeight: "19.5px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
       />
+    </div>
+  );
+}
+
+function sanitizeAppearanceColor(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  if (/^#[\da-f]{6}$/i.test(normalized) || /^#[\da-f]{3}$/i.test(normalized)) return normalized;
+  return undefined;
+}
+
+function buildAppearanceValue(
+  nextValue: TextAppearance,
+  defaults: { fontSize: number; lineHeight: number; fontWeight: number; color: string },
+) {
+  const normalized: TextAppearance = {};
+
+  if (typeof nextValue.fontSize === "number" && nextValue.fontSize !== defaults.fontSize) normalized.fontSize = nextValue.fontSize;
+  if (typeof nextValue.lineHeight === "number" && nextValue.lineHeight !== defaults.lineHeight) normalized.lineHeight = nextValue.lineHeight;
+  if (typeof nextValue.fontWeight === "number" && nextValue.fontWeight !== defaults.fontWeight) normalized.fontWeight = nextValue.fontWeight;
+
+  const normalizedColor = sanitizeAppearanceColor(nextValue.color || "");
+  if (normalizedColor) normalized.color = normalizedColor;
+
+  return Object.keys(normalized).length ? normalized : undefined;
+}
+
+function TextAppearanceControl({
+  label,
+  value,
+  onChange,
+  defaults,
+  defaultColorValue,
+  sample,
+  fontSizeRange,
+  lineHeightRange,
+}: {
+  label: string;
+  value?: TextAppearance;
+  onChange: (value?: TextAppearance) => void;
+  defaults: { fontSize: number; lineHeight: number; fontWeight: number; color: string };
+  defaultColorValue: string;
+  sample: string;
+  fontSizeRange: { min: number; max: number; step?: number };
+  lineHeightRange: { min: number; max: number; step?: number };
+}) {
+  const currentFontSize = value?.fontSize ?? defaults.fontSize;
+  const currentLineHeight = value?.lineHeight ?? defaults.lineHeight;
+  const currentFontWeight = value?.fontWeight ?? defaults.fontWeight;
+  const currentColor = value?.color || defaults.color;
+
+  const updateAppearance = (patch: Partial<TextAppearance>) => {
+    onChange(buildAppearanceValue({ ...value, ...patch }, defaults));
+  };
+
+  const weightOptions = [400, 500, 600, 700];
+
+  return (
+    <div className="space-y-4 rounded-[14px] border p-4" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>{label}</p>
+          <p className="mt-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            Ajuste tamanho, peso, entrelinhas e cor do texto desta seção.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          className="rounded-[10px] border px-3 py-1.5 text-[#888] transition-colors hover:text-[#fafafa]"
+          style={{ borderColor: "#1e1e1e", fontSize: "12px", lineHeight: "18px" }}
+        >
+          Resetar
+        </button>
+      </div>
+
+      <div className="rounded-[12px] border px-4 py-3" style={{ borderColor: "#1e1e1e", backgroundColor: "#141414" }}>
+        <span
+          style={resolveTextAppearanceStyle(
+            { fontSize: currentFontSize, lineHeight: currentLineHeight, fontWeight: currentFontWeight, color: currentColor },
+            defaults,
+          )}
+        >
+          {sample}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tamanho</span>
+            <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{currentFontSize}px</span>
+          </div>
+          <input
+            type="range"
+            min={fontSizeRange.min}
+            max={fontSizeRange.max}
+            step={fontSizeRange.step || 1}
+            value={currentFontSize}
+            onChange={(event) => updateAppearance({ fontSize: Number(event.target.value) })}
+            className="w-full accent-[#fafafa]"
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Entrelinhas</span>
+            <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{currentLineHeight}px</span>
+          </div>
+          <input
+            type="range"
+            min={lineHeightRange.min}
+            max={lineHeightRange.max}
+            step={lineHeightRange.step || 1}
+            value={currentLineHeight}
+            onChange={(event) => updateAppearance({ lineHeight: Number(event.target.value) })}
+            className="w-full accent-[#fafafa]"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-[1fr,180px]">
+        <div className="space-y-2">
+          <span className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Peso</span>
+          <div className="flex flex-wrap gap-2">
+            {weightOptions.map((weight) => (
+              <button
+                key={weight}
+                type="button"
+                onClick={() => updateAppearance({ fontWeight: weight })}
+                className="rounded-[10px] border px-3 py-1.5 transition-colors"
+                style={{
+                  borderColor: currentFontWeight === weight ? "#fafafa" : "#1e1e1e",
+                  color: currentFontWeight === weight ? "#fafafa" : "#888",
+                  backgroundColor: currentFontWeight === weight ? "#1a1a1a" : "transparent",
+                  fontSize: "12px",
+                  lineHeight: "18px",
+                }}
+              >
+                {weight}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Cor</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={sanitizeAppearanceColor(currentColor) || defaultColorValue}
+              onChange={(event) => updateAppearance({ color: event.target.value })}
+              className="h-9 w-10 rounded cursor-pointer border-none p-0"
+              style={{ backgroundColor: "transparent" }}
+            />
+            <input
+              type="text"
+              value={sanitizeAppearanceColor(currentColor) || ""}
+              onChange={(event) => updateAppearance({ color: event.target.value })}
+              placeholder={defaultColorValue}
+              className="flex-1 rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#555] focus:outline-none"
+              style={{ fontSize: "12px", lineHeight: "18px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -693,6 +865,14 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
   const cardPreviewImagePosition = item.cardImagePosition || item.imagePosition || "50% 50%";
   const detailPreviewImage = item.image || "";
   const detailPreviewImagePosition = item.imagePosition || "50% 50%";
+  const detailTitleStyle =
+    contentType === "projects"
+      ? resolveTextAppearanceStyle(item.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS)
+      : resolveTextAppearanceStyle(item.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS);
+  const detailSubtitleStyle =
+    contentType === "projects"
+      ? resolveTextAppearanceStyle(item.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS)
+      : resolveTextAppearanceStyle(item.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
 
   return (
     <div
@@ -803,17 +983,17 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
         )}
 
         {/* Title */}
-        {renderText("h1", "title", item.title, "Titulo do conteudo", "mb-2 text-[#fafafa]", { fontSize: "28px", lineHeight: "36px", fontWeight: 500 })}
+        {renderText("h1", "title", item.title, "Titulo do conteudo", "mb-2 text-[#fafafa]", detailTitleStyle)}
 
         {/* Subtitle / Description */}
         {(contentType === "projects" || contentType === "articles") &&
           renderText(
             "p",
             contentType === "projects" ? "subtitle" : "subtitle",
-            contentType === "projects" ? item.subtitle : (item.subtitle || item.description),
-            "Descricao...",
+            contentType === "projects" ? item.subtitle : (item.subtitle || ""),
+            "Subtitulo...",
             "mb-6 text-[#4f4f4f]",
-            { fontSize: "15px", lineHeight: "24px" }
+            detailSubtitleStyle
           )
         }
 
@@ -1932,6 +2112,28 @@ export function CMSEditor() {
           onChange={(v) => updateField("subtitle", v)}
           placeholder="Texto opcional abaixo do titulo da pagina"
         />
+        <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
+          <TextAppearanceControl
+            label="Aparencia do titulo da pagina"
+            value={item.titleAppearance}
+            onChange={(value) => updateField("titleAppearance", value)}
+            defaults={PROJECT_TITLE_APPEARANCE_DEFAULTS}
+            defaultColorValue="#EDEDED"
+            sample={item.title || "Titulo do case"}
+            fontSizeRange={{ min: 22, max: 72 }}
+            lineHeightRange={{ min: 28, max: 88 }}
+          />
+          <TextAppearanceControl
+            label="Aparencia do subtitulo da pagina"
+            value={item.subtitleAppearance}
+            onChange={(value) => updateField("subtitleAppearance", value)}
+            defaults={PROJECT_SUBTITLE_APPEARANCE_DEFAULTS}
+            defaultColorValue="#A6A6A6"
+            sample={item.subtitle || "Subtitulo do case"}
+            fontSizeRange={{ min: 14, max: 40 }}
+            lineHeightRange={{ min: 20, max: 56 }}
+          />
+        </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input
             label="Titulo do card"
@@ -2171,6 +2373,28 @@ export function CMSEditor() {
           <>
         <Input label="Titulo completo do artigo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo maior da pagina interna" />
         <Input label="Subtitulo do artigo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Texto abaixo do titulo da pagina" />
+        <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
+          <TextAppearanceControl
+            label="Aparencia do titulo da pagina"
+            value={item.titleAppearance}
+            onChange={(value) => updateField("titleAppearance", value)}
+            defaults={ARTICLE_TITLE_APPEARANCE_DEFAULTS}
+            defaultColorValue="#FAFAFA"
+            sample={item.title || "Titulo do artigo"}
+            fontSizeRange={{ min: 20, max: 72 }}
+            lineHeightRange={{ min: 26, max: 88 }}
+          />
+          <TextAppearanceControl
+            label="Aparencia do subtitulo da pagina"
+            value={item.subtitleAppearance}
+            onChange={(value) => updateField("subtitleAppearance", value)}
+            defaults={ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS}
+            defaultColorValue="#ABABAB"
+            sample={item.subtitle || "Subtitulo do artigo"}
+            fontSizeRange={{ min: 14, max: 40 }}
+            lineHeightRange={{ min: 20, max: 56 }}
+          />
+        </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input label="Titulo do card" value={item.cardTitle || ""} onChange={(v) => updateField("cardTitle", v)} placeholder="Versao curta para home e listagem" />
           <Input label="Subtitulo do card (opcional)" value={item.cardSubtitle || ""} onChange={(v) => updateField("cardSubtitle", v)} placeholder="Se vazio, usa a descricao curta" />
