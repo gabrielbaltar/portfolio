@@ -375,7 +375,7 @@ export function ArticlePreviewCard({
 
   return (
     <article
-      className={`group relative flex overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-0.5 sm:flex-row ${className}`}
+      className={`group relative flex overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-0.5 sm:min-h-[248px] sm:flex-row ${className}`}
       style={{
         backgroundColor: "var(--bg-secondary, #121212)",
         border: "1px solid var(--border-primary, #363636)",
@@ -389,10 +389,10 @@ export function ArticlePreviewCard({
       />
 
       <div
-        className="pointer-events-none relative z-20 w-full shrink-0 overflow-hidden sm:w-[280px] md:w-[300px]"
-        style={{ borderRight: "1px solid var(--border-secondary, #242424)" }}
+        className="pointer-events-none relative z-20 w-full shrink-0 self-stretch overflow-hidden border-b sm:w-[292px] sm:border-b-0 sm:border-r md:w-[316px]"
+        style={{ borderColor: "var(--border-secondary, #242424)" }}
       >
-        <div className="pointer-events-none" style={{ aspectRatio: "3 / 2" }}>
+        <div className="pointer-events-none h-full min-h-[212px] aspect-[3/2] sm:min-h-full sm:aspect-auto">
           <ContentImage
             src={image}
             alt={title}
@@ -403,7 +403,7 @@ export function ArticlePreviewCard({
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-20 flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4">
+      <div className="pointer-events-none relative z-20 flex min-h-[226px] flex-1 flex-col justify-between px-4 py-4 sm:px-5">
         <div>
           <h3
             className="flex min-h-[48px] min-w-0 items-start gap-1.5"
