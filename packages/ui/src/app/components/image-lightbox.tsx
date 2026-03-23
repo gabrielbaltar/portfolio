@@ -241,40 +241,40 @@ export function ImageLightbox({
       || 1.4
     : 1.4;
 
-  const targetRect = useMemo(
+  const frameRect = useMemo(
     () => fitRectToViewport(viewport.width, viewport.height),
     [viewport.height, viewport.width],
   );
 
   const fittedImageSize = useMemo(
-    () => fitImageToFrame(resolvedAspectRatio, targetRect.width, targetRect.height),
-    [resolvedAspectRatio, targetRect.height, targetRect.width],
+    () => fitImageToFrame(resolvedAspectRatio, frameRect.width, frameRect.height),
+    [frameRect.height, frameRect.width, resolvedAspectRatio],
   );
 
-  const imageTargetRect = useMemo(
-    () => centerRectWithinFrame(targetRect, fittedImageSize.width, fittedImageSize.height),
-    [fittedImageSize.height, fittedImageSize.width, targetRect],
+  const modalRect = useMemo(
+    () => centerRectWithinFrame(frameRect, fittedImageSize.width, fittedImageSize.height),
+    [fittedImageSize.height, fittedImageSize.width, frameRect],
   );
 
   const startRect = useMemo(() => {
     if (activeSlide?.originRect) return clampOriginRect(activeSlide.originRect, viewport.width, viewport.height);
 
     return {
-      top: imageTargetRect.top + 10,
-      left: imageTargetRect.left + 10,
-      width: Math.max(1, imageTargetRect.width - 20),
-      height: Math.max(1, imageTargetRect.height - 20),
+      top: modalRect.top + 10,
+      left: modalRect.left + 10,
+      width: Math.max(1, modalRect.width - 20),
+      height: Math.max(1, modalRect.height - 20),
     };
-  }, [activeSlide?.originRect, imageTargetRect, viewport.height, viewport.width]);
+  }, [activeSlide?.originRect, modalRect, viewport.height, viewport.width]);
 
   const renderedImageWidth = fittedImageSize.width * zoomLevel;
   const renderedImageHeight = fittedImageSize.height * zoomLevel;
-  const maxPanX = Math.max(0, (renderedImageWidth - targetRect.width) / 2);
-  const maxPanY = Math.max(0, (renderedImageHeight - targetRect.height) / 2);
+  const maxPanX = Math.max(0, (renderedImageWidth - modalRect.width) / 2);
+  const maxPanY = Math.max(0, (renderedImageHeight - modalRect.height) / 2);
   const isPannable = maxPanX > 0.5 || maxPanY > 0.5;
   const startRadius = Math.max(16, Math.min(28, Math.min(startRect.width, startRect.height) * 0.08));
-  const endRadius = Math.max(20, Math.min(28, Math.min(imageTargetRect.width, imageTargetRect.height) * 0.03));
-  const initialImageTransform = buildFrameTransform(startRect, imageTargetRect);
+  const endRadius = Math.max(20, Math.min(28, Math.min(modalRect.width, modalRect.height) * 0.03));
+  const initialImageTransform = buildFrameTransform(startRect, modalRect);
 
   useEffect(() => {
     if (!open) return;
@@ -359,8 +359,8 @@ export function ImageLightbox({
         opacity: 0,
         x: slideDirection > 0 ? 56 : -56,
         y: 0,
-        scaleX: 0.985,
-        scaleY: 0.985,
+        scaleX: 1,
+        scaleY: 1,
         borderRadius: endRadius,
       };
 
@@ -378,16 +378,16 @@ export function ImageLightbox({
           opacity: 0,
           x: 0,
           y: 10,
-          scaleX: 0.985,
-          scaleY: 0.985,
+          scaleX: 1,
+          scaleY: 1,
           borderRadius: endRadius + 4,
         }
       : {
           opacity: 0,
           x: slideDirection > 0 ? -44 : 44,
           y: 0,
-          scaleX: 0.985,
-          scaleY: 0.985,
+          scaleX: 1,
+          scaleY: 1,
           borderRadius: endRadius,
         };
 
@@ -415,7 +415,7 @@ export function ImageLightbox({
                 event.stopPropagation();
                 setZoomLevel((current) => (current === 1 ? 2 : 1));
               }}
-              className="flex h-10 min-w-[52px] items-center justify-center rounded-full px-3 text-white transition-colors"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
                 backgroundColor: "rgba(48, 48, 52, 0.5)",
@@ -423,10 +423,7 @@ export function ImageLightbox({
               }}
               aria-label={zoomLevel === 1 ? "Ativar zoom 2x" : "Voltar para zoom 1x"}
             >
-              <span className="flex items-center gap-1.5" style={{ fontSize: "12px", lineHeight: "16px" }}>
-                <Search size={14} />
-                {zoomLevel}x
-              </span>
+              <Search size={16} />
             </button>
             <button
               type="button"
@@ -434,7 +431,7 @@ export function ImageLightbox({
                 event.stopPropagation();
                 closeLightbox();
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-colors"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white transition-colors"
               style={{
                 border: "1px solid rgba(255,255,255,0.14)",
                 backgroundColor: "rgba(48, 48, 52, 0.5)",
@@ -454,7 +451,7 @@ export function ImageLightbox({
                   event.stopPropagation();
                   goToPrevious();
                 }}
-                className="absolute left-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors md:left-6"
+                className="absolute left-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-white transition-colors md:left-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
                   backgroundColor: "rgba(48, 48, 52, 0.5)",
@@ -470,7 +467,7 @@ export function ImageLightbox({
                   event.stopPropagation();
                   goToNext();
                 }}
-                className="absolute right-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-colors md:right-6"
+                className="absolute right-4 top-1/2 z-[123] flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-white transition-colors md:right-6"
                 style={{
                   border: "1px solid rgba(255,255,255,0.14)",
                   backgroundColor: "rgba(48, 48, 52, 0.5)",
@@ -498,39 +495,39 @@ export function ImageLightbox({
 
           <div className="pointer-events-none fixed inset-0 z-[121]">
             <motion.div
-              className="pointer-events-auto absolute overflow-hidden"
-              style={{
-                top: targetRect.top,
-                left: targetRect.left,
-                width: targetRect.width,
-                height: targetRect.height,
-                willChange: "transform, opacity, border-radius, box-shadow",
-                transformOrigin: "center center",
-                backgroundColor: "rgba(10, 10, 12, 0.9)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: `${Math.max(22, Math.min(30, Math.min(targetRect.width, targetRect.height) * 0.03))}px`,
-              }}
-              initial={{ opacity: 0, scale: 0.985, y: 10, boxShadow: "0 18px 52px rgba(0,0,0,0.2)" }}
-              animate={{ opacity: 1, scale: 1, y: 0, boxShadow: "0 34px 100px rgba(0,0,0,0.34)" }}
-              exit={{ opacity: 0, scale: 0.985, y: 8, boxShadow: "0 18px 52px rgba(0,0,0,0.2)" }}
+                className="pointer-events-auto absolute overflow-hidden"
+                style={{
+                  top: modalRect.top,
+                  left: modalRect.left,
+                  width: modalRect.width,
+                  height: modalRect.height,
+                  willChange: "transform, opacity, border-radius, box-shadow",
+                  transformOrigin: "center center",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderRadius: `${Math.max(18, Math.min(24, Math.min(modalRect.width, modalRect.height) * 0.03))}px`,
+                }}
+              initial={{ opacity: 0, scale: 0.992, y: 8, boxShadow: "0 16px 42px rgba(0,0,0,0.18)" }}
+              animate={{ opacity: 1, scale: 1, y: 0, boxShadow: "0 26px 76px rgba(0,0,0,0.26)" }}
+              exit={{ opacity: 0, scale: 0.992, y: 6, boxShadow: "0 16px 42px rgba(0,0,0,0.18)" }}
               transition={{
-                opacity: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-                scale: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
-                y: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
-                boxShadow: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+                scale: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                y: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                boxShadow: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
               }}
               onClick={(event) => event.stopPropagation()}
             >
               <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <AnimatePresence initial={false} mode="wait" custom={slideDirection}>
+                  <AnimatePresence initial={false} mode={slideDirection === 0 ? "wait" : "sync"} custom={slideDirection}>
                     <motion.div
                       key={activeSlide.src}
                       custom={slideDirection}
-                      className="relative shrink-0"
+                      className="absolute inset-0 m-auto"
                       style={{
-                        width: `${fittedImageSize.width}px`,
-                        height: `${fittedImageSize.height}px`,
+                        width: `${modalRect.width}px`,
+                        height: `${modalRect.height}px`,
                         willChange: "transform, opacity, border-radius",
                         transformOrigin: "center center",
                       }}
@@ -557,8 +554,8 @@ export function ImageLightbox({
                         scaleY: slideDirection === 0
                           ? { type: "spring", stiffness: 280, damping: 32, mass: 0.96 }
                           : { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-                        opacity: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
-                        borderRadius: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                        opacity: { duration: slideDirection === 0 ? 0.18 : 0.14, ease: [0.22, 1, 0.36, 1] },
+                        borderRadius: { duration: slideDirection === 0 ? 0.24 : 0.16, ease: [0.22, 1, 0.36, 1] },
                       }}
                     >
                       <div
