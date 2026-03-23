@@ -286,6 +286,8 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   data.blogPosts.forEach((post, postIndex) => {
     addText(`blogPosts.${postIndex}.title`, post.title);
     addText(`blogPosts.${postIndex}.subtitle`, post.subtitle || "");
+    addText(`blogPosts.${postIndex}.cardTitle`, post.cardTitle || "");
+    addText(`blogPosts.${postIndex}.cardSubtitle`, post.cardSubtitle || "");
     addText(`blogPosts.${postIndex}.publisher`, post.publisher);
     addText(`blogPosts.${postIndex}.date`, post.date);
     addText(`blogPosts.${postIndex}.description`, post.description);

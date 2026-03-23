@@ -604,9 +604,12 @@ export function CMSContentList() {
       const nextPost: BlogPost = {
         id,
         title: "",
+        subtitle: "",
         publisher: "",
         date: new Date().toLocaleDateString("pt-BR"),
         description: "",
+        cardTitle: "",
+        cardSubtitle: "",
         cardImage: "",
         cardImagePosition: "50% 50%",
         image: "",

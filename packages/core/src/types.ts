@@ -190,6 +190,8 @@ export interface BlogPost extends TimestampedEntity {
   publisher: string;
   date: string;
   description: string;
+  cardTitle?: string;
+  cardSubtitle?: string;
   cardImage?: string;
   cardImagePosition?: string;
   image: string;

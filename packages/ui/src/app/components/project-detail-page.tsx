@@ -270,56 +270,13 @@ export function ProjectDetailPage() {
           </motion.p>
         )}
 
-        {heroImage && (
-          <motion.div
-            className="mt-8"
-            initial={{ y: 18, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.55, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            <ImageCard
-              src={heroImage}
-              alt={project.title}
-              position={project.imagePosition || "50% 50%"}
-              onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
-            />
-          </motion.div>
-        )}
-
-        {/* Visit Website link */}
-        {project.link && project.link !== "#" && (
-          <motion.a
-            href={project.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 mt-3 underline underline-offset-2 transition-colors hover:opacity-80"
-            style={{ fontSize: "13px", color: "var(--text-secondary, #CFCFCF)" }}
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            Visit Website <ExternalLink size={12} />
-          </motion.a>
-        )}
-
-        {/* Description */}
-        <motion.p
-          className="mt-6"
-          style={{ fontSize: "15px", lineHeight: "26px", color: "var(--text-secondary, #A6A6A6)" }}
-          initial={{ y: 15, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          {project.description}
-        </motion.p>
-
         {/* Metadata 4 columns */}
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pb-8 w-full"
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 w-full"
           style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
           initial={{ y: 15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+          transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
         >
           {meta.map((m) => (
             <div key={m.label} className="min-w-0">
@@ -332,6 +289,22 @@ export function ProjectDetailPage() {
             </div>
           ))}
         </motion.div>
+
+        {heroImage && (
+          <motion.div
+            className="mt-10"
+            initial={{ y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <ImageCard
+              src={heroImage}
+              alt={project.title}
+              position={project.imagePosition || "50% 50%"}
+              onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
+            />
+          </motion.div>
+        )}
       </div>
 
       {/* Content blocks */}

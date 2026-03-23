@@ -15,7 +15,7 @@ import { getVisiblePublicTags } from "./public-tag-utils";
 import { ArticlePreviewCard } from "./content-preview-cards";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
-import { filterVisibleContent } from "./site-visibility";
+import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
 import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
 
 function ImageCard({
@@ -159,8 +159,6 @@ export function BlogPostPage() {
     );
   }
 
-  const visibleTags = getVisiblePublicTags(post.tags);
-
   // Check if post requires password
   const needsPassword = post.password && post.password.trim() !== "";
   const postUnlocked = !needsPassword || isUnlocked || isProjectUnlocked(post.id);
@@ -287,37 +285,9 @@ export function BlogPostPage() {
           </Link>
         </motion.div>
 
-        {/* Date & Category */}
-        <motion.div
-          className="mt-6 flex items-center gap-3 flex-wrap"
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.05, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <span style={{ fontSize: "14px", color: "var(--text-secondary, #ababab)" }}>
-            {post.date}
-          </span>
-          {post.category && (
-            <>
-              <span style={{ fontSize: "14px", color: "var(--border-primary, #363636)" }}>/</span>
-              <span style={{ fontSize: "14px", color: "var(--text-secondary, #ababab)" }}>
-                {post.category}
-              </span>
-            </>
-          )}
-          {post.readTime && (
-            <>
-              <span style={{ fontSize: "14px", color: "var(--border-primary, #363636)" }}>/</span>
-              <span className="flex items-center gap-1" style={{ fontSize: "14px", color: "var(--text-secondary, #ababab)" }}>
-                <Clock size={12} /> {post.readTime}
-              </span>
-            </>
-          )}
-        </motion.div>
-
         {/* Title */}
         <motion.h1
-          className="mt-3"
+          className="mt-4"
           style={{ fontSize: "26px", lineHeight: "31.2px", color: "var(--text-primary, #fafafa)" }}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -339,82 +309,14 @@ export function BlogPostPage() {
           </motion.p>
         )}
 
-        {heroImage && (
-          <motion.div
-            className="mt-8"
-            initial={{ y: 18, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.55, delay: 0.14, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            <ImageCard
-              src={heroImage}
-              alt={post.title}
-              position={post.imagePosition || "50% 50%"}
-              onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
-            />
-          </motion.div>
-        )}
-
-        {/* Description */}
-        <motion.p
-          className="mt-4 max-w-[600px]"
-          style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary, #ababab)" }}
-          initial={{ y: 15, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          {post.description}
-        </motion.p>
-
-        {/* External link */}
-        {post.link && post.link.trim() !== "" && (
-          <motion.a
-            href={post.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 mt-3 underline underline-offset-2 transition-colors hover:opacity-80"
-            style={{ fontSize: "13px", color: "var(--text-secondary, #CFCFCF)" }}
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {t("originalPublication")} <ExternalLink size={12} />
-          </motion.a>
-        )}
-
-        {/* Tags */}
-        {visibleTags.length > 0 && (
-          <motion.div
-            className="mt-5 flex flex-wrap gap-2"
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {visibleTags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2.5 py-1 rounded-md font-['Inter',sans-serif]"
-                style={{
-                  fontSize: "12px",
-                  backgroundColor: "var(--bg-secondary, #121212)",
-                  border: "1px solid var(--border-primary, #2A2A2A)",
-                  color: "var(--text-secondary, #ababab)",
-                }}
-              >
-                {tag}
-              </span>
-            ))}
-          </motion.div>
-        )}
-
         {/* Metadata row */}
         {meta.length > 0 && (
           <motion.div
-            className="flex flex-wrap gap-6 mt-6 pb-6"
+            className="flex flex-wrap gap-6 mt-8"
             style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
             initial={{ y: 15, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.5, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
           >
             {meta.map((m) => (
               <div key={m.label} className="min-w-0">
@@ -426,6 +328,22 @@ export function BlogPostPage() {
                 </p>
               </div>
             ))}
+          </motion.div>
+        )}
+
+        {heroImage && (
+          <motion.div
+            className="mt-10"
+            initial={{ y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.55, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <ImageCard
+              src={heroImage}
+              alt={post.title}
+              position={post.imagePosition || "50% 50%"}
+              onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
+            />
           </motion.div>
         )}
 
@@ -530,12 +448,15 @@ export function BlogPostPage() {
 
             {/* Related articles list */}
             <div className="space-y-10">
-              {otherPosts.map((relatedPost) => (
+              {otherPosts.map((relatedPost) => {
+                const cardCopy = getArticleCardCopy(relatedPost);
+
+                return (
                 <ScrollReveal key={relatedPost.id}>
                   <ArticlePreviewCard
                     href={`/blog/${relatedPost.slug}`}
-                    title={relatedPost.title}
-                    description={relatedPost.description}
+                    title={cardCopy.title}
+                    description={cardCopy.description}
                     image={relatedPost.cardImage || relatedPost.image || ""}
                     imagePosition={relatedPost.cardImagePosition || relatedPost.imagePosition || "50% 50%"}
                     publisher={relatedPost.publisher}
@@ -547,7 +468,8 @@ export function BlogPostPage() {
                     ctaLabel={t("readArticle") || "Read article"}
                   />
                 </ScrollReveal>
-              ))}
+                );
+              })}
             </div>
           </div>
         </ScrollReveal>

@@ -1,4 +1,5 @@
 import {
+  type BlogPost,
   isPortfolioSectionVisible,
   isPublicContentVisible,
   type Project,
@@ -33,5 +34,14 @@ export function getProjectCardCopy(
   return {
     title: normalizeOptionalText(override?.title) || project.title,
     subtitle: normalizeOptionalText(override?.subtitle),
+  };
+}
+
+export function getArticleCardCopy(
+  post: Pick<BlogPost, "title" | "description" | "cardTitle" | "cardSubtitle">,
+) {
+  return {
+    title: normalizeOptionalText(post.cardTitle) || post.title,
+    description: normalizeOptionalText(post.cardSubtitle) || normalizeOptionalText(post.description),
   };
 }

@@ -5,7 +5,7 @@ import { getVisiblePublicTags } from "./public-tag-utils";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { motion } from "motion/react";
 import { ArticlePreviewCard } from "./content-preview-cards";
-import { filterVisibleContent } from "./site-visibility";
+import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
 
 export function BlogPage() {
   const { data } = useTranslatedCMS();
@@ -41,6 +41,7 @@ export function BlogPage() {
         <div className="mt-10 space-y-10 min-[480px]:space-y-[40px]">
           {posts.map((post, i) => {
             const visibleTags = getVisiblePublicTags((post as any).tags);
+            const cardCopy = getArticleCardCopy(post);
 
             return (
               <motion.div
@@ -51,8 +52,8 @@ export function BlogPage() {
               >
                 <ArticlePreviewCard
                   href={`/blog/${post.slug}`}
-                  title={post.title}
-                  description={post.description}
+                  title={cardCopy.title}
+                  description={cardCopy.description}
                   image={post.cardImage || post.image}
                   imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
                   publisher={post.publisher}

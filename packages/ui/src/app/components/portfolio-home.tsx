@@ -12,7 +12,7 @@ import { ArticlePreviewCard, ProjectPreviewCard } from "./content-preview-cards"
 import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
 import { getProfileSocialLinks } from "./profile-social-links";
-import { filterVisibleContent, getProjectCardCopy, isSectionVisible } from "./site-visibility";
+import { filterVisibleContent, getArticleCardCopy, getProjectCardCopy, isSectionVisible } from "./site-visibility";
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -540,12 +540,15 @@ export function PortfolioHome() {
           </Link>
         </div>
         <div className="space-y-10">
-          {displayedBlogPosts.map((post, i) => (
+          {displayedBlogPosts.map((post, i) => {
+            const cardCopy = getArticleCardCopy(post);
+
+            return (
             <ArticlePreviewCard
               key={post.id}
               href={`/blog/${post.slug || post.id}`}
-              title={post.title}
-              description={post.description}
+              title={cardCopy.title}
+              description={cardCopy.description}
               image={post.cardImage || post.image}
               imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
               publisher={post.publisher}
@@ -554,7 +557,8 @@ export function PortfolioHome() {
               locked={Boolean((post as any).password && (post as any).password.trim() !== "")}
               ctaLabel={t("readArticle")}
             />
-          ))}
+            );
+          })}
         </div>
         </ScrollReveal>
       )}

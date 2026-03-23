@@ -684,11 +684,11 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
   const cardPreviewTitle =
     contentType === "projects"
       ? (item.cardTitle || "").trim() || item.title
-      : item.title;
+      : (item.cardTitle || "").trim() || item.title;
   const cardPreviewSubtitle =
     contentType === "projects"
       ? (item.cardSubtitle || "").trim()
-      : (item.subtitle || item.description || "").trim();
+      : (item.cardSubtitle || item.description || "").trim();
   const cardPreviewImage = item.cardImage || item.image;
   const cardPreviewImagePosition = item.cardImagePosition || item.imagePosition || "50% 50%";
   const detailPreviewImage = item.image || "";
@@ -2169,8 +2169,12 @@ export function CMSEditor() {
         title: "Informacoes basicas",
         content: (
           <>
-        <Input label="Titulo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo do artigo" />
-        <Input label="Subtitulo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Descricao curta" />
+        <Input label="Titulo completo do artigo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo maior da pagina interna" />
+        <Input label="Subtitulo do artigo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Texto abaixo do titulo da pagina" />
+        <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
+          <Input label="Titulo do card" value={item.cardTitle || ""} onChange={(v) => updateField("cardTitle", v)} placeholder="Versao curta para home e listagem" />
+          <Input label="Subtitulo do card (opcional)" value={item.cardSubtitle || ""} onChange={(v) => updateField("cardSubtitle", v)} placeholder="Se vazio, usa a descricao curta" />
+        </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input label="Slug (URL)" value={item.slug || ""} onChange={(v) => updateField("slug", slugify(v))} placeholder="meu-artigo" />
           <Input label="Publicacao" value={item.publisher || ""} onChange={(v) => updateField("publisher", v)} placeholder="Blog" />
@@ -2185,7 +2189,7 @@ export function CMSEditor() {
         </div>
         <Input label="Servicos / Topicos" value={item.services || ""} onChange={(v) => updateField("services", v)} placeholder="UX Research, UI Design..." />
         <Input label="Link externo" value={item.link || ""} onChange={(v) => updateField("link", v)} placeholder="https://..." />
-        <TextArea label="Descricao" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
+        <TextArea label="Descricao curta / resumo" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
           </>
         ),
       },
