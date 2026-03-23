@@ -1505,18 +1505,20 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     }}
                   />
 
-                  {hasSlider && (
+                  {imageSlides.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          Assets do slider
+                          {hasSlider ? "Assets do slider" : "Asset atual"}
                         </span>
                         <span className="text-[#555]" style={{ fontSize: "11px" }}>
-                          A capa fica na visualizacao principal
+                          {hasSlider ? "A capa fica na visualizacao principal" : "Mesmo conjunto de acoes do slider"}
                         </span>
                       </div>
                       <p className="text-[#444]" style={{ fontSize: "10px", lineHeight: "15px" }}>
-                        Imagens continuam com reposicionamento. WebM e Lottie usam enquadramento automatico para preservar fluidez.
+                        {hasSlider
+                          ? "Imagens continuam com reposicionamento. WebM e Lottie usam enquadramento automatico para preservar fluidez."
+                          : "Imagem unica tambem pode ser reposicionada, aberta inteira e centralizada sem precisar adicionar novos slides."}
                       </p>
                       <div className="grid grid-cols-2 gap-2 min-[980px]:grid-cols-3">
                         {imageSlides.map((slide, slideIndex) => (
@@ -1526,7 +1528,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                                 {slide.label}
                               </span>
                               <span className="text-[#555]" style={{ fontSize: "10px" }}>
-                                {slideIndex === 0 ? "Slide principal" : "Arraste para ordenar"}
+                                {slideIndex === 0 ? (hasSlider ? "Slide principal" : "Asset unico") : "Arraste para ordenar"}
                               </span>
                             </div>
                             {supportsPositionEditor(slide.src) ? (
