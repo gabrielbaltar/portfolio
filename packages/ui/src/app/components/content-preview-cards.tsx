@@ -4,6 +4,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Clock, ExternalLink, Lock } fr
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { getLightboxOriginRect, type LightboxOpenPayload } from "./image-lightbox";
 import { buildBackTarget } from "./navigation-state";
+import { RichTextContent, richTextToPlainText } from "./rich-text";
 
 type ProjectPreviewCardProps = {
   href: string;
@@ -101,6 +102,7 @@ export function PreviewMediaSlider({
   disablePointerEvents?: boolean;
   onImageClick?: (payload: LightboxOpenPayload) => void;
 }) {
+  const plainTitle = richTextToPlainText(title) || "Imagem";
   const slides = useMemo(
     () => buildSlides(image, imagePosition, galleryImages, galleryPositions),
     [galleryImages, galleryPositions, image, imagePosition],
@@ -151,7 +153,7 @@ export function PreviewMediaSlider({
     onImageClick({
       slides: slides.map((slide, index) => ({
         src: slide.src,
-        alt: slides.length > 1 ? `${title} ${index + 1}` : title,
+        alt: slides.length > 1 ? `${plainTitle} ${index + 1}` : plainTitle,
         originRect: index === activeIndex ? clickedRect : null,
       })),
       index: activeIndex,
@@ -176,7 +178,7 @@ export function PreviewMediaSlider({
             <div key={slide.key} className="h-full w-full shrink-0 overflow-hidden">
               <ContentImage
                 src={slide.src}
-                alt={title}
+                alt={plainTitle}
                 emptyLabel={emptyLabel}
                 className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] ${imageClassName}`}
                 position={slide.position}
@@ -269,6 +271,8 @@ export function ProjectPreviewCard({
   className = "",
 }: ProjectPreviewCardProps) {
   const location = useLocation();
+  const plainTitle = richTextToPlainText(title) || "Projeto";
+  const hasSubtitle = Boolean(richTextToPlainText(subtitle));
 
   return (
     <article
@@ -282,14 +286,14 @@ export function ProjectPreviewCard({
         to={href}
         state={{ backTo: buildBackTarget(location) }}
         className="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/70"
-        aria-label={`Abrir projeto ${title}`}
+        aria-label={`Abrir projeto ${plainTitle}`}
       />
 
       <div className="pointer-events-none relative z-20">
         <div className="pointer-events-none" style={{ aspectRatio: "700 / 525" }}>
           <ContentImage
             src={image}
-            alt={title}
+            alt={plainTitle}
             emptyLabel="Sem capa"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
             position={imagePosition}
@@ -331,15 +335,15 @@ export function ProjectPreviewCard({
                     WebkitBoxOrient: "vertical",
                   }}
                 >
-                  {title}
+                  <RichTextContent value={title} placeholder="Sem titulo" />
                 </span>
               </p>
-              {subtitle && (
+              {hasSubtitle && (
                 <p
                   className="line-clamp-1"
                   style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
                 >
-                  {subtitle}
+                  <RichTextContent value={subtitle} />
                 </p>
               )}
             </div>
@@ -372,6 +376,8 @@ export function ArticlePreviewCard({
 }: ArticlePreviewCardProps) {
   const location = useLocation();
   const visibleTags = tags.slice(0, 3);
+  const plainTitle = richTextToPlainText(title) || "Artigo";
+  const hasDescription = Boolean(richTextToPlainText(description));
 
   return (
     <article
@@ -385,7 +391,7 @@ export function ArticlePreviewCard({
         to={href}
         state={{ backTo: buildBackTarget(location) }}
         className="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/70"
-        aria-label={`Abrir artigo ${title}`}
+        aria-label={`Abrir artigo ${plainTitle}`}
       />
 
       <div
@@ -395,7 +401,7 @@ export function ArticlePreviewCard({
         <div className="pointer-events-none h-full min-h-[212px] aspect-[3/2] sm:min-h-full sm:aspect-auto">
           <ContentImage
             src={image}
-            alt={title}
+            alt={plainTitle}
             emptyLabel="Sem capa"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
             position={imagePosition}
@@ -418,7 +424,7 @@ export function ArticlePreviewCard({
                 WebkitBoxOrient: "vertical",
               }}
             >
-              {title}
+              <RichTextContent value={title} placeholder="Sem titulo" />
             </span>
           </h3>
 
@@ -436,12 +442,12 @@ export function ArticlePreviewCard({
             )}
           </div>
 
-          <p
+          <div
             className="mt-3 min-h-[67px] line-clamp-3"
             style={{ fontSize: "15px", lineHeight: "22.4px", color: "var(--text-secondary, #ababab)" }}
           >
-            {description || "Sem descricao"}
-          </p>
+            {hasDescription ? <RichTextContent value={description} /> : "Sem descricao"}
+          </div>
 
           <div className="mt-3 min-h-[24px]">
             {visibleTags.length > 0 && (

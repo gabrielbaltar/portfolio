@@ -7,6 +7,7 @@ import {
   type PublicContentVisibilityCollection,
   type SiteSettings,
 } from "@portfolio/core";
+import { richTextToPlainText } from "./rich-text";
 
 export function isSectionVisible(siteSettings: SiteSettings, section: PortfolioSectionId) {
   return isPortfolioSectionVisible(siteSettings, section);
@@ -22,7 +23,8 @@ export function filterVisibleContent<T extends { id: string }>(
 
 function normalizeOptionalText(value?: string | null) {
   const normalized = value?.trim();
-  return normalized ? normalized : undefined;
+  if (!normalized) return undefined;
+  return richTextToPlainText(normalized) ? normalized : undefined;
 }
 
 export function getProjectCardCopy(

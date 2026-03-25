@@ -168,6 +168,7 @@ export interface Project extends TimestampedEntity {
   subtitle: string;
   titleAppearance?: TextAppearance;
   subtitleAppearance?: TextAppearance;
+  infoDividerSpacing?: number;
   category: string;
   services: string;
   client: string;

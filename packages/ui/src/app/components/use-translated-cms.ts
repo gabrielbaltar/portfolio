@@ -253,8 +253,8 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
 
   siteSettingsFields.forEach((field) => addText(`siteSettings.${field}`, data.siteSettings[field] as string));
   Object.entries(data.siteSettings.projectCardOverrides || {}).forEach(([projectId, override]) => {
-    addText(`siteSettings.projectCardOverrides.${projectId}.title`, override.title || "");
-    addText(`siteSettings.projectCardOverrides.${projectId}.subtitle`, override.subtitle || "");
+    addRichText(`siteSettings.projectCardOverrides.${projectId}.title`, override.title || "");
+    addRichText(`siteSettings.projectCardOverrides.${projectId}.subtitle`, override.subtitle || "");
   });
 
   const profileFields: Array<keyof CMSData["profile"]> = [
@@ -270,13 +270,13 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   profileFields.forEach((field) => addText(`profile.${field}`, data.profile[field] as string));
 
   data.projects.forEach((project, projectIndex) => {
-    addText(`projects.${projectIndex}.title`, project.title);
-    addText(`projects.${projectIndex}.subtitle`, project.subtitle);
+    addRichText(`projects.${projectIndex}.title`, project.title);
+    addRichText(`projects.${projectIndex}.subtitle`, project.subtitle);
     addText(`projects.${projectIndex}.category`, project.category);
     addText(`projects.${projectIndex}.services`, project.services);
     addText(`projects.${projectIndex}.client`, project.client);
     addText(`projects.${projectIndex}.year`, project.year);
-    addText(`projects.${projectIndex}.description`, project.description);
+    addRichText(`projects.${projectIndex}.description`, project.description);
     addText(`projects.${projectIndex}.seoTitle`, project.seoTitle);
     addText(`projects.${projectIndex}.seoDescription`, project.seoDescription);
     project.tags.forEach((tag, tagIndex) => addText(`projects.${projectIndex}.tags.${tagIndex}`, tag));
@@ -284,13 +284,13 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   });
 
   data.blogPosts.forEach((post, postIndex) => {
-    addText(`blogPosts.${postIndex}.title`, post.title);
-    addText(`blogPosts.${postIndex}.subtitle`, post.subtitle || "");
-    addText(`blogPosts.${postIndex}.cardTitle`, post.cardTitle || "");
-    addText(`blogPosts.${postIndex}.cardSubtitle`, post.cardSubtitle || "");
+    addRichText(`blogPosts.${postIndex}.title`, post.title);
+    addRichText(`blogPosts.${postIndex}.subtitle`, post.subtitle || "");
+    addRichText(`blogPosts.${postIndex}.cardTitle`, post.cardTitle || "");
+    addRichText(`blogPosts.${postIndex}.cardSubtitle`, post.cardSubtitle || "");
     addText(`blogPosts.${postIndex}.publisher`, post.publisher);
     addText(`blogPosts.${postIndex}.date`, post.date);
-    addText(`blogPosts.${postIndex}.description`, post.description);
+    addRichText(`blogPosts.${postIndex}.description`, post.description);
     addText(`blogPosts.${postIndex}.content`, post.content);
     addText(`blogPosts.${postIndex}.category`, post.category || "");
     addText(`blogPosts.${postIndex}.services`, post.services || "");

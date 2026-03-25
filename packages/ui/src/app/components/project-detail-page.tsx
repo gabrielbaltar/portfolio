@@ -15,6 +15,7 @@ import { copyToClipboard } from "./clipboard-utils";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
+import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { PROJECT_SUBTITLE_APPEARANCE_DEFAULTS, PROJECT_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
 
 function ImageCard({
@@ -197,11 +198,14 @@ export function ProjectDetailPage() {
 
   const heroImage = project.image || "";
   const gallery = (project.galleryImages || []).filter(Boolean);
+  const projectTitleText = richTextToPlainText(project.title) || "Projeto";
+  const projectSubtitleText = richTextToPlainText(project.subtitle);
+  const infoDividerSpacing = Math.max(24, Math.min(160, project.infoDividerSpacing ?? 48));
   const projectGallerySlides: LightboxSlide[] = [
-    ...(heroImage ? [{ src: heroImage, alt: project.title }] : []),
+    ...(heroImage ? [{ src: heroImage, alt: projectTitleText }] : []),
     ...gallery.map((img, index) => ({
       src: img,
-      alt: `${project.title} gallery ${index + 1}`,
+      alt: `${projectTitleText} gallery ${index + 1}`,
     })),
   ];
   const projectGalleryOffset = heroImage ? 1 : 0;
@@ -258,10 +262,10 @@ export function ProjectDetailPage() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          {project.title}
+          <RichTextContent value={project.title} placeholder="Titulo do case" />
         </motion.h1>
 
-        {project.subtitle && (
+        {projectSubtitleText && (
           <motion.p
             className="mt-2"
             style={subtitleStyle}
@@ -269,14 +273,17 @@ export function ProjectDetailPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.14, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            {project.subtitle}
+            <RichTextContent value={project.subtitle} />
           </motion.p>
         )}
 
         {/* Metadata 4 columns */}
         <motion.div
           className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 w-full"
-          style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
+          style={{
+            borderBottom: "1px solid var(--border-primary, #2A2A2A)",
+            paddingBottom: "16px",
+          }}
           initial={{ y: 15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
@@ -295,14 +302,14 @@ export function ProjectDetailPage() {
 
         {heroImage && (
           <motion.div
-            className="mt-10"
+            style={{ marginTop: `${infoDividerSpacing}px` }}
             initial={{ y: 18, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.55, delay: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
           >
             <ImageCard
               src={heroImage}
-              alt={project.title}
+              alt={projectTitleText}
               position={project.imagePosition || "50% 50%"}
               onClick={(event) => openProjectGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
             />
@@ -312,19 +319,31 @@ export function ProjectDetailPage() {
 
       {/* Content blocks */}
       {project.contentBlocks && project.contentBlocks.length > 0 && (
-        <ScrollReveal className="max-w-[700px] mx-auto px-5 mt-12">
-          <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
-        </ScrollReveal>
+        <div style={{ marginTop: heroImage ? "48px" : `${infoDividerSpacing}px` }}>
+          <ScrollReveal className="max-w-[700px] mx-auto px-5">
+            <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
+          </ScrollReveal>
+        </div>
       )}
 
       {/* Gallery */}
       {gallery.length > 0 && (
-        <div className="max-w-[700px] mx-auto px-5 mt-12 flex flex-col gap-8">
+        <div
+          className="max-w-[700px] mx-auto px-5 flex flex-col gap-8"
+          style={{
+            marginTop:
+              project.contentBlocks && project.contentBlocks.length > 0
+                ? "48px"
+                : heroImage
+                  ? "48px"
+                  : `${infoDividerSpacing}px`,
+          }}
+        >
           {gallery.map((img, i) => (
             <ScrollReveal key={i}>
               <ImageCard
                 src={img}
-                alt={`${project.title} gallery ${i + 1}`}
+                alt={`${projectTitleText} gallery ${i + 1}`}
                 position={project.galleryPositions?.[i] || "50% 50%"}
                 onClick={(event) => openProjectGalleryLightbox(i + projectGalleryOffset, getLightboxOriginRect(event.currentTarget))}
               />

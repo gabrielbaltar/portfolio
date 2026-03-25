@@ -26,6 +26,7 @@ import { ensureUniqueSlug, getPublicContentVisibilityKey, legacySeedData, slugif
 import { toast } from "sonner";
 import { useCMS, type BlogPost, type ContentStatus, type Page, type Project } from "./cms-data";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
+import { richTextToPlainText } from "./rich-text";
 
 type ContentType = "projects" | "articles" | "pages";
 
@@ -52,6 +53,10 @@ const DEMO_SIGNATURES: Record<ContentType, { ids: Set<string>; slugs: Set<string
 function isDemoItem(contentType: ContentType, item: ContentItem) {
   const signature = DEMO_SIGNATURES[contentType];
   return signature.ids.has(item.id) || signature.slugs.has(item.slug);
+}
+
+function getItemDisplayTitle(value?: string | null) {
+  return richTextToPlainText(value) || "Sem titulo";
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {
@@ -359,7 +364,7 @@ function DraggableContentRow({
             className="truncate text-[#fafafa]"
             style={{ fontSize: "14px", lineHeight: "21px" }}
           >
-            {item.title || "Sem titulo"}
+            {getItemDisplayTitle(item.title)}
           </Link>
           {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
           {isProtected && <Lock size={11} className="text-[#ffa500]" />}
@@ -482,8 +487,8 @@ export function CMSContentList() {
       const query = search.toLowerCase();
       list = list.filter((item) => {
         const fields = [
-          item.title,
-          "description" in item ? item.description : "",
+          richTextToPlainText(item.title),
+          "description" in item ? richTextToPlainText(item.description) : "",
           "category" in item ? item.category : "",
         ];
         return fields.some((field) => field?.toLowerCase().includes(query));
@@ -547,7 +552,7 @@ export function CMSContentList() {
     const cloned = {
       ...item,
       id,
-      title: `${item.title} (copia)`,
+      title: item.title ? `${item.title} (copia)` : "Sem titulo (copia)",
       slug: `${item.slug || ""}-copy`,
       status: "draft" as ContentStatus,
       createdAt: now,
@@ -571,6 +576,7 @@ export function CMSContentList() {
         id,
         title: "",
         subtitle: "",
+        infoDividerSpacing: 48,
         category: "",
         services: "",
         client: "",
@@ -869,7 +875,7 @@ export function CMSContentList() {
                 <div className="flex grow flex-col gap-2 px-4 pb-4 pt-4">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="truncate text-[#fafafa]" style={{ fontSize: "14px", lineHeight: "21px" }}>
-                      {item.title || "Sem titulo"}
+                      {getItemDisplayTitle(item.title)}
                     </h3>
                     <div className="flex items-center gap-1.5">
                       {isFeatured && <Star size={12} className="fill-[#fbbf24] text-[#fbbf24]" />}
@@ -909,7 +915,7 @@ export function CMSContentList() {
         title={`Excluir ${contentType === "projects" ? "projeto" : contentType === "articles" ? "artigo" : "pagina"}?`}
         description={
           pendingDelete?.title
-            ? `Esta acao remove permanentemente "${pendingDelete.title}" do CMS.`
+            ? `Esta acao remove permanentemente "${getItemDisplayTitle(pendingDelete.title)}" do CMS.`
             : "Esta acao remove permanentemente este conteudo do CMS."
         }
         confirmLabel="Excluir"

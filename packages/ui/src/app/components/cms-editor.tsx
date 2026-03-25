@@ -27,7 +27,7 @@ import {
 import { LineHeightControl } from "./line-height-control";
 import { CodeHighlight } from "./code-highlight";
 import { ContentEmbed } from "./content-embed";
-import { RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
+import { isRichTextEmpty, RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
@@ -127,7 +127,9 @@ type ProjectEditorFields = {
 };
 
 function normalizeProjectCardField(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+  if (typeof value !== "string") return "";
+  const normalized = value.trim();
+  return normalized && !isRichTextEmpty(normalized) ? normalized : "";
 }
 
 function attachProjectCardFields(project: Project, siteSettings: SiteSettings) {
@@ -189,6 +191,54 @@ function TextArea({ label, value, onChange, rows = 3, placeholder = "" }: {
         className="w-full resize-none rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#ababab] focus:outline-none transition-colors"
         style={{ minHeight: rows === 3 ? "76.5px" : undefined, fontSize: "13px", lineHeight: "19.5px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
       />
+    </div>
+  );
+}
+
+function RichTextField({
+  label,
+  value,
+  onChange,
+  placeholder = "",
+  multiline = false,
+  helperText,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  helperText?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label
+        className="block text-[#777]"
+        style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}
+      >
+        {label}
+      </label>
+      <RichTextEditor
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        multiline={multiline}
+        compact
+        containerClassName="space-y-1.5"
+        editorClassName="w-full rounded-[10px] px-3 py-2 text-[#fafafa] placeholder:text-[#ababab] focus:outline-none transition-colors"
+        editorStyle={{
+          fontSize: "13px",
+          lineHeight: multiline ? "20px" : "19.5px",
+          minHeight: multiline ? "96px" : "37.5px",
+          backgroundColor: "#141414",
+          border: "1px solid #1e1e1e",
+        }}
+      />
+      {helperText ? (
+        <p className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          {helperText}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -643,12 +693,6 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
   previewMode: "desktop" | "mobile";
   readOnly?: boolean;
 }) {
-  const handleInlineEdit = (field: string, e: React.FocusEvent<HTMLElement>) => {
-    if (readOnly) return;
-    const newText = e.currentTarget.textContent || "";
-    onUpdate(field, newText);
-  };
-
   const updateBlock = (index: number, updater: (block: ContentBlock) => ContentBlock) => {
     const blocks = [...(item.contentBlocks || [])];
     if (blocks[index]) {
@@ -657,31 +701,35 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
     }
   };
 
-  const renderText = (
-    Tag: keyof React.JSX.IntrinsicElements,
+  const renderRichField = (
     field: string,
     text: string,
     placeholder: string,
     className: string,
     style: React.CSSProperties,
-    key?: string | number
+    key?: string | number,
+    multiline = false,
   ) => {
     if (readOnly) {
-      const El = Tag as any;
-      return <El key={key} className={className} style={style}>{text || <span className="opacity-30">{placeholder}</span>}</El>;
+      return (
+        <div key={key} className={className} style={style}>
+          <RichTextContent value={text} placeholder={placeholder} />
+        </div>
+      );
     }
-    const El = Tag as any;
+
     return (
-      <El
+      <RichTextEditor
         key={key}
-        contentEditable
-        suppressContentEditableWarning
-        onBlur={(e: any) => handleInlineEdit(field, e)}
-        className={`${className} outline-none focus:ring-1 focus:ring-[#333] rounded px-1 -mx-1 cursor-text`}
-        style={{ ...style, minHeight: style.lineHeight || "24px" }}
-      >
-        {text || placeholder}
-      </El>
+        value={text}
+        onChange={(nextValue) => onUpdate(field, nextValue)}
+        placeholder={placeholder}
+        multiline={multiline}
+        compact
+        containerClassName="space-y-1"
+        editorClassName={`${className} rounded px-1 -mx-1`}
+        editorStyle={style}
+      />
     );
   };
 
@@ -854,17 +902,18 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
 
   const isCardPreviewContent = contentType === "projects" || contentType === "articles";
   const cardPreviewTitle =
-    contentType === "projects"
-      ? (item.cardTitle || "").trim() || item.title
-      : (item.cardTitle || "").trim() || item.title;
+    !isRichTextEmpty(item.cardTitle || "")
+      ? item.cardTitle
+      : item.title;
   const cardPreviewSubtitle =
     contentType === "projects"
-      ? (item.cardSubtitle || "").trim()
-      : (item.cardSubtitle || item.description || "").trim();
+      ? (!isRichTextEmpty(item.cardSubtitle || "") ? item.cardSubtitle : "")
+      : (!isRichTextEmpty(item.cardSubtitle || "") ? item.cardSubtitle : item.description || "");
   const cardPreviewImage = item.cardImage || item.image;
   const cardPreviewImagePosition = item.cardImagePosition || item.imagePosition || "50% 50%";
   const detailPreviewImage = item.image || "";
   const detailPreviewImagePosition = item.imagePosition || "50% 50%";
+  const detailTitleText = richTextToPlainText(item.title) || "Preview";
   const detailTitleStyle =
     contentType === "projects"
       ? resolveTextAppearanceStyle(item.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS)
@@ -938,7 +987,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                 <div style={{ aspectRatio: contentType === "projects" ? "700 / 525" : "3 / 2" }}>
                   <ContentImage
                     src={cardPreviewImage}
-                    alt={cardPreviewTitle || item.title || "Preview"}
+                    alt={richTextToPlainText(cardPreviewTitle) || detailTitleText}
                     emptyLabel="Sem capa"
                     className="h-full w-full object-cover"
                     position={cardPreviewImagePosition}
@@ -947,11 +996,11 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               </div>
               <div className="space-y-2 px-4 py-4">
                 <p style={{ fontSize: "17px", lineHeight: "25px", color: "#fafafa" }}>
-                  {cardPreviewTitle || "Titulo do card"}
+                  <RichTextContent value={cardPreviewTitle} placeholder="Titulo do card" />
                 </p>
                 {cardPreviewSubtitle && (
                   <p style={{ fontSize: "14px", lineHeight: "21px", color: "#8d8d8d" }}>
-                    {cardPreviewSubtitle}
+                    <RichTextContent value={cardPreviewSubtitle} />
                   </p>
                 )}
                 {contentType === "projects" && item.category && (
@@ -983,13 +1032,12 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
         )}
 
         {/* Title */}
-        {renderText("h1", "title", item.title, "Titulo do conteudo", "mb-2 text-[#fafafa]", detailTitleStyle)}
+        {renderRichField("title", item.title, "Titulo do conteudo", "mb-2 text-[#fafafa]", detailTitleStyle)}
 
         {/* Subtitle / Description */}
         {(contentType === "projects" || contentType === "articles") &&
-          renderText(
-            "p",
-            contentType === "projects" ? "subtitle" : "subtitle",
+          renderRichField(
+            "subtitle",
             contentType === "projects" ? item.subtitle : (item.subtitle || ""),
             "Subtitulo...",
             "mb-6 text-[#4f4f4f]",
@@ -1002,7 +1050,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
           <div className="mb-8 overflow-hidden rounded-[12px]" style={{ backgroundColor: item.imageBgColor || "transparent" }}>
             <ContentImage
               src={detailPreviewImage}
-              alt={item.title}
+              alt={detailTitleText}
               className="w-full object-cover"
               position={detailPreviewImagePosition}
               style={{ maxHeight: "220px" }}
@@ -1012,7 +1060,16 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
 
         {/* Meta info for projects */}
         {contentType === "projects" && (
-          <div className="mb-6 flex flex-wrap items-center gap-5 border-y py-3" style={{ borderColor: "#1e1e1e", fontSize: "12px", lineHeight: "18px", color: "#666" }}>
+          <div
+            className="flex flex-wrap items-center gap-5 border-y py-3"
+            style={{
+              borderColor: "#1e1e1e",
+              fontSize: "12px",
+              lineHeight: "18px",
+              color: "#666",
+              marginBottom: `${item.infoDividerSpacing ?? 48}px`,
+            }}
+          >
             <span>Cliente: {item.client || "—"}</span>
             <span>Ano: {item.year || "—"}</span>
             <span>Servicos: {item.services || "—"}</span>
@@ -2100,17 +2157,19 @@ export function CMSEditor() {
         title: "Informacoes basicas",
         content: (
           <>
-        <Input
+        <RichTextField
           label="Titulo completo do case"
           value={item.title}
           onChange={(v) => updateField("title", v)}
           placeholder="Nome completo que aparece na pagina do projeto"
+          helperText="Clique no texto para abrir a mesma barra de estilo dos blocos de conteudo."
         />
-        <Input
+        <RichTextField
           label="Subtitulo do case"
           value={item.subtitle || ""}
           onChange={(v) => updateField("subtitle", v)}
           placeholder="Texto opcional abaixo do titulo da pagina"
+          helperText="Aceita destaque, cor, tamanho inline e demais estilos do editor rico."
         />
         <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
           <TextAppearanceControl
@@ -2119,7 +2178,7 @@ export function CMSEditor() {
             onChange={(value) => updateField("titleAppearance", value)}
             defaults={PROJECT_TITLE_APPEARANCE_DEFAULTS}
             defaultColorValue="#EDEDED"
-            sample={item.title || "Titulo do case"}
+            sample={richTextToPlainText(item.title) || "Titulo do case"}
             fontSizeRange={{ min: 22, max: 72 }}
             lineHeightRange={{ min: 28, max: 88 }}
           />
@@ -2129,19 +2188,19 @@ export function CMSEditor() {
             onChange={(value) => updateField("subtitleAppearance", value)}
             defaults={PROJECT_SUBTITLE_APPEARANCE_DEFAULTS}
             defaultColorValue="#A6A6A6"
-            sample={item.subtitle || "Subtitulo do case"}
+            sample={richTextToPlainText(item.subtitle) || "Subtitulo do case"}
             fontSizeRange={{ min: 14, max: 40 }}
             lineHeightRange={{ min: 20, max: 56 }}
           />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
-          <Input
+          <RichTextField
             label="Titulo do card"
             value={item.cardTitle || ""}
             onChange={(v) => updateField("cardTitle", v)}
             placeholder="Versao curta para home e listagem"
           />
-          <Input
+          <RichTextField
             label="Subtitulo do card (opcional)"
             value={item.cardSubtitle || ""}
             onChange={(v) => updateField("cardSubtitle", v)}
@@ -2158,7 +2217,40 @@ export function CMSEditor() {
         </div>
         <Input label="Servicos" value={item.services || ""} onChange={(v) => updateField("services", v)} placeholder="UI Design, Frontend" />
         <Input label="Link externo" value={item.link} onChange={(v) => updateField("link", v)} placeholder="https://..." />
-        <TextArea label="Descricao" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
+        <RichTextField
+          label="Descricao"
+          value={item.description || ""}
+          onChange={(v) => updateField("description", v)}
+          placeholder="Resumo do case"
+          multiline
+        />
+        <div className="space-y-2">
+          <label className="block text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Espacamento apos divisor das informacoes
+          </label>
+          <div
+            className="rounded-[12px] border px-3 py-3"
+            style={{ backgroundColor: "#141414", borderColor: "#1e1e1e" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[#888]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                Distancia entre o divisor dos metadados e a proxima secao do case.
+              </span>
+              <span className="rounded-full px-2 py-0.5 text-[#fafafa]" style={{ fontSize: "11px", lineHeight: "16px", backgroundColor: "#1c1c1c" }}>
+                {item.infoDividerSpacing ?? 48}px
+              </span>
+            </div>
+            <input
+              type="range"
+              min={24}
+              max={160}
+              step={4}
+              value={item.infoDividerSpacing ?? 48}
+              onChange={(event) => updateField("infoDividerSpacing", Number(event.target.value))}
+              className="mt-3 w-full accent-[#fafafa]"
+            />
+          </div>
+        </div>
           </>
         ),
       },
@@ -2371,8 +2463,20 @@ export function CMSEditor() {
         title: "Informacoes basicas",
         content: (
           <>
-        <Input label="Titulo completo do artigo" value={item.title} onChange={(v) => updateField("title", v)} placeholder="Titulo maior da pagina interna" />
-        <Input label="Subtitulo do artigo" value={item.subtitle || ""} onChange={(v) => updateField("subtitle", v)} placeholder="Texto abaixo do titulo da pagina" />
+        <RichTextField
+          label="Titulo completo do artigo"
+          value={item.title}
+          onChange={(v) => updateField("title", v)}
+          placeholder="Titulo maior da pagina interna"
+          helperText="Clique no texto para abrir a mesma barra de estilo dos blocos de conteudo."
+        />
+        <RichTextField
+          label="Subtitulo do artigo"
+          value={item.subtitle || ""}
+          onChange={(v) => updateField("subtitle", v)}
+          placeholder="Texto abaixo do titulo da pagina"
+          helperText="Aceita destaque, cor, tamanho inline e demais estilos do editor rico."
+        />
         <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
           <TextAppearanceControl
             label="Aparencia do titulo da pagina"
@@ -2380,7 +2484,7 @@ export function CMSEditor() {
             onChange={(value) => updateField("titleAppearance", value)}
             defaults={ARTICLE_TITLE_APPEARANCE_DEFAULTS}
             defaultColorValue="#FAFAFA"
-            sample={item.title || "Titulo do artigo"}
+            sample={richTextToPlainText(item.title) || "Titulo do artigo"}
             fontSizeRange={{ min: 20, max: 72 }}
             lineHeightRange={{ min: 26, max: 88 }}
           />
@@ -2390,14 +2494,24 @@ export function CMSEditor() {
             onChange={(value) => updateField("subtitleAppearance", value)}
             defaults={ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS}
             defaultColorValue="#ABABAB"
-            sample={item.subtitle || "Subtitulo do artigo"}
+            sample={richTextToPlainText(item.subtitle) || "Subtitulo do artigo"}
             fontSizeRange={{ min: 14, max: 40 }}
             lineHeightRange={{ min: 20, max: 56 }}
           />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
-          <Input label="Titulo do card" value={item.cardTitle || ""} onChange={(v) => updateField("cardTitle", v)} placeholder="Versao curta para home e listagem" />
-          <Input label="Subtitulo do card (opcional)" value={item.cardSubtitle || ""} onChange={(v) => updateField("cardSubtitle", v)} placeholder="Se vazio, usa a descricao curta" />
+          <RichTextField
+            label="Titulo do card"
+            value={item.cardTitle || ""}
+            onChange={(v) => updateField("cardTitle", v)}
+            placeholder="Versao curta para home e listagem"
+          />
+          <RichTextField
+            label="Subtitulo do card (opcional)"
+            value={item.cardSubtitle || ""}
+            onChange={(v) => updateField("cardSubtitle", v)}
+            placeholder="Se vazio, usa a descricao curta"
+          />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
           <Input label="Slug (URL)" value={item.slug || ""} onChange={(v) => updateField("slug", slugify(v))} placeholder="meu-artigo" />
@@ -2413,7 +2527,13 @@ export function CMSEditor() {
         </div>
         <Input label="Servicos / Topicos" value={item.services || ""} onChange={(v) => updateField("services", v)} placeholder="UX Research, UI Design..." />
         <Input label="Link externo" value={item.link || ""} onChange={(v) => updateField("link", v)} placeholder="https://..." />
-        <TextArea label="Descricao curta / resumo" value={item.description || ""} onChange={(v) => updateField("description", v)} rows={3} />
+        <RichTextField
+          label="Descricao curta / resumo"
+          value={item.description || ""}
+          onChange={(v) => updateField("description", v)}
+          placeholder="Resumo do artigo"
+          multiline
+        />
           </>
         ),
       },

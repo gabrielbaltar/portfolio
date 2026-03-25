@@ -17,6 +17,7 @@ import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
 import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
+import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS, ARTICLE_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
 
 function ImageCard({
@@ -232,11 +233,13 @@ export function BlogPostPage() {
   const hasLegacyContent = Boolean(post.content && post.content.trim());
   const galleryImages = (post.galleryImages || []).filter(Boolean);
   const hasGallery = galleryImages.length > 0;
+  const postTitleText = richTextToPlainText(post.title) || "Artigo";
+  const postSubtitleText = richTextToPlainText(post.subtitle);
   const articleGallerySlides: LightboxSlide[] = [
-    ...(heroImage ? [{ src: heroImage, alt: post.title }] : []),
+    ...(heroImage ? [{ src: heroImage, alt: postTitleText }] : []),
     ...galleryImages.map((img, index) => ({
       src: img,
-      alt: `${post.title} gallery ${index + 1}`,
+      alt: `${postTitleText} gallery ${index + 1}`,
     })),
   ];
   const articleGalleryOffset = heroImage ? 1 : 0;
@@ -296,11 +299,11 @@ export function BlogPostPage() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          {post.title}
+          <RichTextContent value={post.title} placeholder="Titulo do artigo" />
         </motion.h1>
 
         {/* Subtitle */}
-        {post.subtitle && (
+        {postSubtitleText && (
           <motion.p
             className="mt-2"
             style={subtitleStyle}
@@ -308,7 +311,7 @@ export function BlogPostPage() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            {post.subtitle}
+            <RichTextContent value={post.subtitle} />
           </motion.p>
         )}
 
@@ -343,7 +346,7 @@ export function BlogPostPage() {
           >
             <ImageCard
               src={heroImage}
-              alt={post.title}
+              alt={postTitleText}
               position={post.imagePosition || "50% 50%"}
               onClick={(event) => openArticleGalleryLightbox(0, getLightboxOriginRect(event.currentTarget))}
             />
@@ -406,7 +409,7 @@ export function BlogPostPage() {
             <ScrollReveal key={i}>
               <ImageCard
                 src={img}
-                alt={`${post.title} gallery ${i + 1}`}
+                alt={`${postTitleText} gallery ${i + 1}`}
                 position={post.galleryPositions?.[i] || "50% 50%"}
                 onClick={(event) => openArticleGalleryLightbox(i + articleGalleryOffset, getLightboxOriginRect(event.currentTarget))}
               />
