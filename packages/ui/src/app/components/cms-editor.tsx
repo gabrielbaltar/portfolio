@@ -2171,7 +2171,7 @@ export function CMSEditor() {
           placeholder="Texto opcional abaixo do titulo da pagina"
           helperText="Aceita destaque, cor, tamanho inline e demais estilos do editor rico."
         />
-        <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
+        <div className="space-y-4">
           <TextAppearanceControl
             label="Aparencia do titulo da pagina"
             value={item.titleAppearance}
@@ -2477,7 +2477,7 @@ export function CMSEditor() {
           placeholder="Texto abaixo do titulo da pagina"
           helperText="Aceita destaque, cor, tamanho inline e demais estilos do editor rico."
         />
-        <div className="grid grid-cols-1 gap-4 min-[1180px]:grid-cols-2">
+        <div className="space-y-4">
           <TextAppearanceControl
             label="Aparencia do titulo da pagina"
             value={item.titleAppearance}
