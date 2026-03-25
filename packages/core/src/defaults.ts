@@ -14,6 +14,10 @@ import type {
   SiteSettings,
   StackItem,
 } from "./types";
+import {
+  clampExperienceTaskLineHeight,
+  DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+} from "./experience";
 
 const now = new Date().toISOString();
 
@@ -35,6 +39,7 @@ export const defaultSiteSettings: SiteSettings = {
   contentVisibility: {},
   projectCardOverrides: {},
   blogPostCardOverrides: {},
+  experienceOverrides: {},
   createdAt: now,
   updatedAt: now,
 };
@@ -232,6 +237,15 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     ...page,
     contentBlocks: normalizeContentBlocks(page.contentBlocks),
   }));
+  const experiences = (data?.experiences ?? empty.experiences).map((experience) => ({
+    ...experience,
+    tasks: experience.tasks ?? [],
+    taskLineHeight: clampExperienceTaskLineHeight(
+      siteSettings.experienceOverrides?.[experience.id]?.taskLineHeight ??
+        experience.taskLineHeight ??
+        DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+    ),
+  }));
 
   return {
     ...empty,
@@ -239,7 +253,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     siteSettings,
     profile,
     projects,
-    experiences: data?.experiences ?? empty.experiences,
+    experiences,
     education: data?.education ?? empty.education,
     certifications: data?.certifications ?? empty.certifications,
     stack: data?.stack ?? empty.stack,

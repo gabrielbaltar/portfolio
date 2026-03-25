@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { MapPin, ExternalLink, ChevronRight, Mail, Copy, Phone, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { getProfileAboutParagraphs } from "@portfolio/core";
+import { DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT, getProfileAboutParagraphs } from "@portfolio/core";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
@@ -350,7 +350,14 @@ export function PortfolioHome() {
               {exp.tasks.length > 0 && (
                 <ul className="mt-3 space-y-1.5 list-disc list-inside">
                   {exp.tasks.map((task, ti) => (
-                    <li key={ti} style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary)" }}>
+                    <li
+                      key={ti}
+                      style={{
+                        fontSize: "14px",
+                        lineHeight: `${exp.taskLineHeight ?? DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT}px`,
+                        color: "var(--text-secondary)",
+                      }}
+                    >
                       {task}
                     </li>
                   ))}

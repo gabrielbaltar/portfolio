@@ -137,6 +137,7 @@ export interface SiteSettings extends TimestampedEntity {
   contentVisibility: Record<string, boolean>;
   projectCardOverrides: Record<string, { title?: string; subtitle?: string; image?: string; imagePosition?: string }>;
   blogPostCardOverrides: Record<string, { title?: string; subtitle?: string; image?: string; imagePosition?: string }>;
+  experienceOverrides: Record<string, { taskLineHeight?: number }>;
 }
 
 export interface ProfileData extends TimestampedEntity {
@@ -249,6 +250,7 @@ export interface Experience extends SortableEntity {
   period: string;
   role: string;
   tasks: string[];
+  taskLineHeight?: number;
 }
 
 export interface Education extends SortableEntity {

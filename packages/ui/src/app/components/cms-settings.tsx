@@ -4,6 +4,8 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload, GripVertical } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
 import {
+  DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+  clampExperienceTaskLineHeight,
   getProfileAboutParagraphs,
   getPublicContentVisibilityKey,
   syncProfileAboutFields,
@@ -13,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
+import { LineHeightControl } from "./line-height-control";
 import { RichTextEditor } from "./rich-text";
 
 function hasMeaningfulSelection(field: HTMLInputElement | HTMLTextAreaElement | null) {
@@ -327,6 +330,19 @@ function reindexSortableItems<T extends { sortOrder: number }>(items: T[]) {
   return items.map((item, index) => ({ ...item, sortOrder: index + 1 }));
 }
 
+function buildExperienceOverrides(experiences: Experience[]) {
+  return Object.fromEntries(
+    experiences.map((experience) => [
+      experience.id,
+      {
+        taskLineHeight: clampExperienceTaskLineHeight(
+          experience.taskLineHeight ?? DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+        ),
+      },
+    ]),
+  );
+}
+
 function DraggableExperienceSection({
   index,
   children,
@@ -511,6 +527,27 @@ export function CMSSettings() {
         experience.id === experienceId ? updater(experience) : experience
       )),
     );
+  };
+
+  const saveExperiences = () => {
+    const nextExperiences = reindexSortableItems(
+      experiences.map((experience) => ({
+        ...experience,
+        taskLineHeight: clampExperienceTaskLineHeight(
+          experience.taskLineHeight ?? DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+        ),
+      })),
+    );
+    const nextSiteSettings = {
+      ...siteSettings,
+      experienceOverrides: buildExperienceOverrides(nextExperiences),
+    };
+
+    setExperiences(nextExperiences);
+    setSiteSettings(nextSiteSettings);
+    cms.updateSiteSettings(nextSiteSettings);
+    cms.updateExperiences(nextExperiences);
+    toast.success("Salvo!");
   };
 
   const previewExperienceMove = (dragIndex: number, hoverIndex: number) => {
@@ -903,6 +940,20 @@ export function CMSSettings() {
                     checked={isItemVisible("experiences", exp.id)}
                     onChange={(visible) => setItemVisibility("experiences", exp.id, visible)}
                   />
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#1a1a1a] bg-[#0e0e0e] px-3 py-2">
+                    <span className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                      Ajuste a entrelinha das tarefas exibidas nesta experiência.
+                    </span>
+                    <LineHeightControl
+                      value={clampExperienceTaskLineHeight(exp.taskLineHeight ?? DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT)}
+                      onChange={(value) =>
+                        updateExperience(exp.id, (current) => ({
+                          ...current,
+                          taskLineHeight: clampExperienceTaskLineHeight(value),
+                        }))
+                      }
+                    />
+                  </div>
                   <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tarefas</label>
                   {exp.tasks.map((task, taskIndex) => (
                     <ExperienceTaskInput
@@ -941,10 +992,10 @@ export function CMSSettings() {
             </DraggableExperienceSection>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setExperiences((current) => reindexSortableItems([...current, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], sortOrder: current.length + 1 }]))} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setExperiences((current) => reindexSortableItems([...current, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], taskLineHeight: DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT, sortOrder: current.length + 1 }]))} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { const nextExperiences = reindexSortableItems(experiences); setExperiences(nextExperiences); cms.updateSiteSettings(siteSettings); cms.updateExperiences(nextExperiences); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveExperiences} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
