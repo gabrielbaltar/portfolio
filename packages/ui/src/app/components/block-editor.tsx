@@ -209,15 +209,6 @@ function BlockTypeSelector({
   );
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => resolve(event.target?.result as string);
-    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
-    reader.readAsDataURL(file);
-  });
-}
-
 function isUploadableVideoFile(file: File) {
   return file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|ogv|ogg)$/i.test(file.name);
 }
@@ -518,13 +509,9 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const uploadImageAsset = useCallback(async (file: File) => {
     if (!isSupportedVisualUpload(file)) return "";
 
-    try {
-      const uploaded = await dataProvider.uploadMedia(file, "public");
-      addMediaItem(uploaded);
-      return uploaded.url;
-    } catch {
-      return readFileAsDataUrl(file);
-    }
+    const uploaded = await dataProvider.uploadMedia(file, "public");
+    addMediaItem(uploaded);
+    return uploaded.url;
   }, [addMediaItem]);
 
   const handleImageUpload = useCallback(async (
@@ -543,9 +530,13 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
       const uploadedUrls: string[] = [];
 
       for (const file of validFiles) {
-        const uploadedUrl = await uploadImageAsset(file);
-        if (uploadedUrl) {
-          uploadedUrls.push(uploadedUrl);
+        try {
+          const uploadedUrl = await uploadImageAsset(file);
+          if (uploadedUrl) {
+            uploadedUrls.push(uploadedUrl);
+          }
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : `Nao foi possivel enviar ${file.name}.`);
         }
       }
 
@@ -655,28 +646,17 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
     setIconUploadingIndex(iconIndex);
     try {
-      try {
-        const uploaded = await dataProvider.uploadMedia(file, "public");
-        addMediaItem(uploaded);
-        updateIconGridItem(iconIndex, {
-          url: uploaded.url,
-          name: block.type === "icon-grid" && block.icons[iconIndex]?.name
-            ? block.icons[iconIndex]?.name
-            : file.name.replace(/\.[^.]+$/, ""),
-        });
-        toast.success("Icone enviado.");
-      } catch {
-        const originalDataUrl = await readFileAsDataUrl(file);
-        updateIconGridItem(iconIndex, {
-          url: originalDataUrl,
-          name: block.type === "icon-grid" && block.icons[iconIndex]?.name
-            ? block.icons[iconIndex]?.name
-            : file.name.replace(/\.[^.]+$/, ""),
-        });
-        toast.info("Upload externo indisponivel. O icone foi mantido localmente sem compressao.");
-      }
-    } catch {
-      toast.error("Nao foi possivel carregar o icone.");
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      addMediaItem(uploaded);
+      updateIconGridItem(iconIndex, {
+        url: uploaded.url,
+        name: block.type === "icon-grid" && block.icons[iconIndex]?.name
+          ? block.icons[iconIndex]?.name
+          : file.name.replace(/\.[^.]+$/, ""),
+      });
+      toast.success("Icone enviado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar o icone.");
     } finally {
       setIconUploadingIndex(null);
       setDragOverIconIndex(null);
@@ -694,26 +674,15 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
     setDragOver(false);
 
     try {
-      try {
-        const uploaded = await dataProvider.uploadMedia(file, "public");
-        addMediaItem(uploaded);
-        onChange({ ...currentBlock, url: uploaded.url } as ContentBlock);
-        toast.success("Video enviado sem compressao.");
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      addMediaItem(uploaded);
+      onChange({ ...currentBlock, url: uploaded.url } as ContentBlock);
+      toast.success("Video enviado sem compressao.");
 
-        if (file.type && typeof document !== "undefined") {
-          const canPlayType = document.createElement("video").canPlayType(file.type);
-          if (!canPlayType) {
-            toast.info("O video foi enviado em qualidade original, mas MP4 H.264 ou WebM continuam sendo os formatos mais compativeis para todos os navegadores.");
-          }
-        }
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "Falha no upload do storage.";
-        const objectUrl = URL.createObjectURL(file);
-        onChange({ ...currentBlock, url: objectUrl } as ContentBlock);
-        if (/maximum allowed size|exceeded the maximum allowed size/i.test(reason)) {
-          toast.error(`O Supabase rejeitou o video por limite de tamanho. Preview local ativo nesta sessao. ${reason}`);
-        } else {
-          toast.warning(`O upload persistente falhou. Preview local ativo nesta sessao. Motivo: ${reason}`);
+      if (file.type && typeof document !== "undefined") {
+        const canPlayType = document.createElement("video").canPlayType(file.type);
+        if (!canPlayType) {
+          toast.info("O video foi enviado em qualidade original, mas MP4 H.264 ou WebM continuam sendo os formatos mais compativeis para todos os navegadores.");
         }
       }
     } catch (error) {

@@ -34,6 +34,7 @@ export const defaultSiteSettings: SiteSettings = {
   sectionVisibility: {},
   contentVisibility: {},
   projectCardOverrides: {},
+  blogPostCardOverrides: {},
   createdAt: now,
   updatedAt: now,
 };
@@ -79,6 +80,30 @@ export const defaultProfile: ProfileData = {
   createdAt: now,
   updatedAt: now,
 };
+
+export function getProfileAboutParagraphs(
+  profile: Pick<ProfileData, "aboutParagraphs" | "aboutParagraph1" | "aboutParagraph2"> | null | undefined,
+) {
+  if (Array.isArray(profile?.aboutParagraphs)) {
+    return profile.aboutParagraphs.map((paragraph) => (typeof paragraph === "string" ? paragraph : ""));
+  }
+
+  return [
+    typeof profile?.aboutParagraph1 === "string" ? profile.aboutParagraph1 : "",
+    typeof profile?.aboutParagraph2 === "string" ? profile.aboutParagraph2 : "",
+  ];
+}
+
+export function syncProfileAboutFields(profile: ProfileData): ProfileData {
+  const aboutParagraphs = getProfileAboutParagraphs(profile);
+
+  return {
+    ...profile,
+    aboutParagraphs,
+    aboutParagraph1: aboutParagraphs[0] || "",
+    aboutParagraph2: aboutParagraphs[1] || "",
+  };
+}
 
 export function emptyMedia(): MediaItem[] {
   return [];
@@ -180,12 +205,27 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
 export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMSData {
   const empty = createEmptyCMSData();
   const siteSettings = { ...empty.siteSettings, ...(data?.siteSettings ?? {}) };
+  const profile = syncProfileAboutFields({ ...empty.profile, ...(data?.profile ?? {}) });
   const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder).map((project) => ({
     ...project,
+    cardImage: siteSettings.projectCardOverrides?.[project.id]?.image || project.cardImage || "",
+    cardImagePosition:
+      siteSettings.projectCardOverrides?.[project.id]?.imagePosition ||
+      project.cardImagePosition ||
+      project.imagePosition ||
+      "50% 50%",
     contentBlocks: normalizeContentBlocks(project.contentBlocks),
   }));
   const blogPosts = applyExplicitOrder(data?.blogPosts ?? empty.blogPosts, siteSettings.blogPostOrder).map((post) => ({
     ...post,
+    cardTitle: siteSettings.blogPostCardOverrides?.[post.id]?.title || post.cardTitle || "",
+    cardSubtitle: siteSettings.blogPostCardOverrides?.[post.id]?.subtitle || post.cardSubtitle || "",
+    cardImage: siteSettings.blogPostCardOverrides?.[post.id]?.image || post.cardImage || "",
+    cardImagePosition:
+      siteSettings.blogPostCardOverrides?.[post.id]?.imagePosition ||
+      post.cardImagePosition ||
+      post.imagePosition ||
+      "50% 50%",
     contentBlocks: normalizeContentBlocks(post.contentBlocks),
   }));
   const pages = (data?.pages ?? empty.pages).map((page) => ({
@@ -197,7 +237,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     ...empty,
     ...data,
     siteSettings,
-    profile: { ...empty.profile, ...(data?.profile ?? {}) },
+    profile,
     projects,
     experiences: data?.experiences ?? empty.experiences,
     education: data?.education ?? empty.education,

@@ -96,21 +96,13 @@ function writeSectionOrder(contentType: ContentType, order: string[]) {
   window.localStorage.setItem(`${SECTION_ORDER_STORAGE_PREFIX}${contentType}`, JSON.stringify(order));
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => resolve(event.target?.result as string);
-    reader.onerror = () => reject(new Error("Falha ao ler arquivo"));
-    reader.readAsDataURL(file);
-  });
-}
-
 function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
 }
 
 const CMS_UNORDERED_LIST_STYLE_TYPES = ["disc", "circle", "square"] as const;
 const CMS_ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as const;
+const CMS_AUTOSAVE_DELAY_MS = 800;
 
 function getCmsListStyleType(ordered: boolean, depth: number) {
   const styles = ordered ? CMS_ORDERED_LIST_STYLE_TYPES : CMS_UNORDERED_LIST_STYLE_TYPES;
@@ -124,6 +116,15 @@ function getImageFiles(files: FileList | File[]) {
 type ProjectEditorFields = {
   cardTitle?: string;
   cardSubtitle?: string;
+  cardImage?: string;
+  cardImagePosition?: string;
+};
+
+type BlogPostEditorFields = {
+  cardTitle?: string;
+  cardSubtitle?: string;
+  cardImage?: string;
+  cardImagePosition?: string;
 };
 
 function normalizeProjectCardField(value: unknown) {
@@ -139,21 +140,60 @@ function attachProjectCardFields(project: Project, siteSettings: SiteSettings) {
     ...project,
     cardTitle: override?.title || "",
     cardSubtitle: override?.subtitle || "",
+    cardImage: override?.image || project.cardImage || "",
+    cardImagePosition: override?.imagePosition || project.cardImagePosition || project.imagePosition || "50% 50%",
   };
 }
 
 function splitProjectCardFields(project: Project & ProjectEditorFields) {
-  const { cardTitle, cardSubtitle, ...persistedProject } = project;
+  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, ...persistedProject } = project;
   const normalizedCardTitle = normalizeProjectCardField(cardTitle);
   const normalizedCardSubtitle = normalizeProjectCardField(cardSubtitle);
+  const normalizedCardImage = typeof cardImage === "string" ? cardImage.trim() : "";
+  const normalizedCardImagePosition = typeof cardImagePosition === "string" ? cardImagePosition.trim() : "";
 
   return {
     project: persistedProject as Project,
     override:
-      normalizedCardTitle || normalizedCardSubtitle
+      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage
         ? {
             ...(normalizedCardTitle ? { title: normalizedCardTitle } : {}),
             ...(normalizedCardSubtitle ? { subtitle: normalizedCardSubtitle } : {}),
+            ...(normalizedCardImage ? { image: normalizedCardImage } : {}),
+            ...(normalizedCardImage && normalizedCardImagePosition ? { imagePosition: normalizedCardImagePosition } : {}),
+          }
+        : null,
+  };
+}
+
+function attachBlogPostCardFields(post: BlogPost, siteSettings: SiteSettings) {
+  const override = siteSettings.blogPostCardOverrides?.[post.id];
+
+  return {
+    ...post,
+    cardTitle: override?.title || post.cardTitle || "",
+    cardSubtitle: override?.subtitle || post.cardSubtitle || "",
+    cardImage: override?.image || post.cardImage || "",
+    cardImagePosition: override?.imagePosition || post.cardImagePosition || post.imagePosition || "50% 50%",
+  };
+}
+
+function splitBlogPostCardFields(post: BlogPost & BlogPostEditorFields) {
+  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, ...persistedPost } = post;
+  const normalizedCardTitle = normalizeProjectCardField(cardTitle);
+  const normalizedCardSubtitle = normalizeProjectCardField(cardSubtitle);
+  const normalizedCardImage = typeof cardImage === "string" ? cardImage.trim() : "";
+  const normalizedCardImagePosition = typeof cardImagePosition === "string" ? cardImagePosition.trim() : "";
+
+  return {
+    post: persistedPost as BlogPost,
+    override:
+      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage
+        ? {
+            ...(normalizedCardTitle ? { title: normalizedCardTitle } : {}),
+            ...(normalizedCardSubtitle ? { subtitle: normalizedCardSubtitle } : {}),
+            ...(normalizedCardImage ? { image: normalizedCardImage } : {}),
+            ...(normalizedCardImage && normalizedCardImagePosition ? { imagePosition: normalizedCardImagePosition } : {}),
           }
         : null,
   };
@@ -1428,16 +1468,12 @@ function ImageUrlField({
           const uploaded = await dataProvider.uploadMedia(file, "public");
           addMediaItem(uploaded);
           uploadedImages.push(uploaded.url);
-        } catch {
-          try {
-            const originalDataUrl = await readFileAsDataUrl(file);
-            uploadedImages.push(originalDataUrl);
-            toast.info("Upload externo indisponivel. A imagem foi mantida localmente sem compressao.");
-          } catch {
-            toast.error("Nao foi possivel carregar a imagem.");
-          }
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : `Nao foi possivel enviar ${file.name}.`);
         }
       }
+
+      if (!uploadedImages.length) return;
 
       const result = applyIncomingImages(uploadedImages);
       if (uploadedImages.length === 1) {
@@ -1671,16 +1707,12 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
           const uploaded = await dataProvider.uploadMedia(file, "public");
           addMediaItem(uploaded);
           uploadedImages.push(uploaded.url);
-        } catch {
-          try {
-            const originalDataUrl = await readFileAsDataUrl(file);
-            uploadedImages.push(originalDataUrl);
-            toast.info("Upload externo indisponivel. O asset foi mantido localmente sem compressao.");
-          } catch {
-            toast.error("Nao foi possivel carregar o asset.");
-          }
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : `Nao foi possivel enviar ${file.name}.`);
         }
       }
+
+      if (!uploadedImages.length) return;
 
       const addedCount = appendImages(uploadedImages);
       if (addedCount > 0) {
@@ -1882,6 +1914,8 @@ export function CMSEditor() {
     if (!found) return null;
     return contentType === "projects"
       ? attachProjectCardFields(found as Project, data.siteSettings)
+      : contentType === "articles"
+      ? attachBlogPostCardFields(found as BlogPost, data.siteSettings)
       : { ...found };
   });
   const visibilityCollection = contentType === "projects" ? "projects" : contentType === "articles" ? "blogPosts" : "pages";
@@ -1911,9 +1945,21 @@ export function CMSEditor() {
     if (autosaveRef.current) clearTimeout(autosaveRef.current);
     autosaveRef.current = setTimeout(() => {
       void saveItem(true);
-    }, 3000);
+    }, CMS_AUTOSAVE_DELAY_MS);
     return () => { if (autosaveRef.current) clearTimeout(autosaveRef.current); };
   }, [item, hasChanges]);
+
+  useEffect(() => {
+    if (!hasChanges) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasChanges]);
 
   // Keyboard shortcuts: Ctrl+S (save), Ctrl+Z (undo via history)
   useEffect(() => {
@@ -2021,6 +2067,11 @@ export function CMSEditor() {
         const { project: persistedProject, override } = splitProjectCardFields(nextItem as Project & ProjectEditorFields);
         const projectId = persistedProject.id;
         const nextProjectCardOverrides = { ...(data.siteSettings.projectCardOverrides || {}) };
+        const nextSiteSettings = {
+          ...data.siteSettings,
+          projectCardOverrides: nextProjectCardOverrides,
+          updatedAt: nextUpdatedAt,
+        };
 
         if (override) {
           nextProjectCardOverrides[projectId] = override;
@@ -2028,21 +2079,28 @@ export function CMSEditor() {
           delete nextProjectCardOverrides[projectId];
         }
 
-        updateProjects(data.projects.map((project) => (project.id === id ? persistedProject : project)));
-        updateSiteSettings({
-          ...data.siteSettings,
-          projectCardOverrides: nextProjectCardOverrides,
-          updatedAt: nextUpdatedAt,
-        });
-
-        setItem({
-          ...persistedProject,
-          cardTitle: override?.title || "",
-          cardSubtitle: override?.subtitle || "",
-        });
+        updateProjects(data.projects.map((project) => (project.id === id ? nextItem as Project : project)));
+        updateSiteSettings(nextSiteSettings);
+        setItem(attachProjectCardFields(persistedProject, nextSiteSettings));
       } else if (contentType === "articles") {
+        const { post: persistedPost, override } = splitBlogPostCardFields(nextItem as BlogPost & BlogPostEditorFields);
+        const postId = persistedPost.id;
+        const nextBlogPostCardOverrides = { ...(data.siteSettings.blogPostCardOverrides || {}) };
+        const nextSiteSettings = {
+          ...data.siteSettings,
+          blogPostCardOverrides: nextBlogPostCardOverrides,
+          updatedAt: nextUpdatedAt,
+        };
+
+        if (override) {
+          nextBlogPostCardOverrides[postId] = override;
+        } else {
+          delete nextBlogPostCardOverrides[postId];
+        }
+
         updateBlogPosts(data.blogPosts.map((post) => (post.id === id ? nextItem : post)));
-        setItem(nextItem);
+        updateSiteSettings(nextSiteSettings);
+        setItem(attachBlogPostCardFields(persistedPost, nextSiteSettings));
       } else if (contentType === "pages") {
         updatePages((data.pages || []).map((page) => (page.id === id ? nextItem : page)));
         setItem(nextItem);

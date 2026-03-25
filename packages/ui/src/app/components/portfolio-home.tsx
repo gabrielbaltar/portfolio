@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { MapPin, ExternalLink, ChevronRight, Mail, Copy, Phone, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { getProfileAboutParagraphs } from "@portfolio/core";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
@@ -13,6 +14,7 @@ import { sendContactEmail } from "./email-service";
 import { copyToClipboard } from "./clipboard-utils";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy, getProjectCardCopy, isSectionVisible } from "./site-visibility";
+import { isRichTextEmpty, RichTextContent } from "./rich-text";
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -97,6 +99,8 @@ export function PortfolioHome() {
   const visibleRecommendations = filterVisibleContent(recommendations, siteSettings, "recommendations");
   const displayedProjects = publishedProjects.slice(0, 4);
   const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
+  const aboutParagraphs = getProfileAboutParagraphs(profile).filter((paragraph) => !isRichTextEmpty(paragraph));
+  const hasAboutTitle = !isRichTextEmpty(profile.aboutTitle);
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
   const avatarLabel = getInitials(displayName) || "Foto";
   const socialLinks = getProfileSocialLinks(profile, ["twitter", "linkedin"]).filter((item) => hasExternalUrl(item.url));
@@ -260,12 +264,17 @@ export function PortfolioHome() {
       </header>
 
       {/* About Me */}
-      {isSectionVisible(siteSettings, "about") && (profile.aboutParagraph1 || profile.aboutParagraph2) && (
+      {isSectionVisible(siteSettings, "about") && (hasAboutTitle || aboutParagraphs.length > 0) && (
         <ScrollReveal as="section" id="about" className="max-w-[700px] mx-auto px-5 py-12">
-          <SectionTitle>{t("aboutMe")}</SectionTitle>
+          <SectionTitle>
+            {hasAboutTitle ? <RichTextContent value={profile.aboutTitle} /> : t("aboutMe")}
+          </SectionTitle>
           <div className="mt-6 space-y-4">
-            <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph1}</p>
-            <p style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>{profile.aboutParagraph2}</p>
+            {aboutParagraphs.map((paragraph, index) => (
+              <p key={`${index}-${paragraph}`} style={{ fontSize: "16px", lineHeight: "22.4px", color: "var(--text-secondary)" }}>
+                <RichTextContent value={paragraph} />
+              </p>
+            ))}
           </div>
         </ScrollReveal>
       )}

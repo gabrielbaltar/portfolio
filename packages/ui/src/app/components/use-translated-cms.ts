@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
 import { translateBatchToLanguage } from "./translation-service";
-import type { ContentListItem } from "@portfolio/core";
+import { getProfileAboutParagraphs, type ContentListItem } from "@portfolio/core";
 import {
   applyRichTextTranslation,
   collectRichTextTranslation,
@@ -12,8 +12,12 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v6";
-const LEGACY_TRANSLATED_DATA_CACHE_KEYS = ["portfolio_translated_cms_cache_v5", "portfolio_translated_cms_cache_v4"];
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v7";
+const LEGACY_TRANSLATED_DATA_CACHE_KEYS = [
+  "portfolio_translated_cms_cache_v6",
+  "portfolio_translated_cms_cache_v5",
+  "portfolio_translated_cms_cache_v4",
+];
 let translatedCacheHydrated = false;
 
 function hashString(value: string) {
@@ -261,13 +265,15 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     "role",
     "location",
     "availableText",
-    "aboutTitle",
-    "aboutParagraph1",
-    "aboutParagraph2",
     "currentJobTitle",
   ];
 
   profileFields.forEach((field) => addText(`profile.${field}`, data.profile[field] as string));
+  addRichText("profile.aboutTitle", data.profile.aboutTitle);
+  const aboutParagraphs = getProfileAboutParagraphs(data.profile);
+  aboutParagraphs.forEach((paragraph, index) => addRichText(`profile.aboutParagraphs.${index}`, paragraph));
+  addRichText("profile.aboutParagraph1", aboutParagraphs[0] ?? "");
+  addRichText("profile.aboutParagraph2", aboutParagraphs[1] ?? "");
 
   data.projects.forEach((project, projectIndex) => {
     addRichText(`projects.${projectIndex}.title`, project.title);

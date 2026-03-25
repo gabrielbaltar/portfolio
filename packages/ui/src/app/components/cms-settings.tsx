@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload } from "lucide-react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload, GripVertical } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
-import { getPublicContentVisibilityKey, type PortfolioSectionId, type PublicContentVisibilityCollection } from "@portfolio/core";
+import {
+  getProfileAboutParagraphs,
+  getPublicContentVisibilityKey,
+  syncProfileAboutFields,
+  type PortfolioSectionId,
+  type PublicContentVisibilityCollection,
+} from "@portfolio/core";
 import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
+import { RichTextEditor } from "./rich-text";
 
 function hasMeaningfulSelection(field: HTMLInputElement | HTMLTextAreaElement | null) {
   if (!field) return false;
@@ -150,6 +159,45 @@ function TextArea({ label, value, onChange, rows = 3 }: {
   );
 }
 
+function RichTextField({
+  label,
+  value,
+  onChange,
+  placeholder = "",
+  multiline = true,
+  helperText,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  helperText?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+        {helperText ? (
+          <span className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+            {helperText}
+          </span>
+        ) : null}
+      </div>
+      <RichTextEditor
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        multiline={multiline}
+        containerClassName="rounded-lg border border-[#1e1e1e] bg-[#141414] p-2"
+        editorClassName={multiline ? "min-h-[110px] px-3 py-2 text-[#fafafa]" : "min-h-[44px] px-3 py-2 text-[#fafafa]"}
+        placeholderClassName="px-3 py-2"
+        editorStyle={{ fontSize: "13px", lineHeight: multiline ? "21px" : "18px" }}
+      />
+    </div>
+  );
+}
+
 function ExperienceTaskInput({
   value,
   onChange,
@@ -259,14 +307,130 @@ const PORTFOLIO_SECTION_FIELDS: Array<{ id: PortfolioSectionId; label: string; d
   { id: "contact", label: "Contato", description: "Mostra ou oculta o bloco final de contato." },
 ];
 
+type ExperienceDragItem = {
+  index: number;
+  type: string;
+};
+
+const EXPERIENCE_DND_TYPE = "CMS_SETTINGS_EXPERIENCE";
+
+function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
+  if (fromIndex === toIndex) return items;
+
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  return next;
+}
+
+function reindexSortableItems<T extends { sortOrder: number }>(items: T[]) {
+  return items.map((item, index) => ({ ...item, sortOrder: index + 1 }));
+}
+
+function DraggableExperienceSection({
+  index,
+  children,
+  onMovePreview,
+  onCommit,
+  onCancel,
+}: {
+  index: number;
+  children: React.ReactNode;
+  onMovePreview: (dragIndex: number, hoverIndex: number) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLButtonElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: EXPERIENCE_DND_TYPE,
+    item: (): ExperienceDragItem => ({ index, type: EXPERIENCE_DND_TYPE }),
+    end: (_item, monitor) => {
+      if (monitor.didDrop()) {
+        onCommit();
+        return;
+      }
+      onCancel();
+    },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [{ isOver, canDrop }, drop] = useDrop<ExperienceDragItem, { moved: true } | void, { isOver: boolean; canDrop: boolean }>({
+    accept: EXPERIENCE_DND_TYPE,
+    hover(dragItem, monitor) {
+      if (!ref.current) return;
+      const dragIndex = dragItem.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverRect = ref.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverRect.bottom - hoverRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      const hoverClientY = clientOffset.y - hoverRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      onMovePreview(dragIndex, hoverIndex);
+      dragItem.index = hoverIndex;
+    },
+    drop() {
+      return { moved: true };
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+      canDrop: monitor.canDrop(),
+    }),
+  });
+
+  drag(handleRef);
+  drop(ref);
+
+  return (
+    <div
+      ref={ref}
+      className="space-y-2 rounded-[16px] p-1 transition-colors"
+      style={{
+        opacity: isDragging ? 0.48 : 1,
+        backgroundColor: isOver && canDrop ? "#0f0f0f" : "transparent",
+      }}
+    >
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div className="flex items-center gap-2 text-[#666]">
+          <button
+            ref={handleRef}
+            type="button"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-[#1f1f1f] bg-[#101010] text-[#777] transition-colors hover:border-[#2f2f2f] hover:text-[#ddd] cursor-grab active:cursor-grabbing"
+            aria-label="Arrastar experiência"
+          >
+            <GripVertical size={14} />
+          </button>
+          <span style={{ fontSize: "11px", lineHeight: "16px" }}>Arraste para reorganizar</span>
+        </div>
+        <span className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          {isOver && canDrop ? "Solte aqui" : `Posição ${index + 1}`}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 type SettingsTab = "profile" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
 
 export function CMSSettings() {
   const cms = useCMS();
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...cms.data.siteSettings });
-  const [profile, setProfile] = useState<ProfileData>({ ...cms.data.profile });
-  const [experiences, setExperiences] = useState<Experience[]>(cms.data.experiences.map(e => ({ ...e, tasks: [...e.tasks] })));
+  const [profile, setProfile] = useState<ProfileData>(syncProfileAboutFields({ ...cms.data.profile }));
+  const [experiences, setExperiences] = useState<Experience[]>(
+    reindexSortableItems(cms.data.experiences.map((experience) => ({ ...experience, tasks: [...experience.tasks] }))),
+  );
   const [education, setEducation] = useState<Education[]>(cms.data.education.map(e => ({ ...e })));
   const [certs, setCerts] = useState<Certification[]>(cms.data.certifications.map(c => ({ ...c })));
   const [stack, setStack] = useState<StackItem[]>(cms.data.stack.map(s => ({ ...s })));
@@ -277,6 +441,7 @@ export function CMSSettings() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoDragOver, setPhotoDragOver] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const experienceOrderSnapshotRef = useRef<Experience[] | null>(null);
 
   const isSectionVisible = (sectionId: PortfolioSectionId) => siteSettings.sectionVisibility?.[sectionId] !== false;
 
@@ -327,9 +492,53 @@ export function CMSSettings() {
     { key: "recommendations", label: "Recomendacoes" },
   ];
 
+  const aboutParagraphs = getProfileAboutParagraphs(profile);
+
+  const updateProfileState = (updater: (current: ProfileData) => ProfileData) => {
+    setProfile((current) => syncProfileAboutFields(updater(current)));
+  };
+
+  const updateAboutParagraphs = (updater: (current: string[]) => string[]) => {
+    updateProfileState((current) => ({
+      ...current,
+      aboutParagraphs: updater(getProfileAboutParagraphs(current)),
+    }));
+  };
+
+  const updateExperience = (experienceId: string, updater: (current: Experience) => Experience) => {
+    setExperiences((current) =>
+      current.map((experience) => (
+        experience.id === experienceId ? updater(experience) : experience
+      )),
+    );
+  };
+
+  const previewExperienceMove = (dragIndex: number, hoverIndex: number) => {
+    setExperiences((current) => {
+      if (!experienceOrderSnapshotRef.current) {
+        experienceOrderSnapshotRef.current = current;
+      }
+
+      return reindexSortableItems(moveArrayItem(current, dragIndex, hoverIndex));
+    });
+  };
+
+  const commitExperienceOrder = () => {
+    experienceOrderSnapshotRef.current = null;
+    setExperiences((current) => reindexSortableItems(current));
+  };
+
+  const cancelExperienceOrder = () => {
+    if (!experienceOrderSnapshotRef.current) return;
+    setExperiences(reindexSortableItems(experienceOrderSnapshotRef.current));
+    experienceOrderSnapshotRef.current = null;
+  };
+
   const saveProfile = () => {
+    const nextProfile = syncProfileAboutFields(profile);
+    setProfile(nextProfile);
     cms.updateSiteSettings(siteSettings);
-    cms.updateProfile(profile);
+    cms.updateProfile(nextProfile);
     toast.success("Configuracoes salvas!");
   };
 
@@ -372,9 +581,11 @@ export function CMSSettings() {
     setPhotoUploading(true);
     try {
       const uploaded = await dataProvider.uploadMedia(file, "public");
+      const nextProfile = syncProfileAboutFields({ ...profile, photo: uploaded.url });
       cms.addMediaItem(uploaded);
-      setProfile((current) => ({ ...current, photo: uploaded.url }));
-      toast.success("Foto enviada na qualidade original.");
+      cms.updateProfile(nextProfile);
+      setProfile(nextProfile);
+      toast.success("Foto enviada e salva.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao enviar foto.");
     } finally {
@@ -393,18 +604,21 @@ export function CMSSettings() {
 
     try {
       const uploaded = await dataProvider.uploadMedia(file, "public");
+      const nextStackForSave = stack.map((item) => (
+        item.id === stackId ? { ...item, logo: uploaded.url } : item
+      ));
       cms.addMediaItem(uploaded);
-      setStack((current) =>
-        current.map((item) => (item.id === stackId ? { ...item, logo: uploaded.url } : item)),
-      );
-      toast.success("Logo enviada na qualidade original.");
+      cms.updateStack(nextStackForSave);
+      setStack(nextStackForSave);
+      toast.success("Logo enviada e salva.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao enviar logo.");
     }
   };
 
   return (
-    <div className="w-full">
+    <DndProvider backend={HTML5Backend}>
+      <div className="w-full">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[#fafafa] mb-1" style={{ fontSize: "22px" }}>Configuracoes</h1>
@@ -528,9 +742,62 @@ export function CMSSettings() {
             </Section>
 
             <Section title="Sobre">
-              <Input label="Titulo" value={profile.aboutTitle} onChange={(v) => setProfile({ ...profile, aboutTitle: v })} />
-              <TextArea label="Paragrafo 1" value={profile.aboutParagraph1} onChange={(v) => setProfile({ ...profile, aboutParagraph1: v })} />
-              <TextArea label="Paragrafo 2" value={profile.aboutParagraph2} onChange={(v) => setProfile({ ...profile, aboutParagraph2: v })} />
+              <RichTextField
+                label="Titulo"
+                value={profile.aboutTitle}
+                onChange={(value) => updateProfileState((current) => ({ ...current, aboutTitle: value }))}
+                placeholder="Use o toolbar para estilizar o título da seção"
+                multiline={false}
+                helperText="Negrito, sublinhado, link, cor e tamanho."
+              />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Parágrafos
+                  </label>
+                  <span className="text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                    Adicione quantos blocos quiser e remova os que não precisa.
+                  </span>
+                </div>
+                {aboutParagraphs.map((paragraph, index) => (
+                  <div key={`about-paragraph-${index}`} className="space-y-2 rounded-xl border border-[#1a1a1a] bg-[#101010] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                        {`Parágrafo ${index + 1}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateAboutParagraphs((current) => current.filter((_, paragraphIndex) => paragraphIndex !== index))}
+                        className="flex items-center gap-1 text-red-400 transition-colors hover:text-red-300 cursor-pointer"
+                        style={{ fontSize: "11px", lineHeight: "16px" }}
+                      >
+                        <Trash2 size={12} />
+                        Remover
+                      </button>
+                    </div>
+                    <RichTextField
+                      label={`Conteúdo ${index + 1}`}
+                      value={paragraph}
+                      onChange={(value) =>
+                        updateAboutParagraphs((current) => current.map((item, paragraphIndex) => (
+                          paragraphIndex === index ? value : item
+                        )))
+                      }
+                      placeholder="Escreva o texto do sobre e use o toolbar para link, sublinhado, cor e tamanho."
+                      helperText="Selecione um trecho para formatar."
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => updateAboutParagraphs((current) => [...current, ""])}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors"
+                  style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+                >
+                  <Plus size={12} />
+                  Adicionar parágrafo
+                </button>
+              </div>
             </Section>
           </div>
 
@@ -611,48 +878,73 @@ export function CMSSettings() {
       {/* Experience Tab */}
       {tab === "experience" && (
         <div className="space-y-4">
-          {experiences.map((exp) => (
-            <Section key={exp.id} title={exp.company || "Nova experiencia"}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input label="Empresa" value={exp.company} onChange={(v) => setExperiences(experiences.map(e => e.id === exp.id ? { ...e, company: v } : e))} />
-                <Input label="Cargo" value={exp.role} onChange={(v) => setExperiences(experiences.map(e => e.id === exp.id ? { ...e, role: v } : e))} />
-                <Input label="Periodo" value={exp.period} onChange={(v) => setExperiences(experiences.map(e => e.id === exp.id ? { ...e, period: v } : e))} />
-                <Input label="Localizacao" value={exp.location} onChange={(v) => setExperiences(experiences.map(e => e.id === exp.id ? { ...e, location: v } : e))} />
-              </div>
-              <div className="space-y-2">
-                <VisibilitySwitch
-                  label="Mostrar no site"
-                  description="Oculta esta experiência do portfólio sem remover do CMS."
-                  checked={isItemVisible("experiences", exp.id)}
-                  onChange={(visible) => setItemVisibility("experiences", exp.id, visible)}
-                />
-                <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tarefas</label>
-                {exp.tasks.map((task, i) => (
-                  <ExperienceTaskInput
-                    key={i}
-                    value={task}
-                    onChange={(value) => {
-                      const newTasks = [...exp.tasks];
-                      newTasks[i] = value;
-                      setExperiences(experiences.map(ex => ex.id === exp.id ? { ...ex, tasks: newTasks } : ex));
-                    }}
-                    onRemove={() => setExperiences(experiences.map(ex => ex.id === exp.id ? { ...ex, tasks: ex.tasks.filter((_, j) => j !== i) } : ex))}
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {experiences.map((exp, index) => (
+            <DraggableExperienceSection
+              key={exp.id}
+              index={index}
+              onMovePreview={previewExperienceMove}
+              onCommit={commitExperienceOrder}
+              onCancel={cancelExperienceOrder}
+            >
+              <Section title={exp.company || "Nova experiencia"}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input label="Empresa" value={exp.company} onChange={(value) => updateExperience(exp.id, (current) => ({ ...current, company: value }))} />
+                  <Input label="Cargo" value={exp.role} onChange={(value) => updateExperience(exp.id, (current) => ({ ...current, role: value }))} />
+                  <Input label="Periodo" value={exp.period} onChange={(value) => updateExperience(exp.id, (current) => ({ ...current, period: value }))} />
+                  <Input label="Localizacao" value={exp.location} onChange={(value) => updateExperience(exp.id, (current) => ({ ...current, location: value }))} />
+                </div>
+                <div className="space-y-2">
+                  <VisibilitySwitch
+                    label="Mostrar no site"
+                    description="Oculta esta experiência do portfólio sem remover do CMS."
+                    checked={isItemVisible("experiences", exp.id)}
+                    onChange={(visible) => setItemVisibility("experiences", exp.id, visible)}
                   />
-                ))}
-                <button onClick={() => setExperiences(experiences.map(ex => ex.id === exp.id ? { ...ex, tasks: [...ex.tasks, ""] } : ex))} className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer" style={{ fontSize: "11px" }}>
-                  <Plus size={11} /> Adicionar tarefa
+                  <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tarefas</label>
+                  {exp.tasks.map((task, taskIndex) => (
+                    <ExperienceTaskInput
+                      key={taskIndex}
+                      value={task}
+                      onChange={(value) =>
+                        updateExperience(exp.id, (current) => ({
+                          ...current,
+                          tasks: current.tasks.map((item, itemIndex) => (itemIndex === taskIndex ? value : item)),
+                        }))
+                      }
+                      onRemove={() =>
+                        updateExperience(exp.id, (current) => ({
+                          ...current,
+                          tasks: current.tasks.filter((_, itemIndex) => itemIndex !== taskIndex),
+                        }))
+                      }
+                    />
+                  ))}
+                  <button
+                    onClick={() => updateExperience(exp.id, (current) => ({ ...current, tasks: [...current.tasks, ""] }))}
+                    className="text-[#666] hover:text-[#aaa] flex items-center gap-1 cursor-pointer"
+                    style={{ fontSize: "11px" }}
+                  >
+                    <Plus size={11} /> Adicionar tarefa
+                  </button>
+                </div>
+                <button
+                  onClick={() => setExperiences((current) => reindexSortableItems(current.filter((experience) => experience.id !== exp.id)))}
+                  className="text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+                  style={{ fontSize: "12px" }}
+                >
+                  <Trash2 size={12} /> Remover
                 </button>
-              </div>
-              <button onClick={() => setExperiences(experiences.filter(e => e.id !== exp.id))} className="text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer" style={{ fontSize: "12px" }}>
-                <Trash2 size={12} /> Remover
-              </button>
-            </Section>
+              </Section>
+            </DraggableExperienceSection>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setExperiences([...experiences, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], sortOrder: experiences.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setExperiences((current) => reindexSortableItems([...current, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], sortOrder: current.length + 1 }]))} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateExperiences(experiences); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={() => { const nextExperiences = reindexSortableItems(experiences); setExperiences(nextExperiences); cms.updateSiteSettings(siteSettings); cms.updateExperiences(nextExperiences); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -913,6 +1205,7 @@ export function CMSSettings() {
         busy={resetting}
         onConfirm={() => void handleReset()}
       />
-    </div>
+      </div>
+    </DndProvider>
   );
 }
