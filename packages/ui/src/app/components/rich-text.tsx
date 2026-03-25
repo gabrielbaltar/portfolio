@@ -87,6 +87,16 @@ const INLINE_FONT_SIZE_OPTIONS = [
   { label: "72px", value: "72px" },
 ] as const;
 
+const INLINE_LINE_HEIGHT_OPTIONS = [
+  { label: "Padrao", value: "inherit" },
+  { label: "1.1x", value: "1.1" },
+  { label: "1.3x", value: "1.3" },
+  { label: "1.5x", value: "1.5" },
+  { label: "1.7x", value: "1.7" },
+  { label: "2.0x", value: "2" },
+  { label: "2.4x", value: "2.4" },
+] as const;
+
 function normalizeInlineTagLabel(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -126,6 +136,16 @@ function sanitizeInlineFontSize(value?: string | null) {
   const size = Number.parseInt(normalized, 10);
   if (Number.isNaN(size) || size < 10 || size > 96) return null;
   return `${size}px`;
+}
+
+function sanitizeInlineLineHeight(value?: string | null) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "inherit") return normalized;
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+  const lineHeight = Number.parseFloat(normalized);
+  if (Number.isNaN(lineHeight) || lineHeight < 0.9 || lineHeight > 3) return null;
+  return `${lineHeight}`;
 }
 
 function parseInlineRgbColor(value: string) {
@@ -288,10 +308,12 @@ function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
 
     const inlineColor = sanitizeInlineColor(node.style.color);
     const inlineFontSize = sanitizeInlineFontSize(node.style.fontSize);
-    if (inlineColor || inlineFontSize) {
+    const inlineLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    if (inlineColor || inlineFontSize || inlineLineHeight) {
       const span = doc.createElement("span");
       if (inlineColor) span.style.color = inlineColor;
       if (inlineFontSize) span.style.fontSize = inlineFontSize;
+      if (inlineLineHeight) span.style.lineHeight = inlineLineHeight;
       appendChildren(node, span, doc);
       appendNode(target, span);
       return;
@@ -412,7 +434,8 @@ function renderNode(node: Node, key: string, theme: Theme): ReactNode {
   if (tagName === "span") {
     const inlineColor = sanitizeInlineColor(node.style.color);
     const inlineFontSize = sanitizeInlineFontSize(node.style.fontSize);
-    if (inlineColor || inlineFontSize) {
+    const inlineLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    if (inlineColor || inlineFontSize || inlineLineHeight) {
       const resolvedColor = resolveThemeAwareInlineColor(inlineColor, theme);
       return (
         <span
@@ -420,6 +443,7 @@ function renderNode(node: Node, key: string, theme: Theme): ReactNode {
           style={{
             color: resolvedColor,
             fontSize: inlineFontSize || undefined,
+            lineHeight: inlineLineHeight || undefined,
           }}
         >
           {children}
@@ -586,7 +610,7 @@ function getSelectedNoTranslate(selection: Selection | null, root?: HTMLElement 
 
 function clearInlineStyleFromTree(
   node: Node,
-  style: { clearColor: boolean; clearFontSize: boolean },
+  style: { clearColor: boolean; clearFontSize: boolean; clearLineHeight: boolean },
 ) {
   if (!(node instanceof HTMLElement)) return;
 
@@ -595,6 +619,9 @@ function clearInlineStyleFromTree(
   }
   if (style.clearFontSize) {
     node.style.removeProperty("font-size");
+  }
+  if (style.clearLineHeight) {
+    node.style.removeProperty("line-height");
   }
 
   Array.from(node.childNodes).forEach((child) => clearInlineStyleFromTree(child, style));
@@ -606,7 +633,7 @@ function clearInlineStyleFromTree(
 
 function clearInlineStyleSelection(
   range: Range,
-  style: { clearColor: boolean; clearFontSize: boolean },
+  style: { clearColor: boolean; clearFontSize: boolean; clearLineHeight: boolean },
 ) {
   const fragment = range.extractContents();
   const nodes = Array.from(fragment.childNodes);
@@ -697,6 +724,7 @@ export function RichTextEditor({
   const [showIcons, setShowIcons] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showFontSizes, setShowFontSizes] = useState(false);
+  const [showLineHeights, setShowLineHeights] = useState(false);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [savedLinkRange, setSavedLinkRange] = useState<Range | null>(null);
   const [savedStyleRange, setSavedStyleRange] = useState<Range | null>(null);
@@ -753,10 +781,13 @@ export function RichTextEditor({
     setLinkDraft(currentUrl);
     setLinkError("");
     setShowIcons(false);
+    setShowColors(false);
+    setShowFontSizes(false);
+    setShowLineHeights(false);
     setShowLinkDialog(true);
   };
 
-  const applyInlineStyle = (style: { color?: string; fontSize?: string }, range?: Range | null) => {
+  const applyInlineStyle = (style: { color?: string; fontSize?: string; lineHeight?: string }, range?: Range | null) => {
     focusEditor();
     if (range) {
       restoreRange(range);
@@ -770,14 +801,17 @@ export function RichTextEditor({
 
     const color = sanitizeInlineColor(style.color);
     const fontSize = sanitizeInlineFontSize(style.fontSize);
+    const lineHeight = sanitizeInlineLineHeight(style.lineHeight);
     const clearColor = color === "inherit";
     const clearFontSize = fontSize === "inherit";
-    if (!color && !fontSize) return;
+    const clearLineHeight = lineHeight === "inherit";
+    if (!color && !fontSize && !lineHeight) return;
 
-    if (clearColor || clearFontSize) {
+    if (clearColor || clearFontSize || clearLineHeight) {
       const cleared = clearInlineStyleSelection(activeRange, {
         clearColor,
         clearFontSize,
+        clearLineHeight,
       });
       if (cleared) {
         commitValue({ syncDom: true });
@@ -791,6 +825,7 @@ export function RichTextEditor({
     const span = document.createElement("span");
     if (color) span.style.color = color;
     if (fontSize) span.style.fontSize = fontSize;
+    if (lineHeight) span.style.lineHeight = lineHeight;
     span.appendChild(fragment);
     activeRange.insertNode(span);
 
@@ -1046,6 +1081,7 @@ export function RichTextEditor({
                 const range = getCurrentRange();
                 if (!range || range.toString().trim() === "") return;
                 setSavedStyleRange(range);
+                setShowLineHeights(false);
                 setShowFontSizes(false);
                 setShowIcons(false);
                 setShowColors((current) => !current);
@@ -1104,6 +1140,7 @@ export function RichTextEditor({
                 if (!range || range.toString().trim() === "") return;
                 setSavedStyleRange(range);
                 setShowColors(false);
+                setShowLineHeights(false);
                 setShowIcons(false);
                 setShowFontSizes((current) => !current);
               }}
@@ -1137,11 +1174,53 @@ export function RichTextEditor({
           </div>
           <div className="relative">
             <ToolbarButton
+              label="Alterar entrelinha"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                const range = getCurrentRange();
+                if (!range || range.toString().trim() === "") return;
+                setSavedStyleRange(range);
+                setShowColors(false);
+                setShowFontSizes(false);
+                setShowIcons(false);
+                setShowLineHeights((current) => !current);
+              }}
+            >
+              <span className="text-[10px] font-semibold leading-none">LH</span>
+            </ToolbarButton>
+            {showLineHeights && (
+              <div
+                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-[12px] border p-2 shadow-xl"
+                style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
+              >
+                <div className="grid grid-cols-2 gap-1.5">
+                  {INLINE_LINE_HEIGHT_OPTIONS.map((lineHeightOption) => (
+                    <button
+                      key={lineHeightOption.value}
+                      type="button"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        applyInlineStyle({ lineHeight: lineHeightOption.value }, savedStyleRange);
+                        setShowLineHeights(false);
+                      }}
+                      className="rounded-md border px-2.5 py-2 text-left text-[#e8e8e8] transition-colors hover:border-[#565656] hover:bg-[#181818]"
+                      style={{ borderColor: "#2a2a2a", fontSize: "12px", lineHeight: "16px" }}
+                    >
+                      {lineHeightOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <ToolbarButton
               label="Adicionar ícone"
               onMouseDown={(event) => {
                 event.preventDefault();
                 setShowColors(false);
                 setShowFontSizes(false);
+                setShowLineHeights(false);
                 setShowIcons((current) => !current);
               }}
             >
@@ -1222,6 +1301,7 @@ export function RichTextEditor({
             setShowIcons(false);
             setShowColors(false);
             setShowFontSizes(false);
+            setShowLineHeights(false);
           }}
           onInput={() => commitValue()}
           onPaste={handlePaste}
