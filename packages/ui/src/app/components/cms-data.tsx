@@ -81,7 +81,7 @@ async function persistCollection<K extends CMSCollectionName>(key: K, previous: 
   await dataProvider.saveCollection(key, previous, next);
 }
 
-const PUBLIC_REFRESH_INTERVAL_MS = 12000;
+const PUBLIC_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export function CMSProvider({ children, mode = "public" }: { children: ReactNode; mode?: CMSMode }) {
   const [data, setData] = useState<CMSData>(createEmptyCMSData);

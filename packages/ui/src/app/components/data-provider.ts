@@ -34,6 +34,15 @@ import {
   deleteMedia,
 } from "@portfolio/supabase";
 
+const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v1";
+const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
+const PUBLIC_DATA_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type CachedSnapshot = {
+  cachedAt: number;
+  data: CMSData;
+};
+
 function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
   const value = import.meta.env[name];
   if (!value) {
@@ -45,13 +54,121 @@ function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
 
 class SupabaseDataProvider {
   private client = createBrowserSupabaseClient(getEnv("VITE_SUPABASE_URL"), getEnv("VITE_SUPABASE_ANON_KEY"));
+  private publicSnapshot: CachedSnapshot | null = null;
+  private cmsSnapshot: CachedSnapshot | null = null;
+  private publicLoadPromise: Promise<CMSData> | null = null;
+  private cmsLoadPromise: Promise<CMSData> | null = null;
+
+  private readSnapshot(storageKey: string): CachedSnapshot | null {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw) as CachedSnapshot;
+      if (!parsed || typeof parsed.cachedAt !== "number" || !parsed.data) {
+        return null;
+      }
+
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeSnapshot(storageKey: string, data: CMSData) {
+    const snapshot: CachedSnapshot = {
+      cachedAt: Date.now(),
+      data,
+    };
+
+    if (storageKey === PUBLIC_DATA_CACHE_KEY) {
+      this.publicSnapshot = snapshot;
+    } else {
+      this.cmsSnapshot = snapshot;
+    }
+
+    if (typeof window === "undefined") return;
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(snapshot));
+    } catch {
+      // Ignore storage failures and continue using in-memory snapshots.
+    }
+  }
+
+  private getSnapshot(storageKey: string) {
+    const inMemory = storageKey === PUBLIC_DATA_CACHE_KEY ? this.publicSnapshot : this.cmsSnapshot;
+    if (inMemory) return inMemory;
+
+    const persisted = this.readSnapshot(storageKey);
+    if (!persisted) return null;
+
+    if (storageKey === PUBLIC_DATA_CACHE_KEY) {
+      this.publicSnapshot = persisted;
+    } else {
+      this.cmsSnapshot = persisted;
+    }
+
+    return persisted;
+  }
 
   loadPublicData(): Promise<CMSData> {
-    return loadPublicCMSDataFromSupabase(this.client);
+    const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
+    const isFresh = Boolean(snapshot && Date.now() - snapshot.cachedAt < PUBLIC_DATA_CACHE_TTL_MS);
+
+    if (isFresh && snapshot) {
+      return Promise.resolve(snapshot.data);
+    }
+
+    if (this.publicLoadPromise) {
+      return this.publicLoadPromise;
+    }
+
+    this.publicLoadPromise = loadPublicCMSDataFromSupabase(this.client)
+      .then((data) => {
+        this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, data);
+        return data;
+      })
+      .catch((error) => {
+        if (snapshot) {
+          console.warn("[SupabaseDataProvider] Using cached public snapshot after load failure.", error);
+          return snapshot.data;
+        }
+        throw error;
+      })
+      .finally(() => {
+        this.publicLoadPromise = null;
+      });
+
+    return this.publicLoadPromise;
   }
 
   loadCmsData(): Promise<CMSData> {
-    return loadCmsDataFromSupabase(this.client);
+    const snapshot = this.getSnapshot(CMS_DATA_CACHE_KEY);
+
+    if (this.cmsLoadPromise) {
+      return this.cmsLoadPromise;
+    }
+
+    this.cmsLoadPromise = loadCmsDataFromSupabase(this.client)
+      .then((data) => {
+        this.writeSnapshot(CMS_DATA_CACHE_KEY, data);
+        return data;
+      })
+      .catch((error) => {
+        if (snapshot) {
+          console.warn("[SupabaseDataProvider] Using cached CMS snapshot after load failure.", error);
+          return snapshot.data;
+        }
+        throw error;
+      })
+      .finally(() => {
+        this.cmsLoadPromise = null;
+      });
+
+    return this.cmsLoadPromise;
   }
 
   saveSiteSettings(siteSettings: SiteSettings) {
