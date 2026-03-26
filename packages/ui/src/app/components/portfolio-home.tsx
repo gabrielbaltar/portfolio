@@ -3,7 +3,12 @@ import { Link } from "react-router";
 import { MapPin, ExternalLink, ChevronRight, Mail, Copy, Phone, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT, getProfileAboutParagraphs } from "@portfolio/core";
+import {
+  clampStackLogoRadius,
+  DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+  DEFAULT_STACK_LOGO_RADIUS,
+  getProfileAboutParagraphs,
+} from "@portfolio/core";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
@@ -469,6 +474,7 @@ export function PortfolioHome() {
                       src={item.logo}
                       alt={item.name}
                       className="h-6 w-6 object-contain"
+                      style={{ borderRadius: `${clampStackLogoRadius(item.logoRadius ?? DEFAULT_STACK_LOGO_RADIUS)}px` }}
                       draggable={false}
                     />
                   ) : (

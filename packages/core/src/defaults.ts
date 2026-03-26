@@ -18,6 +18,7 @@ import {
   clampExperienceTaskLineHeight,
   DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
 } from "./experience";
+import { clampStackLogoRadius, DEFAULT_STACK_LOGO_RADIUS } from "./stack";
 
 const now = new Date().toISOString();
 
@@ -246,6 +247,10 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
         DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
     ),
   }));
+  const stack = (data?.stack ?? empty.stack).map((item) => ({
+    ...item,
+    logoRadius: clampStackLogoRadius(item.logoRadius ?? DEFAULT_STACK_LOGO_RADIUS),
+  }));
 
   return {
     ...empty,
@@ -256,7 +261,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     experiences,
     education: data?.education ?? empty.education,
     certifications: data?.certifications ?? empty.certifications,
-    stack: data?.stack ?? empty.stack,
+    stack,
     awards: data?.awards ?? empty.awards,
     recommendations: data?.recommendations ?? empty.recommendations,
     blogPosts,

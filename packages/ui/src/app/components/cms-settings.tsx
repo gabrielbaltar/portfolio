@@ -4,7 +4,9 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Save, RotateCcw, ChevronDown, ChevronUp, Plus, Trash2, Upload, GripVertical } from "lucide-react";
 import { useCMS, type ProfileData, type Experience, type Education, type Certification, type StackItem, type Award, type Recommendation, type SiteSettings } from "./cms-data";
 import {
+  clampStackLogoRadius,
   DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
+  DEFAULT_STACK_LOGO_RADIUS,
   clampExperienceTaskLineHeight,
   getProfileAboutParagraphs,
   getPublicContentVisibilityKey,
@@ -1052,7 +1054,13 @@ export function CMSSettings() {
                       style={{ backgroundColor: item.color || "#555555", border: "1px solid #1f1f1f" }}
                     >
                       {item.logo ? (
-                        <img src={item.logo} alt={item.name || "Logo da stack"} className="h-7 w-7 object-contain" draggable={false} />
+                        <img
+                          src={item.logo}
+                          alt={item.name || "Logo da stack"}
+                          className="h-7 w-7 object-contain"
+                          style={{ borderRadius: `${clampStackLogoRadius(item.logoRadius ?? DEFAULT_STACK_LOGO_RADIUS)}px` }}
+                          draggable={false}
+                        />
                       ) : (
                         <span className="text-[#fafafa]" style={{ fontSize: "14px" }}>
                           {(item.name || "?").charAt(0)}
@@ -1067,6 +1075,28 @@ export function CMSSettings() {
                         O upload usa o arquivo original, sem compressao automatica.
                       </p>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        Radius da logo
+                      </label>
+                      <span className="text-[#aaa]" style={{ fontSize: "11px" }}>
+                        {clampStackLogoRadius(item.logoRadius ?? DEFAULT_STACK_LOGO_RADIUS)}px
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={24}
+                      step={1}
+                      value={clampStackLogoRadius(item.logoRadius ?? DEFAULT_STACK_LOGO_RADIUS)}
+                      onChange={(event) => {
+                        const logoRadius = clampStackLogoRadius(Number(event.target.value));
+                        setStack(stack.map((s) => (s.id === item.id ? { ...s, logoRadius } : s)));
+                      }}
+                      className="w-full accent-[#fafafa]"
+                    />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -1096,7 +1126,7 @@ export function CMSSettings() {
             </Section>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", logoRadius: DEFAULT_STACK_LOGO_RADIUS, link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
             <button onClick={saveStack} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
