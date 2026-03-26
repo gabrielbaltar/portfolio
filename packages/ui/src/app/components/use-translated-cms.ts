@@ -12,8 +12,9 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v9";
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v10";
 const LEGACY_TRANSLATED_DATA_CACHE_KEYS = [
+  "portfolio_translated_cms_cache_v9",
   "portfolio_translated_cms_cache_v8",
   "portfolio_translated_cms_cache_v7",
   "portfolio_translated_cms_cache_v6",

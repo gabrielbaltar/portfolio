@@ -2,8 +2,9 @@
 
 export type TranslationLanguage = "pt" | "en";
 
-const CACHE_KEY = "portfolio_translations_cache_v7";
+const CACHE_KEY = "portfolio_translations_cache_v8";
 const LEGACY_CACHE_KEYS = [
+  "portfolio_translations_cache_v7",
   "portfolio_translations_cache_v6",
   "portfolio_translations_cache_v5",
   "portfolio_translations_cache_v4",
@@ -106,15 +107,17 @@ type ProtectedTerm = {
   value: string;
 };
 
-const PLACEHOLDER_ARTIFACT_REGEX = /__\s*portfolio(?:\s|_|-)*keep(?:\s|_|-)*(\d+)?(?:\s*__)?/gi;
+const LEGACY_PLACEHOLDER_INDEX_REGEX = /__\s*portf[oó]lio(?:\s|_|-)*keep(?:\s|_|-)*(\d+)(?:\s*__)?/i;
+const SAFE_PLACEHOLDER_INDEX_REGEX = /__\s*pfk(?:\s|_|-)*(\d+)(?:\s*__)?/i;
+const PLACEHOLDER_ARTIFACT_REGEX = /__\s*(?:pfk|portf[oó]lio(?:\s|_|-)*keep)(?:\s|_|-)*(\d+)?(?:\s*__)?/gi;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getPlaceholderIndex(placeholder: string) {
-  const match = placeholder.match(/__PORTFOLIO_KEEP_(\d+)__/i);
-  return match ? match[1] : null;
+  const match = placeholder.match(SAFE_PLACEHOLDER_INDEX_REGEX) || placeholder.match(LEGACY_PLACEHOLDER_INDEX_REGEX);
+  return match?.[1] ?? null;
 }
 
 function createPlaceholderPattern(placeholder: string) {
@@ -124,7 +127,7 @@ function createPlaceholderPattern(placeholder: string) {
   }
 
   return new RegExp(
-    `__\\s*portfolio(?:\\s|_|-)*keep(?:\\s|_|-)*${escapeRegExp(index)}(?:\\s*__)?`,
+    `(?:__\\s*pfk(?:\\s|_|-)*${escapeRegExp(index)}(?:\\s*__)?|__\\s*portf[oó]lio(?:\\s|_|-)*keep(?:\\s|_|-)*${escapeRegExp(index)}(?:\\s*__)?)`,
     "gi",
   );
 }
@@ -167,7 +170,7 @@ function prepareProtectedTerms(text: string) {
   let counter = 0;
 
   const makePlaceholder = (value: string) => {
-    const placeholder = `__PORTFOLIO_KEEP_${counter}__`;
+    const placeholder = `__PFK${counter}__`;
     counter += 1;
     protectedTerms.push({ placeholder, value: value.trim() });
     return placeholder;
