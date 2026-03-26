@@ -54,6 +54,26 @@ import {
 
 type Identifiable = { id: string };
 type DatabaseRow = Record<string, any>;
+type SingletonDatabaseRow = {
+  id: string;
+  data: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+} | null;
+
+type PublicSnapshotPayload = {
+  siteSettingsRow: SingletonDatabaseRow;
+  profileRow: SingletonDatabaseRow;
+  projectsRows: DatabaseRow[];
+  blogPostsRows: DatabaseRow[];
+  pagesRows: DatabaseRow[];
+  experiencesRows: DatabaseRow[];
+  educationRows: DatabaseRow[];
+  certificationsRows: DatabaseRow[];
+  stackRows: DatabaseRow[];
+  awardsRows: DatabaseRow[];
+  recommendationsRows: DatabaseRow[];
+};
 
 const TABLES = {
   siteSettings: "site_settings",
@@ -81,6 +101,11 @@ function ensureSuccess<T>(result: { data: T; error: { message: string } | null }
 function ensureRows(result: { data: unknown; error: { message: string } | null }, action: string): DatabaseRow[] {
   const rows = ensureSuccess(result, action);
   return Array.isArray(rows) ? (rows as DatabaseRow[]) : [];
+}
+
+function shouldFallbackToLegacyPublicLoader(error: { code?: string; message?: string } | null | undefined) {
+  const message = error?.message || "";
+  return error?.code === "PGRST202" || error?.code === "42883" || /get_public_portfolio_snapshot/i.test(message);
 }
 
 function isVideo(mimeType: string): boolean {
@@ -176,7 +201,35 @@ async function loadMedia(client: SupabaseClient): Promise<MediaItem[]> {
   );
 }
 
+function buildPublicCMSData(payload: PublicSnapshotPayload): CMSData {
+  const empty = createEmptyCMSData();
+
+  return normalizeCMSData({
+    siteSettings: mapSingletonFromRow(payload.siteSettingsRow as any, defaultSiteSettings),
+    profile: mapSingletonFromRow(payload.profileRow as any, defaultProfile),
+    projects: (payload.projectsRows ?? []).map((row) => mapProjectFromRow(row as Parameters<typeof mapProjectFromRow>[0])),
+    blogPosts: (payload.blogPostsRows ?? []).map((row) => mapBlogPostFromRow(row as Parameters<typeof mapBlogPostFromRow>[0])),
+    pages: (payload.pagesRows ?? []).map((row) => mapPageFromRow(row as Parameters<typeof mapPageFromRow>[0])),
+    experiences: (payload.experiencesRows ?? []).map((row) => mapExperienceFromRow(row as Parameters<typeof mapExperienceFromRow>[0])),
+    education: (payload.educationRows ?? []).map((row) => mapEducationFromRow(row as Parameters<typeof mapEducationFromRow>[0])),
+    certifications: (payload.certificationsRows ?? []).map((row) => mapCertificationFromRow(row as Parameters<typeof mapCertificationFromRow>[0])),
+    stack: (payload.stackRows ?? []).map((row) => mapStackFromRow(row as Parameters<typeof mapStackFromRow>[0])),
+    awards: (payload.awardsRows ?? []).map((row) => mapAwardFromRow(row as Parameters<typeof mapAwardFromRow>[0])),
+    recommendations: (payload.recommendationsRows ?? []).map((row) => mapRecommendationFromRow(row as Parameters<typeof mapRecommendationFromRow>[0])),
+    media: empty.media,
+  });
+}
+
 export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData> {
+  const snapshotResult = await client.rpc("get_public_portfolio_snapshot");
+  if (!snapshotResult.error && snapshotResult.data) {
+    return buildPublicCMSData(snapshotResult.data as PublicSnapshotPayload);
+  }
+
+  if (snapshotResult.error && !shouldFallbackToLegacyPublicLoader(snapshotResult.error)) {
+    throw new Error(`Erro ao carregar snapshot publico: ${snapshotResult.error.message}`);
+  }
+
   const [
     siteSettingsRow,
     profileRow,
@@ -203,30 +256,18 @@ export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData
     client.from(TABLES.recommendations).select("*").order("sort_order", { ascending: true }),
   ]);
 
-  const empty = createEmptyCMSData();
-  const projects = ensureRows(projectsRows, "Erro ao carregar projetos");
-  const blogPosts = ensureRows(blogPostRows, "Erro ao carregar artigos");
-  const pages = ensureRows(pagesRows, "Erro ao carregar paginas");
-  const experiences = ensureRows(experiencesRows, "Erro ao carregar experiencias");
-  const education = ensureRows(educationRows, "Erro ao carregar educacao");
-  const certifications = ensureRows(certificationsRows, "Erro ao carregar certificacoes");
-  const stack = ensureRows(stackRows, "Erro ao carregar stack");
-  const awards = ensureRows(awardsRows, "Erro ao carregar premios");
-  const recommendations = ensureRows(recommendationsRows, "Erro ao carregar recomendacoes");
-
-  return normalizeCMSData({
-    siteSettings: mapSingletonFromRow(siteSettingsRow.data as any, defaultSiteSettings),
-    profile: mapSingletonFromRow(profileRow.data as any, defaultProfile),
-    projects: projects.map((row) => mapProjectFromRow(row as Parameters<typeof mapProjectFromRow>[0])),
-    blogPosts: blogPosts.map((row) => mapBlogPostFromRow(row as Parameters<typeof mapBlogPostFromRow>[0])),
-    pages: pages.map((row) => mapPageFromRow(row as Parameters<typeof mapPageFromRow>[0])),
-    experiences: experiences.map((row) => mapExperienceFromRow(row as Parameters<typeof mapExperienceFromRow>[0])),
-    education: education.map((row) => mapEducationFromRow(row as Parameters<typeof mapEducationFromRow>[0])),
-    certifications: certifications.map((row) => mapCertificationFromRow(row as Parameters<typeof mapCertificationFromRow>[0])),
-    stack: stack.map((row) => mapStackFromRow(row as Parameters<typeof mapStackFromRow>[0])),
-    awards: awards.map((row) => mapAwardFromRow(row as Parameters<typeof mapAwardFromRow>[0])),
-    recommendations: recommendations.map((row) => mapRecommendationFromRow(row as Parameters<typeof mapRecommendationFromRow>[0])),
-    media: empty.media,
+  return buildPublicCMSData({
+    siteSettingsRow: siteSettingsRow.data as SingletonDatabaseRow,
+    profileRow: profileRow.data as SingletonDatabaseRow,
+    projectsRows: ensureRows(projectsRows, "Erro ao carregar projetos"),
+    blogPostsRows: ensureRows(blogPostRows, "Erro ao carregar artigos"),
+    pagesRows: ensureRows(pagesRows, "Erro ao carregar paginas"),
+    experiencesRows: ensureRows(experiencesRows, "Erro ao carregar experiencias"),
+    educationRows: ensureRows(educationRows, "Erro ao carregar educacao"),
+    certificationsRows: ensureRows(certificationsRows, "Erro ao carregar certificacoes"),
+    stackRows: ensureRows(stackRows, "Erro ao carregar stack"),
+    awardsRows: ensureRows(awardsRows, "Erro ao carregar premios"),
+    recommendationsRows: ensureRows(recommendationsRows, "Erro ao carregar recomendacoes"),
   });
 }
 
