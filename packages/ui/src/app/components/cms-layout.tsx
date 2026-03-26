@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useCMS } from "./cms-data";
 import { dataProvider } from "./data-provider";
+import { dispatchCMSSaveShortcut } from "./cms-shortcuts";
 
 const NAV_SECTIONS = [
   {
@@ -47,17 +48,16 @@ export function CMSLayout() {
   } as const;
 
   const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || "http://localhost:4173";
-  const hasLocalShortcut =
-    location.pathname === "/settings" ||
-    /^\/content\/(projects|articles|pages)\/[^/]+\/edit$/.test(location.pathname);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey)) return;
       if (event.key.toLowerCase() !== "s") return;
-      if (hasLocalShortcut) return;
 
       event.preventDefault();
+      const handledLocally = !dispatchCMSSaveShortcut();
+      if (handledLocally) return;
+
       void saveAll()
         .then(() => {
           toast.success("Conteudo salvo.");
@@ -70,7 +70,7 @@ export function CMSLayout() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasLocalShortcut, saveAll]);
+  }, [saveAll]);
 
   const handleSignOut = async () => {
     try {

@@ -17,6 +17,7 @@ import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
 import { LineHeightControl } from "./line-height-control";
 import { RichTextEditor } from "./rich-text";
+import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
 import {
   SelectionProtectedInput,
   SelectionProtectedTextarea,
@@ -452,21 +453,68 @@ export function CMSSettings() {
     cms.updateProfile(nextProfile);
     toast.success("Configuracoes salvas!");
   };
+  const saveEducation = () => {
+    cms.updateSiteSettings(siteSettings);
+    cms.updateEducation(education);
+    toast.success("Salvo!");
+  };
+  const saveCertifications = () => {
+    cms.updateSiteSettings(siteSettings);
+    cms.updateCertifications(certs);
+    toast.success("Salvo!");
+  };
+  const saveStack = () => {
+    cms.updateSiteSettings(siteSettings);
+    cms.updateStack(stack);
+    toast.success("Salvo!");
+  };
+  const saveAwards = () => {
+    cms.updateSiteSettings(siteSettings);
+    cms.updateAwards(awards);
+    toast.success("Salvo!");
+  };
+  const saveRecommendations = () => {
+    cms.updateSiteSettings(siteSettings);
+    cms.updateRecommendations(recs);
+    toast.success("Salvo!");
+  };
+  const saveCurrentTab = () => {
+    switch (tab) {
+      case "profile":
+        saveProfile();
+        return;
+      case "experience":
+        saveExperiences();
+        return;
+      case "education":
+        saveEducation();
+        return;
+      case "certifications":
+        saveCertifications();
+        return;
+      case "stack":
+        saveStack();
+        return;
+      case "awards":
+        saveAwards();
+        return;
+      case "recommendations":
+        saveRecommendations();
+        return;
+      default:
+        return;
+    }
+  };
 
   useEffect(() => {
-    if (tab !== "profile") return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      if (event.key.toLowerCase() !== "s") return;
-
+    const handleShortcutSave = (event: Event) => {
       event.preventDefault();
-      saveProfile();
+      saveCurrentTab();
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [tab, profile, siteSettings]);
+    window.addEventListener(CMS_SAVE_SHORTCUT_EVENT, handleShortcutSave);
+    return () => window.removeEventListener(CMS_SAVE_SHORTCUT_EVENT, handleShortcutSave);
+  }, [tab, profile, siteSettings, experiences, education, certs, stack, awards, recs]);
 
   const handleReset = async () => {
     try {
@@ -903,7 +951,7 @@ export function CMSSettings() {
             <button onClick={() => setEducation([...education, { id: Date.now().toString(), degree: "", university: "", period: "", location: "", description: "", sortOrder: education.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateEducation(education); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveEducation} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -957,7 +1005,7 @@ export function CMSSettings() {
             <button onClick={() => setCerts([...certs, { id: Date.now().toString(), title: "", issuer: "", link: "", showLink: false, sortOrder: certs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateCertifications(certs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveCertifications} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -1051,7 +1099,7 @@ export function CMSSettings() {
             <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateStack(stack); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveStack} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -1081,7 +1129,7 @@ export function CMSSettings() {
             <button onClick={() => setAwards([...awards, { id: Date.now().toString(), title: "", issuer: "", link: "", sortOrder: awards.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateAwards(awards); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveAwards} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>
@@ -1111,7 +1159,7 @@ export function CMSSettings() {
             <button onClick={() => setRecs([...recs, { id: Date.now().toString(), name: "", role: "", quote: "", sortOrder: recs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
-            <button onClick={() => { cms.updateSiteSettings(siteSettings); cms.updateRecommendations(recs); toast.success("Salvo!"); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
+            <button onClick={saveRecommendations} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
               <Save size={14} /> Salvar
             </button>
           </div>

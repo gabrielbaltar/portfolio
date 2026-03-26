@@ -35,6 +35,7 @@ import {
 } from "./text-protection";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
+import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
 import {
   ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS,
   ARTICLE_TITLE_APPEARANCE_DEFAULTS,
@@ -1965,19 +1966,13 @@ export function CMSEditor() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasChanges]);
 
-  // Keyboard shortcuts: Ctrl+S (save), Ctrl+Z (undo via history)
+  // Keyboard shortcuts: Ctrl+Z (undo via history)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
-      
-      // Ctrl+S — save
-      if (isMod && e.key === "s") {
-        e.preventDefault();
-        if (item) void saveItem(false);
-      }
-      
+
       // Ctrl+Z — undo (restore latest version from history)
-      if (isMod && e.key === "z" && !e.shiftKey) {
+      if (isMod && e.key.toLowerCase() === "z" && !e.shiftKey) {
         // Only intercept when not inside a text input/textarea (let browser handle native undo there)
         const target = e.target as HTMLElement;
         const isEditable = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
@@ -1997,7 +1992,7 @@ export function CMSEditor() {
       }
 
       // Ctrl+Shift+H — toggle history panel
-      if (isMod && e.shiftKey && e.key === "H") {
+      if (isMod && e.shiftKey && e.key.toLowerCase() === "h") {
         e.preventDefault();
         setShowHistory(prev => !prev);
       }
@@ -2005,7 +2000,7 @@ export function CMSEditor() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [item, id, contentType]);
+  }, [id, contentType]);
 
   if (!item) {
     return (
@@ -2129,6 +2124,17 @@ export function CMSEditor() {
     void saveItem(false, publishedItem);
     toast.success("Publicado!");
   };
+
+  useEffect(() => {
+    const handleShortcutSave = (event: Event) => {
+      if (!item) return;
+      event.preventDefault();
+      void saveItem(false);
+    };
+
+    window.addEventListener(CMS_SAVE_SHORTCUT_EVENT, handleShortcutSave);
+    return () => window.removeEventListener(CMS_SAVE_SHORTCUT_EVENT, handleShortcutSave);
+  }, [item, saveItem]);
 
   const handleRestoreVersion = (versionData: Record<string, any>) => {
     setItem({ ...versionData, updatedAt: new Date().toISOString() });
