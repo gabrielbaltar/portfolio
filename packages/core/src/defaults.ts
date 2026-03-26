@@ -26,6 +26,8 @@ export const defaultSiteSettings: SiteSettings = {
   id: "main",
   siteTitle: "",
   siteDescription: "",
+  stackSectionTitlePt: "",
+  stackSectionTitleEn: "",
   templateUrl: "",
   resumeUrl: "",
   defaultLanguage: "pt",

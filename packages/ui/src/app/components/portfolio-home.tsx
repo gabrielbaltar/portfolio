@@ -48,7 +48,7 @@ function getInitials(name: string) {
 export function PortfolioHome() {
   const { data, isTranslating } = useTranslatedCMS();
   const { siteSettings, profile, projects, experiences, education, certifications, stack, awards, recommendations, blogPosts } = data;
-  const { locale, t } = useLanguage();
+  const { lang, locale, t } = useLanguage();
   const [emailCopied, setEmailCopied] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -106,6 +106,11 @@ export function PortfolioHome() {
   const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
   const aboutParagraphs = getProfileAboutParagraphs(profile).filter((paragraph) => !isRichTextEmpty(paragraph));
   const hasAboutTitle = !isRichTextEmpty(profile.aboutTitle);
+  const stackSectionTitle = (
+    lang === "en"
+      ? siteSettings.stackSectionTitleEn?.trim()
+      : siteSettings.stackSectionTitlePt?.trim()
+  ) || t("stackTitle");
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
   const avatarLabel = getInitials(displayName) || "Foto";
   const socialLinks = getProfileSocialLinks(profile, ["twitter", "linkedin"]).filter((item) => hasExternalUrl(item.url));
@@ -451,7 +456,7 @@ export function PortfolioHome() {
       {/* Stack / Tools */}
       {isSectionVisible(siteSettings, "stack") && visibleStack.length > 0 && (
         <ScrollReveal as="section" id="tools" className="max-w-[700px] mx-auto px-5 py-12">
-        <SectionTitle>{t("stackTitle")}</SectionTitle>
+        <SectionTitle>{stackSectionTitle}</SectionTitle>
         <StaggerChildren className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {visibleStack.map((item) => (
             <StaggerItem key={item.id}>

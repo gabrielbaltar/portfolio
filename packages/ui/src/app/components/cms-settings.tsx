@@ -1017,6 +1017,22 @@ export function CMSSettings() {
       {/* Stack Tab */}
       {tab === "stack" && (
         <div className="space-y-4">
+          <Section title="Título da seção" defaultOpen={false}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Input
+                label="Título em português"
+                value={siteSettings.stackSectionTitlePt || ""}
+                onChange={(value) => setSiteSettings({ ...siteSettings, stackSectionTitlePt: value })}
+                placeholder="Ferramentas"
+              />
+              <Input
+                label="Título em inglês"
+                value={siteSettings.stackSectionTitleEn || ""}
+                onChange={(value) => setSiteSettings({ ...siteSettings, stackSectionTitleEn: value })}
+                placeholder="Stacks"
+              />
+            </div>
+          </Section>
           {stack.map((item) => (
             <Section key={item.id} title={item.name || "Nova ferramenta"}>
               <VisibilitySwitch

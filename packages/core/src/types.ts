@@ -123,6 +123,8 @@ export interface SiteSettings extends TimestampedEntity {
   id: string;
   siteTitle: string;
   siteDescription: string;
+  stackSectionTitlePt: string;
+  stackSectionTitleEn: string;
   templateUrl: string;
   resumeUrl: string;
   defaultLanguage: Language;
