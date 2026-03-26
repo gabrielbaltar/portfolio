@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCMS, type CMSData, type ContentBlock } from "./cms-data";
 import { useLanguage, type Language } from "./language-context";
-import { translateBatchToLanguage } from "./translation-service";
+import { stripProtectedTextMarkers, translateBatchToLanguage } from "./translation-service";
 import { getProfileAboutParagraphs, type ContentListItem } from "@portfolio/core";
 import {
   applyRichTextTranslation,
@@ -12,8 +12,10 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v7";
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v9";
 const LEGACY_TRANSLATED_DATA_CACHE_KEYS = [
+  "portfolio_translated_cms_cache_v8",
+  "portfolio_translated_cms_cache_v7",
   "portfolio_translated_cms_cache_v6",
   "portfolio_translated_cms_cache_v5",
   "portfolio_translated_cms_cache_v4",
@@ -97,6 +99,24 @@ function setPathValue(target: Record<string, any>, path: string, value: string) 
   const last = segments[segments.length - 1];
   const key = /^\d+$/.test(last) ? Number(last) : last;
   current[key] = value;
+}
+
+function stripProtectedMarkersInPlace(value: unknown): void {
+  if (Array.isArray(value)) {
+    value.forEach((item) => stripProtectedMarkersInPlace(item));
+    return;
+  }
+
+  if (!value || typeof value !== "object") return;
+
+  Object.entries(value).forEach(([key, item]) => {
+    if (typeof item === "string") {
+      (value as Record<string, unknown>)[key] = stripProtectedTextMarkers(item);
+      return;
+    }
+
+    stripProtectedMarkersInPlace(item);
+  });
 }
 
 function collectBlockTexts(
@@ -262,10 +282,15 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   });
 
   const profileFields: Array<keyof CMSData["profile"]> = [
+    "name",
     "role",
     "location",
     "availableText",
     "currentJobTitle",
+    "currentCompany",
+    "twitterLabel",
+    "instagramLabel",
+    "linkedinLabel",
   ];
 
   profileFields.forEach((field) => addText(`profile.${field}`, data.profile[field] as string));
@@ -353,10 +378,11 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addText(`recommendations.${recommendationIndex}.quote`, recommendation.quote);
   });
 
-  if (texts.length === 0) return data;
+  const translatedData = cloneData(data);
+  stripProtectedMarkersInPlace(translatedData);
+  if (texts.length === 0) return translatedData;
 
   const translatedTexts = await translateBatchToLanguage(texts, targetLang);
-  const translatedData = cloneData(data);
 
   map.forEach(({ path, index }) => {
     const translatedValue = translatedTexts[index];

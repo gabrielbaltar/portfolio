@@ -2,8 +2,9 @@
 
 export type TranslationLanguage = "pt" | "en";
 
-const CACHE_KEY = "portfolio_translations_cache_v6";
+const CACHE_KEY = "portfolio_translations_cache_v7";
 const LEGACY_CACHE_KEYS = [
+  "portfolio_translations_cache_v6",
   "portfolio_translations_cache_v5",
   "portfolio_translations_cache_v4",
   "portfolio_translations_cache_v3",
@@ -105,14 +106,60 @@ type ProtectedTerm = {
   value: string;
 };
 
+const PLACEHOLDER_ARTIFACT_REGEX = /__\s*portfolio(?:\s|_|-)*keep(?:\s|_|-)*(\d+)?(?:\s*__)?/gi;
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function getPlaceholderIndex(placeholder: string) {
+  const match = placeholder.match(/__PORTFOLIO_KEEP_(\d+)__/i);
+  return match ? match[1] : null;
+}
+
+function createPlaceholderPattern(placeholder: string) {
+  const index = getPlaceholderIndex(placeholder);
+  if (!index) {
+    return new RegExp(escapeRegExp(placeholder), "gi");
+  }
+
+  return new RegExp(
+    `__\\s*portfolio(?:\\s|_|-)*keep(?:\\s|_|-)*${escapeRegExp(index)}(?:\\s*__)?`,
+    "gi",
+  );
+}
+
+function cleanupPlaceholderArtifacts(text: string, protectedTerms: ProtectedTerm[]) {
+  if (!text) return text;
+
+  const valueByIndex = new Map<string, string>();
+  protectedTerms.forEach((term) => {
+    const index = getPlaceholderIndex(term.placeholder);
+    if (index) {
+      valueByIndex.set(index, term.value);
+    }
+  });
+
+  let fallbackIndex = 0;
+
+  return text.replace(PLACEHOLDER_ARTIFACT_REGEX, (_match, rawIndex: string | undefined) => {
+    if (rawIndex) {
+      const exact = valueByIndex.get(rawIndex);
+      if (exact) return exact;
+    }
+
+    const fallback = protectedTerms[fallbackIndex];
+    fallbackIndex += 1;
+    return fallback?.value ?? "";
+  });
+}
+
 function restoreProtectedTerms(text: string, protectedTerms: ProtectedTerm[]) {
-  return protectedTerms.reduce((result, term) => {
-    return result.replace(new RegExp(escapeRegExp(term.placeholder), "g"), term.value);
+  const restored = protectedTerms.reduce((result, term) => {
+    return result.replace(createPlaceholderPattern(term.placeholder), term.value);
   }, text);
+
+  return cleanupPlaceholderArtifacts(restored, protectedTerms);
 }
 
 function prepareProtectedTerms(text: string) {
@@ -148,6 +195,11 @@ function prepareProtectedTerms(text: string) {
     displayText,
     protectedTerms,
   };
+}
+
+export function stripProtectedTextMarkers(text: string) {
+  if (!text) return text;
+  return cleanupPlaceholderArtifacts(prepareProtectedTerms(text).displayText, []);
 }
 
 function getCache(): Record<string, string> {
