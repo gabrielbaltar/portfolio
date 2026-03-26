@@ -96,6 +96,14 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     dataRef.current = data;
   }, [data]);
 
+  const persistPublicSnapshot = (nextData: CMSData) => {
+    if (mode !== "cms") return;
+
+    void dataProvider.savePublicSnapshot(nextData).catch((error) => {
+      console.warn("Nao foi possivel atualizar o snapshot publico do portfolio.", error);
+    });
+  };
+
   const refreshData = async (silent = false) => {
     if (!silent) {
       setLoading(true);
@@ -173,6 +181,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       const persisted = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
       persistedDataRef.current = persisted;
       dataProvider.cacheCmsData(persisted);
+      persistPublicSnapshot(persisted);
     });
   };
 
@@ -198,6 +207,9 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       const persisted = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
       persistedDataRef.current = persisted;
       dataProvider.cacheCmsData(persisted);
+      if (key !== "media") {
+        persistPublicSnapshot(persisted);
+      }
     });
   };
 
@@ -237,6 +249,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       ]);
       persistedDataRef.current = nextData;
       dataProvider.cacheCmsData(nextData);
+      persistPublicSnapshot(nextData);
       toast.success("Conteudo demo restaurado.");
     } catch (err) {
       setData(previous);
@@ -269,6 +282,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
 
     persistedDataRef.current = nextData;
     dataProvider.cacheCmsData(nextData);
+    persistPublicSnapshot(nextData);
   };
 
   const value = useMemo<CMSContextType>(

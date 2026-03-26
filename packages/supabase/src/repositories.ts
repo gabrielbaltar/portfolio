@@ -75,6 +75,8 @@ type PublicSnapshotPayload = {
   recommendationsRows: DatabaseRow[];
 };
 
+type PublicSnapshotData = Omit<CMSData, "media">;
+
 const TABLES = {
   siteSettings: "site_settings",
   profile: "profile",
@@ -106,6 +108,31 @@ function ensureRows(result: { data: unknown; error: { message: string } | null }
 function shouldFallbackToLegacyPublicLoader(error: { code?: string; message?: string } | null | undefined) {
   const message = error?.message || "";
   return error?.code === "PGRST202" || error?.code === "42883" || /get_public_portfolio_snapshot/i.test(message);
+}
+
+function buildSerializablePublicSnapshot(data: CMSData): PublicSnapshotData {
+  return normalizeCMSData({
+    siteSettings: mapSingletonFromRow(mapSiteSettingsToRow(data.siteSettings) as any, defaultSiteSettings),
+    profile: data.profile,
+    projects: data.projects,
+    blogPosts: data.blogPosts,
+    pages: data.pages,
+    experiences: data.experiences,
+    education: data.education,
+    certifications: data.certifications,
+    stack: data.stack,
+    awards: data.awards,
+    recommendations: data.recommendations,
+  });
+}
+
+function extractEmbeddedPublicSnapshot(row: SingletonDatabaseRow): CMSData | null {
+  const snapshot = row?.data?.publicSnapshot;
+  if (!snapshot || typeof snapshot !== "object") {
+    return null;
+  }
+
+  return normalizeCMSData(snapshot as Partial<CMSData>);
 }
 
 function isVideo(mimeType: string): boolean {
@@ -221,6 +248,13 @@ function buildPublicCMSData(payload: PublicSnapshotPayload): CMSData {
 }
 
 export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData> {
+  const embeddedSiteSettingsResult = await client.from(TABLES.siteSettings).select("*").eq("id", "main").maybeSingle();
+  const embeddedSiteSettingsRow = ensureSuccess(embeddedSiteSettingsResult, "Erro ao carregar configuracoes publicas") as SingletonDatabaseRow;
+  const embeddedSnapshot = extractEmbeddedPublicSnapshot(embeddedSiteSettingsRow);
+  if (embeddedSnapshot) {
+    return embeddedSnapshot;
+  }
+
   const snapshotResult = await client.rpc("get_public_portfolio_snapshot");
   if (!snapshotResult.error && snapshotResult.data) {
     return buildPublicCMSData(snapshotResult.data as PublicSnapshotPayload);
@@ -257,7 +291,7 @@ export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData
   ]);
 
   return buildPublicCMSData({
-    siteSettingsRow: siteSettingsRow.data as SingletonDatabaseRow,
+    siteSettingsRow: (siteSettingsRow.data as SingletonDatabaseRow) ?? embeddedSiteSettingsRow,
     profileRow: profileRow.data as SingletonDatabaseRow,
     projectsRows: ensureRows(projectsRows, "Erro ao carregar projetos"),
     blogPostsRows: ensureRows(blogPostRows, "Erro ao carregar artigos"),
@@ -269,6 +303,22 @@ export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData
     awardsRows: ensureRows(awardsRows, "Erro ao carregar premios"),
     recommendationsRows: ensureRows(recommendationsRows, "Erro ao carregar recomendacoes"),
   });
+}
+
+export async function savePublicCMSDataSnapshot(client: SupabaseClient, data: CMSData): Promise<void> {
+  const snapshot = buildSerializablePublicSnapshot(data);
+  const siteSettingsRow = mapSiteSettingsToRow(snapshot.siteSettings);
+
+  ensureSuccess(
+    await client.from(TABLES.siteSettings).upsert({
+      ...siteSettingsRow,
+      data: {
+        ...siteSettingsRow.data,
+        publicSnapshot: snapshot,
+      },
+    }),
+    "Erro ao salvar snapshot publico",
+  );
 }
 
 export async function loadCmsData(client: SupabaseClient): Promise<CMSData> {

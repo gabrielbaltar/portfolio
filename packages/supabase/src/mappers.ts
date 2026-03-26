@@ -198,7 +198,12 @@ export function mapSingletonFromRow<T extends { createdAt: string; updatedAt: st
 }
 
 export function mapSiteSettingsToRow(settings: SiteSettings): SingletonRow<Omit<SiteSettings, "createdAt" | "updatedAt">> {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, ...data } = settings;
+  const {
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    publicSnapshot: _publicSnapshot,
+    ...data
+  } = settings as SiteSettings & { publicSnapshot?: unknown };
   return {
     id: settings.id,
     data,

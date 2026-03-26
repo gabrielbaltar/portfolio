@@ -26,6 +26,7 @@ import {
   savePages,
   saveProfile,
   saveProjects,
+  savePublicCMSDataSnapshot,
   saveRecommendations,
   saveSiteSettings,
   saveStack,
@@ -211,6 +212,10 @@ class SupabaseDataProvider {
 
   saveSiteSettings(siteSettings: SiteSettings) {
     return saveSiteSettings(this.client, siteSettings);
+  }
+
+  savePublicSnapshot(data: CMSData) {
+    return savePublicCMSDataSnapshot(this.client, data);
   }
 
   saveProfile(profile: ProfileData) {
