@@ -2,9 +2,14 @@ import {
   ArrowRight,
   Bold,
   Check,
+  Heading1,
+  Heading2,
+  Heading3,
   Italic,
   Languages,
   Link2,
+  List,
+  ListOrdered,
   Palette,
   Sparkles,
   Star,
@@ -97,6 +102,9 @@ const INLINE_LINE_HEIGHT_OPTIONS = [
   { label: "2.4x", value: "2.4" },
 ] as const;
 
+const RICH_TEXT_BLOCK_TAGS = new Set(["div", "p", "h1", "h2", "h3", "ul", "ol", "li"]);
+const RICH_TEXT_LINE_HEIGHT_BLOCK_SELECTOR = "div, p, h1, h2, h3, li";
+
 function normalizeInlineTagLabel(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -111,7 +119,7 @@ function escapeHtml(value: string) {
 }
 
 function isBlockTag(tagName: string) {
-  return tagName === "div" || tagName === "p";
+  return RICH_TEXT_BLOCK_TAGS.has(tagName);
 }
 
 function isSafeUrl(value: string) {
@@ -218,13 +226,7 @@ function appendNode(target: HTMLElement, node: Node) {
 }
 
 function appendChildren(source: Node, target: HTMLElement, doc: Document) {
-  const childNodes = Array.from(source.childNodes);
-  childNodes.forEach((child, index) => {
-    sanitizeNode(child, target, doc);
-    if (child instanceof HTMLElement && isBlockTag(child.tagName.toLowerCase()) && index < childNodes.length - 1) {
-      appendNode(target, doc.createElement("br"));
-    }
-  });
+  Array.from(source.childNodes).forEach((child) => sanitizeNode(child, target, doc));
 }
 
 function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
@@ -243,7 +245,11 @@ function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
   }
 
   if (isBlockTag(tagName)) {
-    appendChildren(node, target, doc);
+    const el = doc.createElement(tagName);
+    const blockLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    if (blockLineHeight) el.style.lineHeight = blockLineHeight;
+    appendChildren(node, el, doc);
+    appendNode(target, el);
     return;
   }
 
@@ -330,6 +336,27 @@ function removeEdgeBreaks(value: string) {
     .replace(/(?:<br\s*\/?>\s*){3,}/gi, "<br><br>");
 }
 
+function getHeadingRenderStyle(tagName: "h1" | "h2" | "h3", lineHeight?: string | null) {
+  if (tagName === "h1") {
+    return { fontSize: "1.85em", fontWeight: 600, lineHeight: lineHeight || "1.1" };
+  }
+
+  if (tagName === "h2") {
+    return { fontSize: "1.5em", fontWeight: 600, lineHeight: lineHeight || "1.15" };
+  }
+
+  return { fontSize: "1.2em", fontWeight: 600, lineHeight: lineHeight || "1.2" };
+}
+
+function getListItemMarker(node: HTMLElement) {
+  const parent = node.parentElement;
+  if (!parent || parent.tagName.toLowerCase() !== "ol") return "•";
+
+  const listItems = Array.from(parent.children).filter((child) => child.tagName.toLowerCase() === "li");
+  const index = listItems.indexOf(node);
+  return `${index + 1}.`;
+}
+
 export function normalizeRichTextHtml(value?: string | null) {
   if (!value) return "";
   if (typeof window === "undefined") return value.trim();
@@ -393,6 +420,48 @@ function renderNode(node: Node, key: string, theme: Theme): ReactNode {
       <a key={key} href={href} target={target} rel={rel} className="underline underline-offset-4">
         {children}
       </a>
+    );
+  }
+  if (tagName === "p" || tagName === "div") {
+    const blockLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    return (
+      <span key={key} style={{ display: "block", lineHeight: blockLineHeight || undefined }}>
+        {children}
+      </span>
+    );
+  }
+  if (tagName === "h1" || tagName === "h2" || tagName === "h3") {
+    const blockLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    return (
+      <span key={key} style={{ display: "block", ...getHeadingRenderStyle(tagName, blockLineHeight) }}>
+        {children}
+      </span>
+    );
+  }
+  if (tagName === "ul" || tagName === "ol") {
+    return (
+      <span key={key} style={{ display: "block" }}>
+        {children}
+      </span>
+    );
+  }
+  if (tagName === "li") {
+    const blockLineHeight = sanitizeInlineLineHeight(node.style.lineHeight);
+    return (
+      <span
+        key={key}
+        style={{
+          display: "block",
+          position: "relative",
+          paddingLeft: "1.35em",
+          lineHeight: blockLineHeight || undefined,
+        }}
+      >
+        <span aria-hidden="true" style={{ position: "absolute", left: 0, top: 0 }}>
+          {getListItemMarker(node)}
+        </span>
+        <span>{children}</span>
+      </span>
     );
   }
   if (tagName === "span" && node.dataset.inlineTag) {
@@ -657,6 +726,54 @@ function clearInlineStyleSelection(
   return true;
 }
 
+function findClosestLineHeightBlock(node: Node | null, root: HTMLElement) {
+  if (!node) return null;
+
+  const element = node instanceof HTMLElement ? node : node.parentElement;
+  if (!element) return null;
+
+  const block = element.closest(RICH_TEXT_LINE_HEIGHT_BLOCK_SELECTOR);
+  if (!block || !root.contains(block)) return null;
+  return block as HTMLElement;
+}
+
+function getSelectedLineHeightBlocks(range: Range, root: HTMLElement) {
+  const blocks = new Set<HTMLElement>();
+  const startBlock = findClosestLineHeightBlock(range.startContainer, root);
+  const endBlock = findClosestLineHeightBlock(range.endContainer, root);
+
+  if (startBlock) blocks.add(startBlock);
+  if (endBlock) blocks.add(endBlock);
+
+  root.querySelectorAll<HTMLElement>(RICH_TEXT_LINE_HEIGHT_BLOCK_SELECTOR).forEach((block) => {
+    try {
+      if (range.intersectsNode(block)) {
+        blocks.add(block);
+      }
+    } catch {
+      // Ignore detached nodes while the selection is changing.
+    }
+  });
+
+  return Array.from(blocks);
+}
+
+function applyLineHeightToBlocks(range: Range, root: HTMLElement, lineHeight: string) {
+  const blocks = getSelectedLineHeightBlocks(range, root);
+  if (!blocks.length) return false;
+
+  blocks.forEach((block) => {
+    if (lineHeight === "inherit") {
+      block.style.removeProperty("line-height");
+      return;
+    }
+
+    block.style.lineHeight = lineHeight;
+  });
+
+  return true;
+}
+
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -762,6 +879,13 @@ export function RichTextEditor({
     commitValue();
   };
 
+  const applyBlockFormat = (tagName: "H1" | "H2" | "H3") => {
+    focusEditor();
+    document.execCommand("styleWithCSS", false, "false");
+    document.execCommand("formatBlock", false, tagName);
+    commitValue({ syncDom: true });
+  };
+
   const insertIcon = (iconName: InlineIconName) => {
     focusEditor();
     insertHtmlAtSelection(
@@ -806,6 +930,19 @@ export function RichTextEditor({
     const clearFontSize = fontSize === "inherit";
     const clearLineHeight = lineHeight === "inherit";
     if (!color && !fontSize && !lineHeight) return;
+
+    if (editorRef.current && lineHeight) {
+      const appliedToBlocks = applyLineHeightToBlocks(
+        activeRange,
+        editorRef.current,
+        clearLineHeight ? "inherit" : lineHeight,
+      );
+
+      if (appliedToBlocks && !color && !fontSize && !clearColor && !clearFontSize && !clearLineHeight) {
+        commitValue({ syncDom: true });
+        return;
+      }
+    }
 
     if (clearColor || clearFontSize || clearLineHeight) {
       const cleared = clearInlineStyleSelection(activeRange, {
@@ -941,6 +1078,13 @@ export function RichTextEditor({
       }
 
       if (multiline) {
+        const selection = window.getSelection();
+        const currentNode =
+          selection?.anchorNode instanceof HTMLElement ? selection.anchorNode : selection?.anchorNode?.parentElement;
+        const isInsideListItem = Boolean(currentNode?.closest("li"));
+        if (isInsideListItem) {
+          return;
+        }
         event.preventDefault();
         insertHtmlAtSelection("<br>");
         commitValue();
@@ -988,6 +1132,55 @@ export function RichTextEditor({
           className="flex flex-wrap items-center gap-1 rounded-[10px] border px-2 py-1.5"
           style={{ backgroundColor: "#0e0e0e", borderColor: "#1e1e1e" }}
         >
+          {multiline && (
+            <>
+              <ToolbarButton
+                label="Transformar em título H1"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  applyBlockFormat("H1");
+                }}
+              >
+                <Heading1 size={14} />
+              </ToolbarButton>
+              <ToolbarButton
+                label="Transformar em título H2"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  applyBlockFormat("H2");
+                }}
+              >
+                <Heading2 size={14} />
+              </ToolbarButton>
+              <ToolbarButton
+                label="Transformar em título H3"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  applyBlockFormat("H3");
+                }}
+              >
+                <Heading3 size={14} />
+              </ToolbarButton>
+              <ToolbarButton
+                label="Criar lista"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  runCommand("insertUnorderedList");
+                }}
+              >
+                <List size={14} />
+              </ToolbarButton>
+              <ToolbarButton
+                label="Criar lista numerada"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  runCommand("insertOrderedList");
+                }}
+              >
+                <ListOrdered size={14} />
+              </ToolbarButton>
+            </>
+          )}
           <ToolbarButton
             label="Adicionar negrito"
             onMouseDown={(event) => {

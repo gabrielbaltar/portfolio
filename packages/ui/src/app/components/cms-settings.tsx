@@ -17,104 +17,20 @@ import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
 import { LineHeightControl } from "./line-height-control";
 import { RichTextEditor } from "./rich-text";
-
-function hasMeaningfulSelection(field: HTMLInputElement | HTMLTextAreaElement | null) {
-  if (!field) return false;
-  const { selectionStart, selectionEnd, value } = field;
-  if (selectionStart == null || selectionEnd == null || selectionStart === selectionEnd) return false;
-  return value.slice(selectionStart, selectionEnd).trim().length > 0;
-}
-
-function protectFieldSelection(
-  field: HTMLInputElement | HTMLTextAreaElement | null,
-  onChange: (value: string) => void,
-) {
-  if (!field) return false;
-
-  const { selectionStart, selectionEnd, value } = field;
-  if (selectionStart == null || selectionEnd == null || selectionStart === selectionEnd) return false;
-
-  const selectedText = value.slice(selectionStart, selectionEnd);
-  if (!selectedText.trim()) return false;
-
-  const isAlreadyProtected =
-    value.slice(Math.max(0, selectionStart - 2), selectionStart) === "[[" &&
-    value.slice(selectionEnd, selectionEnd + 2) === "]]";
-
-  if (isAlreadyProtected || (selectedText.startsWith("[[") && selectedText.endsWith("]]"))) {
-    return false;
-  }
-
-  const nextValue = `${value.slice(0, selectionStart)}[[${selectedText}]]${value.slice(selectionEnd)}`;
-  onChange(nextValue);
-
-  const nextSelectionStart = selectionStart + 2;
-  const nextSelectionEnd = selectionEnd + 2;
-  requestAnimationFrame(() => {
-    field.focus();
-    field.setSelectionRange(nextSelectionStart, nextSelectionEnd);
-  });
-
-  return true;
-}
-
-function ProtectSelectionButton({
-  disabled,
-  onProtect,
-}: {
-  disabled: boolean;
-  onProtect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        if (!disabled) {
-          onProtect();
-        }
-      }}
-      disabled={disabled}
-      title="Selecione um termo e clique para impedir a tradução"
-      className="rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-35"
-      style={{ border: "1px solid #2a2a2a", color: disabled ? "#555" : "#9a9a9a", backgroundColor: "#101010" }}
-    >
-      [[ ]]
-    </button>
-  );
-}
+import {
+  SelectionProtectedInput,
+  SelectionProtectedTextarea,
+} from "./text-protection";
 
 function Input({ label, value, onChange, placeholder = "" }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [canProtect, setCanProtect] = useState(false);
-
-  const syncSelectionState = () => {
-    setCanProtect(hasMeaningfulSelection(inputRef.current));
-  };
-
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-        <ProtectSelectionButton
-          disabled={!canProtect}
-          onProtect={() => {
-            if (protectFieldSelection(inputRef.current, onChange)) {
-              requestAnimationFrame(syncSelectionState);
-            }
-          }}
-        />
-      </div>
-      <input
-        ref={inputRef}
+      <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <SelectionProtectedInput
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onSelect={syncSelectionState}
-        onKeyUp={syncSelectionState}
-        onFocus={syncSelectionState}
-        onBlur={() => setCanProtect(false)}
         placeholder={placeholder}
         className="w-full rounded-lg px-3 py-2 text-[#fafafa] placeholder-[#444] focus:outline-none"
         style={{ fontSize: "13px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
@@ -126,34 +42,12 @@ function Input({ label, value, onChange, placeholder = "" }: {
 function TextArea({ label, value, onChange, rows = 3 }: {
   label: string; value: string; onChange: (v: string) => void; rows?: number;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [canProtect, setCanProtect] = useState(false);
-
-  const syncSelectionState = () => {
-    setCanProtect(hasMeaningfulSelection(textareaRef.current));
-  };
-
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-        <ProtectSelectionButton
-          disabled={!canProtect}
-          onProtect={() => {
-            if (protectFieldSelection(textareaRef.current, onChange)) {
-              requestAnimationFrame(syncSelectionState);
-            }
-          }}
-        />
-      </div>
-      <textarea
-        ref={textareaRef}
+      <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <SelectionProtectedTextarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onSelect={syncSelectionState}
-        onKeyUp={syncSelectionState}
-        onFocus={syncSelectionState}
-        onBlur={() => setCanProtect(false)}
         rows={rows}
         className="w-full rounded-lg px-3 py-2 text-[#fafafa] placeholder-[#444] focus:outline-none resize-none"
         style={{ fontSize: "13px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
@@ -210,33 +104,13 @@ function ExperienceTaskInput({
   onChange: (value: string) => void;
   onRemove: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [canProtect, setCanProtect] = useState(false);
-
-  const syncSelectionState = () => {
-    setCanProtect(hasMeaningfulSelection(inputRef.current));
-  };
-
   return (
     <div className="flex gap-2">
-      <input
-        ref={inputRef}
+      <SelectionProtectedInput
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        onSelect={syncSelectionState}
-        onKeyUp={syncSelectionState}
-        onFocus={syncSelectionState}
-        onBlur={() => setCanProtect(false)}
         className="flex-1 rounded-lg px-3 py-1.5 text-[#fafafa] focus:outline-none"
         style={{ fontSize: "12px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
-      />
-      <ProtectSelectionButton
-        disabled={!canProtect}
-        onProtect={() => {
-          if (protectFieldSelection(inputRef.current, onChange)) {
-            requestAnimationFrame(syncSelectionState);
-          }
-        }}
       />
       <button onClick={onRemove} className="text-[#555] hover:text-red-400 cursor-pointer">
         <Trash2 size={12} />

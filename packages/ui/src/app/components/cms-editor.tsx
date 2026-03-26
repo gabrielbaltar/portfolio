@@ -29,6 +29,10 @@ import { CodeHighlight } from "./code-highlight";
 import { ContentEmbed } from "./content-embed";
 import { isRichTextEmpty, RichTextContent, RichTextEditor, richTextToPlainText } from "./rich-text";
 import { ShowcaseBlockView, isShowcaseBlock } from "./showcase-blocks";
+import {
+  SelectionProtectedInput,
+  SelectionProtectedTextarea,
+} from "./text-protection";
 import { PreviewMediaSlider } from "./content-preview-cards";
 import { ContentImage, inferVisualAssetKind, isSupportedVisualUpload, supportsPositionEditor } from "./content-image";
 import {
@@ -206,7 +210,7 @@ function Input({ label, value, onChange, placeholder = "" }: {
   return (
     <div className="space-y-1.5">
       <label className="block text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-      <input
+      <SelectionProtectedInput
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -223,7 +227,7 @@ function TextArea({ label, value, onChange, rows = 3, placeholder = "" }: {
   return (
     <div className="space-y-1.5">
       <label className="block text-[#777]" style={{ fontSize: "11px", lineHeight: "16.5px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-      <textarea
+      <SelectionProtectedTextarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
@@ -433,7 +437,7 @@ function TextAppearanceControl({
               className="h-9 w-10 rounded cursor-pointer border-none p-0"
               style={{ backgroundColor: "transparent" }}
             />
-            <input
+            <SelectionProtectedInput
               type="text"
               value={sanitizeAppearanceColor(currentColor) || ""}
               onChange={(event) => updateAppearance({ color: event.target.value })}
@@ -526,7 +530,7 @@ function TagsInput({ tags, onChange }: { tags: string[]; onChange: (tags: string
         </p>
       )}
       <div className="flex gap-2">
-        <input
+        <SelectionProtectedInput
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); upsert(); } }}
@@ -1520,7 +1524,7 @@ function ImageUrlField({
         }}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <input
+          <SelectionProtectedInput
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder={placeholder}
@@ -1791,7 +1795,7 @@ function GalleryEditor({ images, onChange, positions, onPositionsChange }: { ima
       </div>
       <div className="rounded-[12px] border p-2.5" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
         <div className="flex flex-col gap-2 min-[1080px]:flex-row">
-          <textarea
+          <SelectionProtectedTextarea
             value={urlInput}
             onChange={(event) => setUrlInput(event.target.value)}
             placeholder={"Cole uma ou varias URLs de imagem, WebM ou Lottie\nUma por linha ou separadas por virgula"}
@@ -2376,7 +2380,7 @@ export function CMSEditor() {
               style={{ backgroundColor: "transparent" }}
               disabled={!item.imageBgColor}
             />
-            <input
+            <SelectionProtectedInput
               type="text"
               value={item.imageBgColor || ""}
               onChange={(e) => updateField("imageBgColor", e.target.value)}
@@ -2472,7 +2476,7 @@ export function CMSEditor() {
           <div className="space-y-1.5">
             <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Senha de acesso</label>
             <div className="flex items-center gap-2">
-              <input
+              <SelectionProtectedInput
                 type="text"
                 value={item.password || ""}
                 onChange={(e) => updateField("password", e.target.value)}
@@ -2659,7 +2663,7 @@ export function CMSEditor() {
               style={{ backgroundColor: "transparent" }}
               disabled={!item.imageBgColor}
             />
-            <input
+            <SelectionProtectedInput
               type="text"
               value={item.imageBgColor || ""}
               onChange={(e) => updateField("imageBgColor", e.target.value)}
@@ -2755,7 +2759,7 @@ export function CMSEditor() {
           <div className="space-y-1.5">
             <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Senha de acesso</label>
             <div className="flex items-center gap-2">
-              <input
+              <SelectionProtectedInput
                 type="text"
                 value={item.password || ""}
                 onChange={(e) => updateField("password", e.target.value)}

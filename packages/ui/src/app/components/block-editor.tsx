@@ -21,6 +21,10 @@ import { ContentEmbed, resolveEmbed } from "./content-embed";
 import { ImagePositionEditorCompact } from "./image-position-editor";
 import { ImageLightbox, type LightboxOpenPayload } from "./image-lightbox";
 import { RichTextEditor } from "./rich-text";
+import {
+  SelectionProtectedInput,
+  SelectionProtectedTextarea,
+} from "./text-protection";
 import { ShowcaseBlockView } from "./showcase-blocks";
 import { VideoPlayer } from "./video-player";
 import { extractMuxPlaybackId, normalizeVideoInput } from "./video-source";
@@ -348,7 +352,7 @@ function MiniInput({
   type?: React.HTMLInputTypeAttribute;
 }) {
   return (
-    <input
+    <SelectionProtectedInput
       type={type}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -371,7 +375,7 @@ function MiniTextarea({
   rows?: number;
 }) {
   return (
-    <textarea
+    <SelectionProtectedTextarea
       rows={rows}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -1311,7 +1315,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 <span className="block text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Legenda
                 </span>
-                <input
+                <SelectionProtectedInput
                   value={block.caption || ""}
                   onChange={(event) => onChange({ ...block, caption: event.target.value } as ContentBlock)}
                   className="h-[36px] w-full rounded border px-2.5 text-[#fafafa] focus:outline-none"
@@ -1320,7 +1324,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 />
               </label>
             </div>
-            <textarea
+            <SelectionProtectedTextarea
               value={block.code}
               onChange={(event) => onChange({ ...block, code: event.target.value } as ContentBlock)}
               className="w-full rounded-lg border px-3 py-3 text-[#e5e5e5] focus:outline-none"
@@ -1647,7 +1651,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[#555] shrink-0" style={{ fontSize: "11px" }}>ou</span>
-                    <input
+                    <SelectionProtectedInput
                       defaultValue=""
                       onBlur={(e) => applyVideoUrl(e.target.value)}
                       onKeyDown={(e) => {
@@ -1734,7 +1738,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       </span>
                     </div>
                   )}
-                  <input
+                  <SelectionProtectedInput
                     value={vBlock.url}
                     onChange={(e) => onChange({ ...vBlock, url: e.target.value } as ContentBlock)}
                     onBlur={(e) => applyVideoUrl(e.target.value)}
@@ -1791,14 +1795,14 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   </div>
                 </label>
               </div>
-              <input
+              <SelectionProtectedInput
                 value={vBlock.poster || ""}
                 onChange={(e) => onChange({ ...vBlock, poster: e.target.value } as ContentBlock)}
                 className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
                 style={{ fontSize: "12px" }}
                 placeholder={muxPlaybackId ? "Poster manual (opcional, o Mux ja gera thumbnail automaticamente)" : "URL do poster/thumbnail (opcional)"}
               />
-              <input
+              <SelectionProtectedInput
                 value={vBlock.caption}
                 onChange={(e) => onChange({ ...vBlock, caption: e.target.value } as ContentBlock)}
                 className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
@@ -1844,7 +1848,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 onChange={(value) => onChange({ ...block, lineHeight: clampBlockLineHeight(value) } as ContentBlock)}
               />
             )}
-            <input
+            <SelectionProtectedInput
               value={(block as any).author}
               onChange={(e) => onChange({ ...block, author: e.target.value } as ContentBlock)}
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
@@ -1883,7 +1887,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
                 placeholderClassName="px-2.5 py-1.5"
               />
-              <input
+              <SelectionProtectedInput
                 value={(block as any).buttonUrl}
                 onChange={(e) => onChange({ ...block, buttonUrl: e.target.value } as ContentBlock)}
                 className="bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
@@ -1911,7 +1915,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
             return (
               <div className="space-y-3">
-                <textarea
+                <SelectionProtectedTextarea
                   value={embedBlock.url}
                   onChange={(e) => onChange({ ...embedBlock, url: e.target.value } as ContentBlock)}
                   className="min-h-[92px] w-full resize-y rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-2 text-[#fafafa] focus:outline-none focus:border-[#555]"
