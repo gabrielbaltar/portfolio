@@ -10,6 +10,7 @@ import type {
 } from "@portfolio/core";
 import {
   createBrowserSupabaseClient,
+  createTimedBrowserSupabaseClient,
   getSession,
   isSlugAvailable,
   loadCmsData as loadCmsDataFromSupabase,
@@ -36,12 +37,26 @@ import {
 
 const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v1";
 const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
-const PUBLIC_DATA_CACHE_TTL_MS = 5 * 60 * 1000;
+const PUBLIC_DATA_CACHE_TTL_MS = 60 * 60 * 1000;
+const SUPABASE_READ_TIMEOUT_MS = 8000;
 
 type CachedSnapshot = {
   cachedAt: number;
   data: CMSData;
 };
+
+function normalizeLoadError(error: unknown): Error {
+  if (
+    error instanceof Error &&
+    (error.name === "TimeoutError" ||
+      error.name === "AbortError" ||
+      /timed out|timeout/i.test(error.message))
+  ) {
+    return new Error("O Supabase nao respondeu a tempo. Tentando usar o ultimo snapshot local disponivel.");
+  }
+
+  return error instanceof Error ? error : new Error("Erro ao carregar dados do Supabase.");
+}
 
 function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
   const value = import.meta.env[name];
@@ -54,6 +69,11 @@ function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
 
 class SupabaseDataProvider {
   private client = createBrowserSupabaseClient(getEnv("VITE_SUPABASE_URL"), getEnv("VITE_SUPABASE_ANON_KEY"));
+  private readClient = createTimedBrowserSupabaseClient(
+    getEnv("VITE_SUPABASE_URL"),
+    getEnv("VITE_SUPABASE_ANON_KEY"),
+    SUPABASE_READ_TIMEOUT_MS,
+  );
   private publicSnapshot: CachedSnapshot | null = null;
   private cmsSnapshot: CachedSnapshot | null = null;
   private publicLoadPromise: Promise<CMSData> | null = null;
@@ -114,6 +134,22 @@ class SupabaseDataProvider {
     return persisted;
   }
 
+  getCachedPublicData(): CMSData | null {
+    return this.getSnapshot(PUBLIC_DATA_CACHE_KEY)?.data ?? null;
+  }
+
+  getCachedCmsData(): CMSData | null {
+    return this.getSnapshot(CMS_DATA_CACHE_KEY)?.data ?? null;
+  }
+
+  cachePublicData(data: CMSData) {
+    this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, data);
+  }
+
+  cacheCmsData(data: CMSData) {
+    this.writeSnapshot(CMS_DATA_CACHE_KEY, data);
+  }
+
   loadPublicData(): Promise<CMSData> {
     const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
     const isFresh = Boolean(snapshot && Date.now() - snapshot.cachedAt < PUBLIC_DATA_CACHE_TTL_MS);
@@ -126,12 +162,13 @@ class SupabaseDataProvider {
       return this.publicLoadPromise;
     }
 
-    this.publicLoadPromise = loadPublicCMSDataFromSupabase(this.client)
+    this.publicLoadPromise = loadPublicCMSDataFromSupabase(this.readClient)
       .then((data) => {
         this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, data);
         return data;
       })
-      .catch((error) => {
+      .catch((rawError) => {
+        const error = normalizeLoadError(rawError);
         if (snapshot) {
           console.warn("[SupabaseDataProvider] Using cached public snapshot after load failure.", error);
           return snapshot.data;
@@ -152,12 +189,13 @@ class SupabaseDataProvider {
       return this.cmsLoadPromise;
     }
 
-    this.cmsLoadPromise = loadCmsDataFromSupabase(this.client)
+    this.cmsLoadPromise = loadCmsDataFromSupabase(this.readClient)
       .then((data) => {
         this.writeSnapshot(CMS_DATA_CACHE_KEY, data);
         return data;
       })
-      .catch((error) => {
+      .catch((rawError) => {
+        const error = normalizeLoadError(rawError);
         if (snapshot) {
           console.warn("[SupabaseDataProvider] Using cached CMS snapshot after load failure.", error);
           return snapshot.data;

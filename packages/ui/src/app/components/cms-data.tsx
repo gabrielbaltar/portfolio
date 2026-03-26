@@ -81,14 +81,16 @@ async function persistCollection<K extends CMSCollectionName>(key: K, previous: 
   await dataProvider.saveCollection(key, previous, next);
 }
 
-const PUBLIC_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const PUBLIC_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 
 export function CMSProvider({ children, mode = "public" }: { children: ReactNode; mode?: CMSMode }) {
-  const [data, setData] = useState<CMSData>(createEmptyCMSData);
-  const [loading, setLoading] = useState(true);
+  const initialSnapshot = mode === "cms" ? dataProvider.getCachedCmsData() : dataProvider.getCachedPublicData();
+  const [data, setData] = useState<CMSData>(() => normalizeCMSData(initialSnapshot ?? createEmptyCMSData()));
+  const [loading, setLoading] = useState(!initialSnapshot);
   const [error, setError] = useState<string | null>(null);
   const dataRef = useRef<CMSData>(data);
   const persistedDataRef = useRef<CMSData>(data);
+  const hasInitialSnapshotRef = useRef(Boolean(initialSnapshot));
 
   useEffect(() => {
     dataRef.current = data;
@@ -123,7 +125,9 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
   const refresh = () => refreshData(false);
 
   useEffect(() => {
-    void refresh();
+    const silentInitialRefresh = hasInitialSnapshotRef.current;
+    hasInitialSnapshotRef.current = false;
+    void refreshData(silentInitialRefresh);
   }, [mode]);
 
   useEffect(() => {
@@ -133,19 +137,9 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
       void refreshData(true);
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshInBackground();
-      }
-    };
-
-    window.addEventListener("focus", refreshInBackground);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
     const intervalId = window.setInterval(refreshInBackground, PUBLIC_REFRESH_INTERVAL_MS);
 
     return () => {
-      window.removeEventListener("focus", refreshInBackground);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.clearInterval(intervalId);
     };
   }, [mode]);
@@ -176,7 +170,9 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     });
 
     void savePromise.then(() => {
-      persistedDataRef.current = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
+      const persisted = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
+      persistedDataRef.current = persisted;
+      dataProvider.cacheCmsData(persisted);
     });
   };
 
@@ -199,7 +195,9 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     });
 
     void savePromise.then(() => {
-      persistedDataRef.current = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
+      const persisted = { ...persistedDataRef.current, [key]: nextValue } as CMSData;
+      persistedDataRef.current = persisted;
+      dataProvider.cacheCmsData(persisted);
     });
   };
 
@@ -238,6 +236,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
         dataProvider.saveCollection("media", previous.media, nextData.media),
       ]);
       persistedDataRef.current = nextData;
+      dataProvider.cacheCmsData(nextData);
       toast.success("Conteudo demo restaurado.");
     } catch (err) {
       setData(previous);
@@ -269,6 +268,7 @@ export function CMSProvider({ children, mode = "public" }: { children: ReactNode
     ]);
 
     persistedDataRef.current = nextData;
+    dataProvider.cacheCmsData(nextData);
   };
 
   const value = useMemo<CMSContextType>(
