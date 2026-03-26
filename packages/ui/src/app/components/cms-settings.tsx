@@ -108,14 +108,15 @@ function ExperienceTaskInput({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex w-full gap-2">
       <SelectionProtectedInput
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="flex-1 rounded-lg px-3 py-1.5 text-[#fafafa] focus:outline-none"
+        wrapperClassName="flex min-w-0 flex-1 items-center gap-2"
+        className="min-w-0 w-full flex-1 rounded-lg px-3 py-1.5 text-[#fafafa] focus:outline-none"
         style={{ fontSize: "12px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
       />
-      <button onClick={onRemove} className="text-[#555] hover:text-red-400 cursor-pointer">
+      <button onClick={onRemove} className="shrink-0 text-[#555] hover:text-red-400 cursor-pointer">
         <Trash2 size={12} />
       </button>
     </div>
