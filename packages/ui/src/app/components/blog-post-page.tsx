@@ -356,20 +356,20 @@ export function BlogPostPage() {
         )}
 
         <motion.div
-          className="mt-8 rounded-[24px] border"
-          style={{
-            borderColor: "var(--border-primary, #2A2A2A)",
-            backgroundColor: "rgba(255, 255, 255, 0.02)",
-          }}
+          className="mt-8"
           initial={{ y: 15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <div className={`flex flex-col gap-5 px-5 py-5 ${meta.length > 0 ? "min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between" : ""}`}>
+          <div className={`flex flex-col gap-4 ${meta.length > 0 ? "min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between" : ""}`}>
             {meta.length > 0 && (
-              <div className="flex flex-wrap gap-x-6 gap-y-4">
+              <div className="flex flex-wrap gap-x-6 gap-y-3">
                 {meta.map((m) => (
-                  <div key={m.label} className="min-w-0">
+                  <div
+                    key={m.label}
+                    className="min-w-[138px] pb-3"
+                    style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
+                  >
                     <p className="font-['Inter',sans-serif]" style={{ fontSize: "11px", color: "var(--text-secondary, #6F6F6F)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                       {m.label}
                     </p>
@@ -381,7 +381,10 @@ export function BlogPostPage() {
               </div>
             )}
 
-            <div className={`flex flex-col gap-3 ${meta.length > 0 ? "min-[720px]:items-end" : ""}`}>
+            <div
+              className={`flex flex-col gap-3 pb-3 ${meta.length > 0 ? "min-[720px]:min-w-[220px] min-[720px]:items-end" : ""}`}
+              style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
+            >
               <p
                 className="font-['Inter',sans-serif]"
                 style={{
