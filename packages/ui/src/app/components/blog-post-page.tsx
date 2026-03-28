@@ -362,7 +362,7 @@ export function BlogPostPage() {
           transition={{ duration: 0.5, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
         >
           <div
-            className="grid grid-cols-2 gap-x-6 gap-y-4 pb-3 min-[720px]:flex min-[720px]:flex-nowrap min-[720px]:items-end min-[720px]:gap-6"
+            className="grid grid-cols-2 gap-x-6 gap-y-4 pb-12 min-[720px]:flex min-[720px]:flex-nowrap min-[720px]:items-end min-[720px]:gap-6"
             style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
           >
             {meta.map((m) => (

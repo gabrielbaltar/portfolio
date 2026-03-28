@@ -70,7 +70,7 @@ function ShareActionButton({
       onClick={() => void onClick()}
       title={label}
       aria-label={label}
-      className="flex min-h-[44px] items-center gap-2 rounded-[12px] border px-3 py-2.5 text-left transition-opacity duration-200 hover:opacity-85"
+      className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-[12px] border transition-opacity duration-200 hover:opacity-85"
       style={{
         borderColor: "var(--border-primary, #2A2A2A)",
         backgroundColor: "rgba(255, 255, 255, 0.03)",
@@ -78,9 +78,6 @@ function ShareActionButton({
       }}
     >
       <Icon size={14} />
-      <span className="min-w-0 font-['Inter',sans-serif]" style={{ fontSize: "13px", lineHeight: "18px" }}>
-        {label}
-      </span>
     </button>
   );
 }
@@ -149,7 +146,7 @@ export function ArticleShareActions({
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 transition-opacity duration-200 hover:opacity-80"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 transition-opacity duration-200 hover:opacity-80"
           style={{
             borderColor: "var(--border-primary, #2A2A2A)",
             backgroundColor: "rgba(255, 255, 255, 0.04)",
@@ -199,7 +196,7 @@ export function ArticleShareActions({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-5 grid grid-cols-2 gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <ShareActionButton
               icon={Share2}
               label={t("shareNatively")}
@@ -223,7 +220,7 @@ export function ArticleShareActions({
             style={{ backgroundColor: "var(--border-primary, #2A2A2A)" }}
           />
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-wrap gap-2">
             <ShareActionButton
               icon={Twitter}
               label={t("shareOnX")}
