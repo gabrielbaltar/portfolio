@@ -111,12 +111,16 @@ function shouldFallbackToLegacyPublicLoader(error: { code?: string; message?: st
 }
 
 function buildSerializablePublicSnapshot(data: CMSData): PublicSnapshotData {
+  const publishedProjects = data.projects.filter((project) => !project.status || project.status === "published");
+  const publishedBlogPosts = data.blogPosts.filter((post) => !post.status || post.status === "published");
+  const publishedPages = data.pages.filter((page) => !page.status || page.status === "published");
+
   return normalizeCMSData({
     siteSettings: mapSingletonFromRow(mapSiteSettingsToRow(data.siteSettings) as any, defaultSiteSettings),
     profile: data.profile,
-    projects: data.projects,
-    blogPosts: data.blogPosts,
-    pages: data.pages,
+    projects: publishedProjects,
+    blogPosts: publishedBlogPosts,
+    pages: publishedPages,
     experiences: data.experiences,
     education: data.education,
     certifications: data.certifications,
@@ -250,14 +254,15 @@ function buildPublicCMSData(payload: PublicSnapshotPayload): CMSData {
 export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData> {
   const embeddedSiteSettingsResult = await client.from(TABLES.siteSettings).select("*").eq("id", "main").maybeSingle();
   const embeddedSiteSettingsRow = ensureSuccess(embeddedSiteSettingsResult, "Erro ao carregar configuracoes publicas") as SingletonDatabaseRow;
-  const embeddedSnapshot = extractEmbeddedPublicSnapshot(embeddedSiteSettingsRow);
-  if (embeddedSnapshot) {
-    return embeddedSnapshot;
-  }
 
   const snapshotResult = await client.rpc("get_public_portfolio_snapshot");
   if (!snapshotResult.error && snapshotResult.data) {
     return buildPublicCMSData(snapshotResult.data as PublicSnapshotPayload);
+  }
+
+  const embeddedSnapshot = extractEmbeddedPublicSnapshot(embeddedSiteSettingsRow);
+  if (embeddedSnapshot) {
+    return embeddedSnapshot;
   }
 
   if (snapshotResult.error && !shouldFallbackToLegacyPublicLoader(snapshotResult.error)) {

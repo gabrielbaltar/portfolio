@@ -38,7 +38,6 @@ import {
 
 const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v1";
 const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
-const PUBLIC_DATA_CACHE_TTL_MS = 60 * 60 * 1000;
 const SUPABASE_READ_TIMEOUT_MS = 8000;
 
 type CachedSnapshot = {
@@ -153,11 +152,6 @@ class SupabaseDataProvider {
 
   loadPublicData(): Promise<CMSData> {
     const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
-    const isFresh = Boolean(snapshot && Date.now() - snapshot.cachedAt < PUBLIC_DATA_CACHE_TTL_MS);
-
-    if (isFresh && snapshot) {
-      return Promise.resolve(snapshot.data);
-    }
 
     if (this.publicLoadPromise) {
       return this.publicLoadPromise;
