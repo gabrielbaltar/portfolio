@@ -1,26 +1,34 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Copy, Phone, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
+import { ContentPagination } from "./content-pagination";
 import { ProjectPreviewCard } from "./content-preview-cards";
 import { copyToClipboard } from "./clipboard-utils";
 import { sendContactEmail } from "./email-service";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 
+const PROJECTS_PER_PAGE = 6;
+
 export function ProjectsPage() {
   const { data } = useTranslatedCMS();
   const { locale, t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile, projects: allProjects, siteSettings } = data;
   const projects = filterVisibleContent(
     allProjects.filter((project) => !project.status || project.status === "published"),
     siteSettings,
     "projects",
   );
+  const totalPages = Math.max(1, Math.ceil(projects.length / PROJECTS_PER_PAGE));
+  const rawPage = Number(searchParams.get("page") || "1");
+  const currentPage = Number.isFinite(rawPage) ? Math.min(Math.max(1, rawPage), totalPages) : 1;
+  const paginatedProjects = projects.slice((currentPage - 1) * PROJECTS_PER_PAGE, currentPage * PROJECTS_PER_PAGE);
   const socialLinks = getProfileSocialLinks(profile);
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -30,6 +38,20 @@ export function ProjectsPage() {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      nextParams.delete("page");
+    } else {
+      nextParams.set("page", String(page));
+    }
+    setSearchParams(nextParams);
+  };
 
   const copyEmail = () => {
     copyToClipboard(profile.email);
@@ -86,7 +108,7 @@ export function ProjectsPage() {
           {t("projectsTitle")}
         </motion.h1>
         <div className="mt-10 grid grid-cols-1 min-[560px]:grid-cols-2 gap-6">
-          {projects.map((project, i) => {
+          {paginatedProjects.map((project, i) => {
             const cardCopy = getProjectCardCopy(project, siteSettings);
 
             return (
@@ -110,6 +132,14 @@ export function ProjectsPage() {
             );
           })}
         </div>
+        <ContentPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          previousLabel={t("previousPage")}
+          nextLabel={t("nextPage")}
+          pageLabel={t("pageLabel")}
+        />
       </div>
 
       {/* Contact / Let's talk */}

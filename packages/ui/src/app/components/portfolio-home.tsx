@@ -103,7 +103,7 @@ export function PortfolioHome() {
   const visibleAwards = filterVisibleContent(awards, siteSettings, "awards");
   const visibleRecommendations = filterVisibleContent(recommendations, siteSettings, "recommendations");
   const displayedProjects = publishedProjects.slice(0, 4);
-  const displayedBlogPosts = publishedBlogPosts.slice(0, 3);
+  const displayedBlogPosts = publishedBlogPosts.slice(0, 4);
   const aboutParagraphs = getProfileAboutParagraphs(profile).filter((paragraph) => !isRichTextEmpty(paragraph));
   const hasAboutTitle = !isRichTextEmpty(profile.aboutTitle);
   const stackSectionTitle = (
@@ -566,24 +566,34 @@ export function PortfolioHome() {
             {t("viewAllPosts")}
           </Link>
         </div>
-        <div className="space-y-10">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {displayedBlogPosts.map((post, i) => {
             const cardCopy = getArticleCardCopy(post);
 
             return (
-            <ArticlePreviewCard
+            <motion.div
               key={post.id}
-              href={`/blog/${post.slug || post.id}`}
-              title={cardCopy.title}
-              description={cardCopy.description}
-              image={post.cardImage || post.image}
-              imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
-              publisher={post.publisher}
-              date={post.date}
-              category={(post as any).category}
-              locked={Boolean((post as any).password && (post as any).password.trim() !== "")}
-              ctaLabel={t("readArticle")}
-            />
+              initial={{ y: 24, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, delay: i * 0.08 }}
+              className="h-full"
+            >
+              <ArticlePreviewCard
+                href={`/blog/${post.slug || post.id}`}
+                title={cardCopy.title}
+                description={cardCopy.description}
+                image={post.cardImage || post.image}
+                imagePosition={post.cardImagePosition || post.imagePosition || "50% 50%"}
+                publisher={post.publisher}
+                date={post.date}
+                category={(post as any).category}
+                readTime={(post as any).readTime}
+                locked={Boolean((post as any).password && (post as any).password.trim() !== "")}
+                ctaLabel={t("readArticle")}
+                layout="vertical"
+              />
+            </motion.div>
             );
           })}
         </div>

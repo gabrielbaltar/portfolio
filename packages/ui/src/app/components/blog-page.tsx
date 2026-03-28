@@ -1,20 +1,43 @@
-import { Link } from "react-router";
+import { useEffect } from "react";
+import { Link, useSearchParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "./language-context";
 import { getVisiblePublicTags } from "./public-tag-utils";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { motion } from "motion/react";
 import { ArticlePreviewCard } from "./content-preview-cards";
+import { ContentPagination } from "./content-pagination";
 import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
+
+const POSTS_PER_PAGE = 6;
 
 export function BlogPage() {
   const { data } = useTranslatedCMS();
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const posts = filterVisibleContent(
     data.blogPosts.filter((post) => !post.status || post.status === "published"),
     data.siteSettings,
     "blogPosts",
   );
+  const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const rawPage = Number(searchParams.get("page") || "1");
+  const currentPage = Number.isFinite(rawPage) ? Math.min(Math.max(1, rawPage), totalPages) : 1;
+  const paginatedPosts = posts.slice((currentPage - 1) * POSTS_PER_PAGE, currentPage * POSTS_PER_PAGE);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      nextParams.delete("page");
+    } else {
+      nextParams.set("page", String(page));
+    }
+    setSearchParams(nextParams);
+  };
 
   return (
     <div
@@ -38,8 +61,8 @@ export function BlogPage() {
         >
           {t("articlesTitle")}
         </motion.h1>
-        <div className="mt-10 space-y-10 min-[480px]:space-y-[40px]">
-          {posts.map((post, i) => {
+        <div className="mt-10 grid grid-cols-1 gap-6 min-[560px]:grid-cols-2">
+          {paginatedPosts.map((post, i) => {
             const visibleTags = getVisiblePublicTags((post as any).tags);
             const cardCopy = getArticleCardCopy(post);
 
@@ -49,6 +72,7 @@ export function BlogPage() {
                 initial={{ y: 40, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.1 * i, ease: [0.23, 1, 0.32, 1] }}
+                className="h-full"
               >
                 <ArticlePreviewCard
                   href={`/blog/${post.slug}`}
@@ -63,11 +87,20 @@ export function BlogPage() {
                   locked={Boolean((post as any).password && (post as any).password.trim() !== "")}
                   tags={visibleTags}
                   ctaLabel={t("readArticle")}
+                  layout="vertical"
                 />
               </motion.div>
             );
           })}
         </div>
+        <ContentPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+          previousLabel={t("previousPage")}
+          nextLabel={t("nextPage")}
+          pageLabel={t("pageLabel")}
+        />
       </div>
     </div>
   );

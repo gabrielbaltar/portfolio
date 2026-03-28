@@ -29,6 +29,7 @@ type ArticlePreviewCardProps = {
   locked?: boolean;
   tags?: string[];
   ctaLabel: string;
+  layout?: "horizontal" | "vertical";
   className?: string;
 };
 
@@ -372,12 +373,109 @@ export function ArticlePreviewCard({
   locked = false,
   tags = [],
   ctaLabel,
+  layout = "horizontal",
   className = "",
 }: ArticlePreviewCardProps) {
   const location = useLocation();
   const visibleTags = tags.slice(0, 3);
   const plainTitle = richTextToPlainText(title) || "Artigo";
   const hasDescription = Boolean(richTextToPlainText(description));
+  const metaItems = [publisher, date, category, readTime].filter(Boolean);
+
+  if (layout === "vertical") {
+    return (
+      <article
+        className={`group relative flex h-full flex-col overflow-hidden rounded-lg transition-transform duration-300 hover:-translate-y-1 ${className}`}
+        style={{
+          backgroundColor: "var(--bg-secondary, #121212)",
+          border: "1px solid var(--border-primary, #363636)",
+        }}
+      >
+        <Link
+          to={href}
+          state={{ backTo: buildBackTarget(location) }}
+          className="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#fafafa]/70"
+          aria-label={`Abrir artigo ${plainTitle}`}
+        />
+
+        <div className="pointer-events-none relative z-20">
+          <div className="pointer-events-none" style={{ aspectRatio: "700 / 525" }}>
+            <ContentImage
+              src={image}
+              alt={plainTitle}
+              emptyLabel="Sem capa"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              position={imagePosition}
+            />
+          </div>
+          {locked && (
+            <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: "rgba(0, 0, 0, 0.6)",
+                  backdropFilter: "blur(4px)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                <Lock size={16} style={{ color: "rgba(255, 255, 255, 0.8)" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div
+          className="pointer-events-none relative z-20 flex min-h-[148px] flex-1 flex-col justify-between px-4 py-3"
+          style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-1.5">
+              {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
+              <div className="min-w-0 flex-1">
+                <p
+                  className="min-h-[48px] overflow-hidden text-ellipsis break-words"
+                  style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+                >
+                  <span
+                    className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    <RichTextContent value={title} placeholder="Sem titulo" />
+                  </span>
+                </p>
+                <div
+                  className="mt-2 line-clamp-3"
+                  style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
+                >
+                  {hasDescription ? <RichTextContent value={description} /> : "Sem descricao"}
+                </div>
+              </div>
+            </div>
+            <ArrowUpRight
+              size={16}
+              className="mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+              style={{ color: "var(--text-secondary, #ababab)" }}
+            />
+          </div>
+
+          <div className="mt-4 min-h-[20px]">
+            {metaItems.length > 0 && (
+              <p
+                className="line-clamp-1"
+                style={{ fontSize: "13px", lineHeight: "19px", color: "var(--text-secondary, #ababab)" }}
+              >
+                {metaItems.join(" • ")}
+              </p>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
