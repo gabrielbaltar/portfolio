@@ -388,11 +388,13 @@ export function BlogPostPage() {
               >
                 {t("shareArticle")}
               </p>
-              <ArticleShareActions
-                title={articleSeo.title}
-                description={articleSeo.description}
-                url={articleSeo.url || articleUrl}
-              />
+              <div className="mt-3">
+                <ArticleShareActions
+                  title={articleSeo.title}
+                  description={articleSeo.description}
+                  url={articleSeo.url || articleUrl}
+                />
+              </div>
             </div>
           </div>
         </motion.div>

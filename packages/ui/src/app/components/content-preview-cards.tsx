@@ -380,7 +380,8 @@ export function ArticlePreviewCard({
   const visibleTags = tags.slice(0, 3);
   const plainTitle = richTextToPlainText(title) || "Artigo";
   const hasDescription = Boolean(richTextToPlainText(description));
-  const metaItems = [publisher, date, category, readTime].filter(Boolean);
+  const eyebrow = category || visibleTags[0] || publisher;
+  const footerMetaItems = [publisher, date, readTime].filter(Boolean);
 
   if (layout === "vertical") {
     return (
@@ -425,14 +426,27 @@ export function ArticlePreviewCard({
         </div>
 
         <div
-          className="pointer-events-none relative z-20 flex min-h-[148px] flex-1 flex-col justify-between px-4 py-3"
+          className="pointer-events-none relative z-20 flex min-h-[168px] flex-1 flex-col justify-between px-4 py-4"
           style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-start gap-1.5">
               {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
               <div className="min-w-0 flex-1">
-                <p
+                {eyebrow && (
+                  <p
+                    className="mb-2 line-clamp-1 uppercase"
+                    style={{
+                      fontSize: "11px",
+                      lineHeight: "14px",
+                      letterSpacing: "0.08em",
+                      color: "var(--text-secondary, #8A8A8A)",
+                    }}
+                  >
+                    {eyebrow}
+                  </p>
+                )}
+                <h3
                   className="min-h-[48px] overflow-hidden text-ellipsis break-words"
                   style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
                 >
@@ -446,9 +460,9 @@ export function ArticlePreviewCard({
                   >
                     <RichTextContent value={title} placeholder="Sem titulo" />
                   </span>
-                </p>
+                </h3>
                 <div
-                  className="mt-2 line-clamp-3"
+                  className="mt-1.5 line-clamp-3"
                   style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
                 >
                   {hasDescription ? <RichTextContent value={description} /> : "Sem descricao"}
@@ -463,12 +477,12 @@ export function ArticlePreviewCard({
           </div>
 
           <div className="mt-4 min-h-[20px]">
-            {metaItems.length > 0 && (
+            {footerMetaItems.length > 0 && (
               <p
                 className="line-clamp-1"
                 style={{ fontSize: "13px", lineHeight: "19px", color: "var(--text-secondary, #ababab)" }}
               >
-                {metaItems.join(" • ")}
+                {footerMetaItems.join(" • ")}
               </p>
             )}
           </div>
