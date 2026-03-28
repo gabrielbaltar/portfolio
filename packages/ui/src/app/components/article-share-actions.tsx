@@ -55,32 +55,6 @@ function openPopup(url: string) {
   }
 }
 
-function ShareTriggerButton({
-  label,
-}: {
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 transition-all duration-200 hover:-translate-y-0.5"
-      style={{
-        borderColor: "var(--border-primary, #2A2A2A)",
-        backgroundColor: "rgba(255, 255, 255, 0.04)",
-        color: "var(--text-primary, #FAFAFA)",
-      }}
-    >
-      <Share2 size={14} />
-      <span
-        className="font-['Inter',sans-serif]"
-        style={{ fontSize: "13px", lineHeight: "18px" }}
-      >
-        {label}
-      </span>
-    </button>
-  );
-}
-
 function ShareActionButton({
   icon: Icon,
   label,
@@ -96,7 +70,7 @@ function ShareActionButton({
       onClick={() => void onClick()}
       title={label}
       aria-label={label}
-      className="flex min-h-[44px] items-center gap-2 rounded-[12px] border px-3 py-2.5 text-left transition-all duration-200 hover:-translate-y-0.5"
+      className="flex min-h-[44px] items-center gap-2 rounded-[12px] border px-3 py-2.5 text-left transition-opacity duration-200 hover:opacity-85"
       style={{
         borderColor: "var(--border-primary, #2A2A2A)",
         backgroundColor: "rgba(255, 255, 255, 0.03)",
@@ -173,7 +147,23 @@ export function ArticleShareActions({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <ShareTriggerButton label={t("shareNatively")} />
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 transition-opacity duration-200 hover:opacity-80"
+          style={{
+            borderColor: "var(--border-primary, #2A2A2A)",
+            backgroundColor: "rgba(255, 255, 255, 0.04)",
+            color: "var(--text-primary, #FAFAFA)",
+          }}
+        >
+          <Share2 size={14} />
+          <span
+            className="font-['Inter',sans-serif]"
+            style={{ fontSize: "13px", lineHeight: "18px" }}
+          >
+            {t("shareNatively")}
+          </span>
+        </button>
       </DialogTrigger>
 
       <DialogContent
