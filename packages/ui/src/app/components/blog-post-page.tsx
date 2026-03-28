@@ -1,5 +1,6 @@
 import { useParams, Link, useLocation } from "react-router";
 import { ArrowLeft, ExternalLink, Copy, Phone, Lock, Tag, Clock, User } from "lucide-react";
+import { buildAbsoluteUrl, buildArticleSeoData } from "@portfolio/core";
 import { canOpenInImageLightbox, ContentImage } from "./content-image";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
@@ -16,9 +17,11 @@ import { ArticlePreviewCard } from "./content-preview-cards";
 import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
+import { ArticleShareActions } from "./article-share-actions";
 import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS, ARTICLE_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
+import { usePageSeo } from "./use-page-seo";
 
 function ImageCard({
   src,
@@ -73,6 +76,10 @@ export function BlogPostPage() {
   const otherPosts = blogPosts
     .filter((p) => p.slug !== slug)
     .slice(0, 3);
+  const fallbackSiteTitle = profile.name || siteSettings.siteTitle || "Portfolio";
+  const publicSiteUrl = (import.meta.env.VITE_PUBLIC_SITE_URL || "").trim();
+  const shareBaseUrl = publicSiteUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  const articleUrl = buildAbsoluteUrl(`${location.pathname}${location.search}`, shareBaseUrl);
 
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -83,6 +90,43 @@ export function BlogPostPage() {
   const [lightboxImage, setLightboxImage] = useState<LightboxOpenPayload | null>(null);
   const backTo = getBackTarget(location.state, "/blog");
   const socialLinks = getProfileSocialLinks(profile);
+  const needsPassword = Boolean(post?.password && post.password.trim() !== "");
+  const postUnlocked = Boolean(post && (!needsPassword || isUnlocked || isProjectUnlocked(post.id)));
+  const protectedSeoPost = {
+    title: t("protectedArticleTitle"),
+    subtitle: "",
+    description: t("protectedArticleDescription"),
+    seoTitle: "",
+    seoDescription: "",
+    image: "",
+  };
+  const articleSeo = post
+    ? buildArticleSeoData(
+        postUnlocked ? post : protectedSeoPost,
+        siteSettings,
+        {
+          articleUrl,
+          siteUrl: shareBaseUrl,
+          locale,
+          fallbackTitle: fallbackSiteTitle,
+        },
+      )
+    : {
+        title: `${t("articleNotFound")} | ${fallbackSiteTitle}`,
+        description: siteSettings.siteDescription || fallbackSiteTitle,
+        url: "",
+        imageUrl: "",
+        siteName: fallbackSiteTitle,
+        locale: locale === "en-US" ? "en_US" : "pt_BR",
+        twitterCard: "summary",
+      };
+
+  usePageSeo({
+    ...articleSeo,
+    type: post && postUnlocked ? "article" : "website",
+    url: articleSeo.url || undefined,
+    imageUrl: articleSeo.imageUrl || undefined,
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -160,10 +204,6 @@ export function BlogPostPage() {
       </div>
     );
   }
-
-  // Check if post requires password
-  const needsPassword = post.password && post.password.trim() !== "";
-  const postUnlocked = !needsPassword || isUnlocked || isProjectUnlocked(post.id);
 
   // Password gate
   if (!postUnlocked) {
@@ -315,27 +355,52 @@ export function BlogPostPage() {
           </motion.p>
         )}
 
-        {/* Metadata row */}
-        {meta.length > 0 && (
-          <motion.div
-            className="flex flex-wrap gap-6 mt-8"
-            style={{ borderBottom: "1px solid var(--border-primary, #2A2A2A)" }}
-            initial={{ y: 15, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {meta.map((m) => (
-              <div key={m.label} className="min-w-0">
-                <p className="font-['Inter',sans-serif]" style={{ fontSize: "11px", color: "var(--text-secondary, #6F6F6F)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  {m.label}
-                </p>
-                <p className="mt-1 font-['Inter',sans-serif]" style={{ fontSize: "14px", color: "var(--text-primary, #D6D6D6)" }}>
-                  {m.value}
-                </p>
+        <motion.div
+          className="mt-8 rounded-[24px] border"
+          style={{
+            borderColor: "var(--border-primary, #2A2A2A)",
+            backgroundColor: "rgba(255, 255, 255, 0.02)",
+          }}
+          initial={{ y: 15, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div className={`flex flex-col gap-5 px-5 py-5 ${meta.length > 0 ? "min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between" : ""}`}>
+            {meta.length > 0 && (
+              <div className="flex flex-wrap gap-x-6 gap-y-4">
+                {meta.map((m) => (
+                  <div key={m.label} className="min-w-0">
+                    <p className="font-['Inter',sans-serif]" style={{ fontSize: "11px", color: "var(--text-secondary, #6F6F6F)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {m.label}
+                    </p>
+                    <p className="mt-1 font-['Inter',sans-serif]" style={{ fontSize: "14px", color: "var(--text-primary, #D6D6D6)" }}>
+                      {m.value}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </motion.div>
-        )}
+            )}
+
+            <div className={`flex flex-col gap-3 ${meta.length > 0 ? "min-[720px]:items-end" : ""}`}>
+              <p
+                className="font-['Inter',sans-serif]"
+                style={{
+                  fontSize: "11px",
+                  color: "var(--text-secondary, #6F6F6F)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {t("shareArticle")}
+              </p>
+              <ArticleShareActions
+                title={articleSeo.title}
+                description={articleSeo.description}
+                url={articleSeo.url || articleUrl}
+              />
+            </div>
+          </div>
+        </motion.div>
 
         {heroImage && (
           <motion.div

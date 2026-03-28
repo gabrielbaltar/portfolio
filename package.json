@@ -14,7 +14,7 @@
   "scripts": {
     "dev:web": "vite --config apps/web/vite.config.ts",
     "dev:cms": "vite --config apps/cms/vite.config.ts",
-    "build:web": "vite build --config apps/web/vite.config.ts",
+    "build:web": "vite build --config apps/web/vite.config.ts && tsx scripts/generate-blog-static-pages.ts",
     "build:cms": "vite build --config apps/cms/vite.config.ts",
     "build": "npm run build:web && npm run build:cms",
     "typecheck": "tsc --noEmit -p tsconfig.base.json",

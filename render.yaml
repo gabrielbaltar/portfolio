@@ -9,6 +9,8 @@ services:
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
+      - key: VITE_PUBLIC_SITE_URL
+        sync: false
       - key: VITE_PUBLIC_POSTHOG_KEY
         sync: false
       - key: VITE_PUBLIC_POSTHOG_HOST
@@ -23,6 +25,7 @@ services:
       paths:
         - apps/web/**
         - packages/**
+        - scripts/**
         - package.json
         - package-lock.json
         - tsconfig.base.json

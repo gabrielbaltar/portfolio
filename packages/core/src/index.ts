@@ -2,6 +2,7 @@ export * from "./constants";
 export * from "./defaults";
 export * from "./experience";
 export * from "./seed";
+export * from "./share";
 export * from "./slug";
 export * from "./stack";
 export * from "./types";
