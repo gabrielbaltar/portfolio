@@ -381,7 +381,7 @@ export function ArticlePreviewCard({
   const plainTitle = richTextToPlainText(title) || "Artigo";
   const hasDescription = Boolean(richTextToPlainText(description));
   const eyebrow = category || visibleTags[0] || publisher;
-  const footerMetaItems = [publisher, date, readTime].filter(Boolean);
+  const footerMetaItems = [publisher && publisher !== eyebrow ? publisher : null, date].filter(Boolean);
 
   if (layout === "vertical") {
     return (
@@ -426,66 +426,97 @@ export function ArticlePreviewCard({
         </div>
 
         <div
-          className="pointer-events-none relative z-20 flex min-h-[168px] flex-1 flex-col justify-between px-4 py-4"
+          className="pointer-events-none relative z-20 flex min-h-[184px] flex-1 flex-col px-4 py-4"
           style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-1.5">
-              {locked && <Lock size={13} className="mt-[5px] shrink-0" style={{ color: "#ffa500", opacity: 0.7 }} />}
-              <div className="min-w-0 flex-1">
-                {eyebrow && (
-                  <p
-                    className="mb-2 line-clamp-1 uppercase"
-                    style={{
-                      fontSize: "11px",
-                      lineHeight: "14px",
-                      letterSpacing: "0.08em",
-                      color: "var(--text-secondary, #8A8A8A)",
-                    }}
-                  >
-                    {eyebrow}
-                  </p>
-                )}
-                <h3
-                  className="min-h-[48px] overflow-hidden text-ellipsis break-words"
-                  style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              {locked && (
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: "rgba(255, 165, 0, 0.14)",
+                    border: "1px solid rgba(255, 165, 0, 0.22)",
+                    color: "#ffa500",
+                  }}
                 >
-                  <span
-                    className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
-                    <RichTextContent value={title} placeholder="Sem titulo" />
-                  </span>
-                </h3>
-                <div
-                  className="mt-1.5 line-clamp-3"
-                  style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
+                  <Lock size={11} />
+                </span>
+              )}
+              {eyebrow && (
+                <span
+                  className="min-w-0 truncate rounded-full border px-2.5 py-1 uppercase"
+                  style={{
+                    fontSize: "10px",
+                    lineHeight: "12px",
+                    letterSpacing: "0.08em",
+                    borderColor: "var(--border-secondary, #242424)",
+                    backgroundColor: "rgba(255, 255, 255, 0.03)",
+                    color: "var(--text-secondary, #8A8A8A)",
+                  }}
                 >
-                  {hasDescription ? <RichTextContent value={description} /> : "Sem descricao"}
-                </div>
-              </div>
+                  {eyebrow}
+                </span>
+              )}
             </div>
-            <ArrowUpRight
-              size={16}
-              className="mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-              style={{ color: "var(--text-secondary, #ababab)" }}
-            />
-          </div>
 
-          <div className="mt-4 min-h-[20px]">
-            {footerMetaItems.length > 0 && (
-              <p
-                className="line-clamp-1"
-                style={{ fontSize: "13px", lineHeight: "19px", color: "var(--text-secondary, #ababab)" }}
+            {readTime && (
+              <span
+                className="shrink-0"
+                style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #8A8A8A)" }}
               >
-                {footerMetaItems.join(" • ")}
-              </p>
+                {readTime}
+              </span>
             )}
           </div>
+
+          <div className="mt-4 flex min-h-[92px] flex-1 flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <h3
+                className="min-h-[48px] flex-1 overflow-hidden text-ellipsis break-words"
+                style={{ fontSize: "16px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+              >
+                <span
+                  className="min-w-0 flex-1 overflow-hidden text-ellipsis break-words"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  <RichTextContent value={title} placeholder="Sem titulo" />
+                </span>
+              </h3>
+              <ArrowUpRight
+                size={16}
+                className="mt-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                style={{ color: "var(--text-secondary, #ababab)" }}
+              />
+            </div>
+
+            {hasDescription && (
+              <div
+                className="mt-2 line-clamp-2"
+                style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
+              >
+                <RichTextContent value={description} />
+              </div>
+            )}
+          </div>
+
+          {footerMetaItems.length > 0 && (
+            <div
+              className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1"
+              style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #8A8A8A)" }}
+            >
+              {footerMetaItems.map((item, index) => (
+                <div key={`${item}-${index}`} className="flex items-center gap-2">
+                  {index > 0 && <span aria-hidden="true">•</span>}
+                  <span className="line-clamp-1">{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </article>
     );
