@@ -496,7 +496,7 @@ export function ArticlePreviewCard({
 
             {hasDescription && (
               <div
-                className="mt-2 line-clamp-2"
+                className="mt-4 line-clamp-2"
                 style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
               >
                 <RichTextContent value={description} />
