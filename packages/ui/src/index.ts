@@ -3,6 +3,7 @@ export * from "./app/cms-data-layout";
 export * from "./app/public-root-layout";
 export * from "./app/components/blog-page";
 export * from "./app/components/blog-post-page";
+export * from "./app/components/cms-access-requests";
 export * from "./app/components/cms-content-list";
 export * from "./app/components/cms-dashboard";
 export * from "./app/components/cms-editor";

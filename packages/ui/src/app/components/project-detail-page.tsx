@@ -2,7 +2,8 @@ import { toast } from "sonner";
 import { useParams, Link, useLocation } from "react-router";
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, ExternalLink, Copy, Phone, Lock } from "lucide-react";
+import type { ProjectAccessRequestStatus } from "@portfolio/core";
+import { ArrowLeft, ExternalLink, Copy, Phone, Lock, Mail, ShieldCheck } from "lucide-react";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
@@ -17,6 +18,12 @@ import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import { PROJECT_SUBTITLE_APPEARANCE_DEFAULTS, PROJECT_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
+import { dataProvider } from "./data-provider";
+import { sendProjectAccessRequestEmail } from "./email-service";
+import { getProjectAccessVisitorToken } from "./project-access-utils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 function ImageCard({
   src,
@@ -76,6 +83,12 @@ export function ProjectDetailPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<LightboxOpenPayload | null>(null);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestForm, setRequestForm] = useState({ name: "", email: "", message: "" });
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [accessRequestStatus, setAccessRequestStatus] = useState<ProjectAccessRequestStatus | null>(null);
+  const [approvedAccessGranted, setApprovedAccessGranted] = useState(false);
+  const [checkingApprovedAccess, setCheckingApprovedAccess] = useState(false);
   const backTo = getBackTarget(location.state, "/projects");
   const socialLinks = getProfileSocialLinks(profile);
 
@@ -86,6 +99,16 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, [slug]);
+
+  useEffect(() => {
+    setPasswordInput("");
+    setIsUnlocked(false);
+    setPasswordError(false);
+    setApprovedAccessGranted(false);
+    setAccessRequestStatus(null);
+    setRequestDialogOpen(false);
+    setRequestForm({ name: "", email: "", message: "" });
   }, [slug]);
 
   const copyEmail = () => {
@@ -116,6 +139,111 @@ export function ProjectDetailPage() {
     }
   };
 
+  // Check if project requires password
+  const needsPassword = Boolean(project?.password && project.password.trim() !== "");
+  const sessionUnlocked = project ? isProjectUnlocked(project.id) : false;
+  const projectUnlocked = project ? !needsPassword || isUnlocked || sessionUnlocked || approvedAccessGranted : false;
+
+  useEffect(() => {
+    if (!project || !needsPassword || isUnlocked || sessionUnlocked) {
+      setCheckingApprovedAccess(false);
+      return;
+    }
+
+    let active = true;
+    const visitorToken = getProjectAccessVisitorToken();
+
+    setCheckingApprovedAccess(true);
+    void dataProvider
+      .getProjectAccessStatus(project.id, visitorToken)
+      .then((status) => {
+        if (!active) return;
+        setApprovedAccessGranted(status.hasAccess);
+        setAccessRequestStatus(status.latestStatus);
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.warn("Nao foi possivel verificar o acesso aprovado ao projeto.", error);
+      })
+      .finally(() => {
+        if (!active) return;
+        setCheckingApprovedAccess(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [project?.id, needsPassword, isUnlocked, sessionUnlocked]);
+
+  const handleAccessRequestSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const name = requestForm.name.trim();
+    const email = requestForm.email.trim();
+    const message = requestForm.message.trim();
+
+    if (!name || !email || !message) {
+      toast.error(t("fillAllFields"));
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      toast.error(t("accessRequestEmailInvalid"));
+      return;
+    }
+
+    if (!project) return;
+
+    setSubmittingRequest(true);
+
+    try {
+      const visitorToken = getProjectAccessVisitorToken();
+      const result = await dataProvider.submitProjectAccessRequest({
+        projectId: project.id,
+        requesterName: name,
+        requesterEmail: email,
+        requesterMessage: message,
+        visitorToken,
+      });
+
+      setAccessRequestStatus(result.latestStatus);
+
+      if (result.hasAccess) {
+        setApprovedAccessGranted(true);
+        setRequestDialogOpen(false);
+        toast.success(t("accessAlreadyGranted"));
+        return;
+      }
+
+      if (!result.created) {
+        toast.info(t("accessRequestAlreadyPending"));
+        setRequestDialogOpen(false);
+        return;
+      }
+
+      const emailResult = await sendProjectAccessRequestEmail({
+        name,
+        email,
+        message,
+        projectTitle: richTextToPlainText(project.title) || "Projeto protegido",
+        projectUrl: typeof window !== "undefined" ? window.location.href : `/projects/${project.slug}`,
+        recipientEmail: profile.email || undefined,
+      });
+
+      setRequestDialogOpen(false);
+      setRequestForm({ name: "", email: "", message: "" });
+      toast.success(t("accessRequestSent"));
+
+      if (!emailResult.success) {
+        toast.info(emailResult.error || t("accessRequestNotificationWarning"));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao solicitar acesso ao projeto.");
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
   if (!project) {
     return (
       <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif]" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -129,70 +257,193 @@ export function ProjectDetailPage() {
     );
   }
 
-  // Check if project requires password
-  const needsPassword = project.password && project.password.trim() !== "";
-  const projectUnlocked = !needsPassword || isUnlocked || isProjectUnlocked(project.id);
-
   // Password gate
   if (!projectUnlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif] px-5" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
-        <motion.div
-          className="w-full max-w-[400px] rounded-2xl p-8 text-center"
-          style={{ backgroundColor: "var(--bg-secondary, #121212)", border: "1px solid var(--border-primary, #2A2A2A)" }}
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-            style={{ backgroundColor: "var(--bg-primary, #0B0B0D)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif] px-5" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
+          <motion.div
+            className="w-full max-w-[420px] rounded-2xl p-8 text-center"
+            style={{ backgroundColor: "var(--bg-secondary, #121212)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <Lock size={22} style={{ color: "var(--text-secondary, #888)" }} />
-          </div>
-          <h2 className="mb-2" style={{ fontSize: "20px", color: "var(--text-primary, #fafafa)" }}>
-            {t("protectedProjectTitle")}
-          </h2>
-          <p className="mb-6" style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #888)" }}>
-            {t("protectedProjectDescription")}
-          </p>
-          <form onSubmit={handlePasswordSubmit} className="space-y-3">
-            <input
-              type="password"
-              value={passwordInput}
-              onChange={handlePasswordChange}
-              placeholder={t("enterPassword")}
-              autoFocus
-              className="w-full rounded-lg px-4 py-3 focus:outline-none transition-colors"
-              style={{
-                fontSize: "14px",
-                backgroundColor: "var(--bg-primary, #0B0B0D)",
-                border: passwordError ? "1px solid #ef4444" : "1px solid var(--border-primary, #2A2A2A)",
-                color: "var(--text-primary, #fafafa)",
-              }}
-            />
-            {passwordError && (
-              <p style={{ fontSize: "12px", color: "#ef4444" }}>
-                {t("incorrectPassword")}
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+              style={{ backgroundColor: "var(--bg-primary, #0B0B0D)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+            >
+              <Lock size={22} style={{ color: "var(--text-secondary, #888)" }} />
+            </div>
+            <h2 className="mb-2" style={{ fontSize: "20px", color: "var(--text-primary, #fafafa)" }}>
+              {t("protectedProjectTitle")}
+            </h2>
+            <p className="mb-6" style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #888)" }}>
+              {t("protectedProjectDescription")}
+            </p>
+            {checkingApprovedAccess && (
+              <p className="mb-4" style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #777)" }}>
+                {t("verifyingProjectAccess")}
               </p>
             )}
-            <button
-              type="submit"
-              className="w-full rounded-lg py-3 cursor-pointer border-none transition-all hover:-translate-y-0.5"
-              style={{ fontSize: "14px", backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #121212)" }}
+            <form onSubmit={handlePasswordSubmit} className="space-y-3">
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={handlePasswordChange}
+                placeholder={t("enterPassword")}
+                autoFocus
+                className="w-full rounded-lg px-4 py-3 focus:outline-none transition-colors"
+                style={{
+                  fontSize: "14px",
+                  backgroundColor: "var(--bg-primary, #0B0B0D)",
+                  border: passwordError ? "1px solid #ef4444" : "1px solid var(--border-primary, #2A2A2A)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              />
+              {passwordError && (
+                <p style={{ fontSize: "12px", color: "#ef4444" }}>
+                  {t("incorrectPassword")}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="w-full rounded-lg py-3 cursor-pointer border-none transition-all hover:-translate-y-0.5"
+                style={{ fontSize: "14px", backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #121212)" }}
+              >
+                {t("accessProject")}
+              </button>
+            </form>
+
+            <div
+              className="mt-6 border-t pt-6 text-left"
+              style={{ borderColor: "var(--border-primary, #2A2A2A)" }}
             >
-              {t("accessProject")}
-            </button>
-          </form>
-          <Link
-            to={backTo}
-            className="inline-flex items-center gap-1.5 mt-6 transition-colors hover:opacity-80"
-            style={{ fontSize: "13px", color: "var(--text-secondary, #666)" }}
-          >
-            <ArrowLeft size={13} /> {t("back")}
-          </Link>
-        </motion.div>
-      </div>
+              <div className="mb-3 flex items-center gap-2 text-[#fafafa]">
+                <ShieldCheck size={15} />
+                <p style={{ fontSize: "13px", lineHeight: "19px" }}>{t("requestProjectAccess")}</p>
+              </div>
+              <p className="mb-4" style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #777)" }}>
+                {t("requestProjectAccessDescription")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setRequestDialogOpen(true)}
+                disabled={submittingRequest || accessRequestStatus === "pending"}
+                className="w-full rounded-lg py-3 cursor-pointer border transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{
+                  fontSize: "13px",
+                  borderColor: "var(--border-primary, #2A2A2A)",
+                  backgroundColor: "rgba(255, 255, 255, 0.04)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              >
+                {t("requestProjectAccess")}
+              </button>
+              {accessRequestStatus === "pending" && (
+                <p className="mt-3" style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #777)" }}>
+                  {t("accessRequestAlreadyPending")}
+                </p>
+              )}
+              {accessRequestStatus === "denied" && (
+                <p className="mt-3" style={{ fontSize: "12px", lineHeight: "18px", color: "#f59e0b" }}>
+                  {t("accessRequestDeniedNotice")}
+                </p>
+              )}
+            </div>
+
+            <Link
+              to={backTo}
+              className="inline-flex items-center gap-1.5 mt-6 transition-colors hover:opacity-80"
+              style={{ fontSize: "13px", color: "var(--text-secondary, #666)" }}
+            >
+              <ArrowLeft size={13} /> {t("back")}
+            </Link>
+          </motion.div>
+        </div>
+
+        <DialogContent
+          className="w-[calc(100%-2rem)] max-w-[460px] rounded-[20px] border p-0"
+          style={{ backgroundColor: "var(--bg-secondary, #121212)", borderColor: "var(--border-primary, #2A2A2A)" }}
+        >
+          <div className="p-6">
+            <DialogHeader className="text-left">
+              <div
+                className="mb-4 flex h-10 w-10 items-center justify-center rounded-[12px]"
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid var(--border-primary, #2A2A2A)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              >
+                <Mail size={16} />
+              </div>
+              <DialogTitle
+                className="text-left font-['Inter',sans-serif]"
+                style={{ fontSize: "18px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+              >
+                {t("requestProjectAccessDialogTitle")}
+              </DialogTitle>
+              <DialogDescription
+                className="text-left font-['Inter',sans-serif]"
+                style={{ fontSize: "13px", lineHeight: "19px", color: "var(--text-secondary, #8A8A8A)" }}
+              >
+                {t("requestProjectAccessDialogDescription")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleAccessRequestSubmit} className="mt-6 space-y-3">
+              <input
+                type="text"
+                value={requestForm.name}
+                onChange={(event) => setRequestForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder={t("yourName")}
+                className="w-full rounded-lg px-4 py-3 focus:outline-none transition-colors"
+                style={{
+                  fontSize: "14px",
+                  backgroundColor: "var(--bg-primary, #0B0B0D)",
+                  border: "1px solid var(--border-primary, #2A2A2A)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              />
+              <input
+                type="email"
+                value={requestForm.email}
+                onChange={(event) => setRequestForm((current) => ({ ...current, email: event.target.value }))}
+                placeholder={t("yourEmail")}
+                className="w-full rounded-lg px-4 py-3 focus:outline-none transition-colors"
+                style={{
+                  fontSize: "14px",
+                  backgroundColor: "var(--bg-primary, #0B0B0D)",
+                  border: "1px solid var(--border-primary, #2A2A2A)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              />
+              <textarea
+                value={requestForm.message}
+                onChange={(event) => setRequestForm((current) => ({ ...current, message: event.target.value }))}
+                placeholder={t("message")}
+                rows={5}
+                className="w-full rounded-lg px-4 py-3 resize-none focus:outline-none transition-colors"
+                style={{
+                  fontSize: "14px",
+                  backgroundColor: "var(--bg-primary, #0B0B0D)",
+                  border: "1px solid var(--border-primary, #2A2A2A)",
+                  color: "var(--text-primary, #fafafa)",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={submittingRequest}
+                className="w-full rounded-lg py-3 cursor-pointer border-none transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ fontSize: "14px", backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #121212)" }}
+              >
+                {submittingRequest ? t("sendingAccessRequest") : t("submitAccessRequest")}
+              </button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 

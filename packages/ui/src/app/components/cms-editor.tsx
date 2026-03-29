@@ -2504,6 +2504,15 @@ export function CMSEditor() {
             <p className="text-[#555]" style={{ fontSize: "11px" }}>
               Visitantes precisarao digitar esta senha para ver o projeto. Ideal para cases sensiveis/NDA.
             </p>
+            {item.password && (
+              <Link
+                to="/access-requests"
+                className="inline-flex items-center gap-1.5 text-[#888] transition-colors hover:text-[#fafafa]"
+                style={{ fontSize: "11px", lineHeight: "16px" }}
+              >
+                Ver e aprovar solicitações de acesso
+              </Link>
+            )}
           </div>
         </div>
           </>

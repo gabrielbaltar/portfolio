@@ -6,15 +6,21 @@ import type {
   MediaItem,
   MediaVisibility,
   ProfileData,
+  ProjectAccessRequest,
+  ProjectAccessRequestStatus,
+  ProjectAccessStatus,
   SiteSettings,
+  SubmitProjectAccessRequestResult,
 } from "@portfolio/core";
 import {
   createBrowserSupabaseClient,
   createTimedBrowserSupabaseClient,
+  getProjectAccessStatus,
   getSession,
   isSlugAvailable,
   loadCmsData as loadCmsDataFromSupabase,
   loadContentVersions,
+  loadProjectAccessRequests,
   loadPublicCMSData as loadPublicCMSDataFromSupabase,
   onAuthStateChange,
   saveAwards,
@@ -32,6 +38,8 @@ import {
   saveStack,
   signInWithPassword,
   signOut,
+  submitProjectAccessRequest,
+  updateProjectAccessRequestStatus,
   uploadMedia,
   deleteMedia,
 } from "@portfolio/supabase";
@@ -277,6 +285,28 @@ class SupabaseDataProvider {
 
   isSlugAvailable(collection: Extract<CMSCollectionName, "projects" | "blogPosts" | "pages">, slug: string, excludeId?: string) {
     return isSlugAvailable(this.client, collection, slug, excludeId);
+  }
+
+  getProjectAccessStatus(projectId: string, visitorToken: string): Promise<ProjectAccessStatus> {
+    return getProjectAccessStatus(this.readClient, projectId, visitorToken);
+  }
+
+  submitProjectAccessRequest(input: {
+    projectId: string;
+    requesterName: string;
+    requesterEmail: string;
+    requesterMessage: string;
+    visitorToken: string;
+  }): Promise<SubmitProjectAccessRequestResult> {
+    return submitProjectAccessRequest(this.client, input);
+  }
+
+  loadProjectAccessRequests(): Promise<ProjectAccessRequest[]> {
+    return loadProjectAccessRequests(this.client);
+  }
+
+  updateProjectAccessRequestStatus(requestId: string, status: ProjectAccessRequestStatus): Promise<void> {
+    return updateProjectAccessRequestStatus(this.client, requestId, status);
   }
 }
 

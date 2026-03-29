@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
   LayoutDashboard, FileText, Image, Settings, LogOut,
-  ChevronLeft, ChevronRight, Briefcase, BookOpen, Globe
+  ChevronLeft, ChevronRight, Briefcase, BookOpen, Globe, ShieldCheck
 } from "lucide-react";
 import { useCMS } from "./cms-data";
 import { dataProvider } from "./data-provider";
@@ -19,6 +19,7 @@ const NAV_SECTIONS = [
   {
     label: "Conteúdo",
     items: [
+      { key: "access-requests", label: "Solicitações", icon: ShieldCheck, path: "/access-requests" },
       { key: "projects", label: "Projetos", icon: Briefcase, path: "/content/projects" },
       { key: "articles", label: "Artigos", icon: BookOpen, path: "/content/articles" },
       { key: "pages", label: "Páginas", icon: FileText, path: "/content/pages" },

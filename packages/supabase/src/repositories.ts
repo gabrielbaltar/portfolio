@@ -18,10 +18,14 @@ import {
   type MediaVisibility,
   type Page,
   type ProfileData,
+  type ProjectAccessRequest,
+  type ProjectAccessRequestStatus,
+  type ProjectAccessStatus,
   type Project,
   type Recommendation,
   type SiteSettings,
   type StackItem,
+  type SubmitProjectAccessRequestResult,
 } from "@portfolio/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -42,6 +46,7 @@ import {
   mapPageFromRow,
   mapPageToRow,
   mapProfileToRow,
+  mapProjectAccessRequestFromRow,
   mapProjectFromRow,
   mapProjectToRow,
   mapRecommendationFromRow,
@@ -77,6 +82,20 @@ type PublicSnapshotPayload = {
 
 type PublicSnapshotData = Omit<CMSData, "media">;
 
+type ProjectAccessStatusPayload = {
+  has_access?: boolean | null;
+  latest_status?: ProjectAccessRequestStatus | null;
+  request_id?: string | null;
+} | null;
+
+type SubmitProjectAccessRequestPayload = {
+  created?: boolean | null;
+  request?: DatabaseRow | null;
+  has_access?: boolean | null;
+  latest_status?: ProjectAccessRequestStatus | null;
+  request_id?: string | null;
+} | null;
+
 const TABLES = {
   siteSettings: "site_settings",
   profile: "profile",
@@ -91,6 +110,7 @@ const TABLES = {
   recommendations: "recommendations",
   media: "media",
   versions: "content_versions",
+  projectAccessRequests: "project_access_requests",
 } as const;
 
 function ensureSuccess<T>(result: { data: T; error: { message: string } | null }, action: string): T {
@@ -540,6 +560,86 @@ export async function loadContentVersions(
   ) as Array<Record<string, any>>;
 
   return rows.map((row) => mapContentVersionFromRow(row as Parameters<typeof mapContentVersionFromRow>[0]));
+}
+
+export async function loadProjectAccessRequests(client: SupabaseClient): Promise<ProjectAccessRequest[]> {
+  const rows = ensureSuccess(
+    await client
+      .from(TABLES.projectAccessRequests)
+      .select("*")
+      .order("created_at", { ascending: false }),
+    "Erro ao carregar solicitacoes de acesso",
+  ) as Array<Record<string, any>>;
+
+  return rows.map((row) =>
+    mapProjectAccessRequestFromRow(row as Parameters<typeof mapProjectAccessRequestFromRow>[0]),
+  );
+}
+
+export async function updateProjectAccessRequestStatus(
+  client: SupabaseClient,
+  requestId: string,
+  status: ProjectAccessRequestStatus,
+): Promise<void> {
+  ensureSuccess(
+    await client
+      .from(TABLES.projectAccessRequests)
+      .update({ status })
+      .eq("id", requestId),
+    "Erro ao atualizar solicitacao de acesso",
+  );
+}
+
+export async function getProjectAccessStatus(
+  client: SupabaseClient,
+  projectId: string,
+  visitorToken: string,
+): Promise<ProjectAccessStatus> {
+  const payload = ensureSuccess(
+    await client.rpc("get_project_access_status", {
+      p_project_id: projectId,
+      p_visitor_token: visitorToken,
+    }),
+    "Erro ao verificar acesso ao projeto",
+  ) as ProjectAccessStatusPayload;
+
+  return {
+    hasAccess: Boolean(payload?.has_access),
+    latestStatus: payload?.latest_status ?? null,
+    requestId: payload?.request_id ?? null,
+  };
+}
+
+export async function submitProjectAccessRequest(
+  client: SupabaseClient,
+  input: {
+    projectId: string;
+    requesterName: string;
+    requesterEmail: string;
+    requesterMessage: string;
+    visitorToken: string;
+  },
+): Promise<SubmitProjectAccessRequestResult> {
+  const payload = ensureSuccess(
+    await client.rpc("submit_project_access_request", {
+      p_project_id: input.projectId,
+      p_requester_name: input.requesterName,
+      p_requester_email: input.requesterEmail,
+      p_requester_message: input.requesterMessage,
+      p_visitor_token: input.visitorToken,
+    }),
+    "Erro ao solicitar acesso ao projeto",
+  ) as SubmitProjectAccessRequestPayload;
+
+  return {
+    created: Boolean(payload?.created),
+    hasAccess: Boolean(payload?.has_access),
+    latestStatus: payload?.latest_status ?? null,
+    requestId: payload?.request_id ?? null,
+    request: payload?.request
+      ? mapProjectAccessRequestFromRow(payload.request as Parameters<typeof mapProjectAccessRequestFromRow>[0])
+      : null,
+  };
 }
 
 export async function isSlugAvailable(

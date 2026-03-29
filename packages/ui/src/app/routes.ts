@@ -8,6 +8,7 @@ import { ProjectDetailPage } from "./components/project-detail-page";
 import { CMSLogin } from "./components/cms-login";
 import { CMSLayout } from "./components/cms-layout";
 import { CMSDashboard } from "./components/cms-dashboard";
+import { CMSAccessRequests } from "./components/cms-access-requests";
 import { CMSContentList } from "./components/cms-content-list";
 import { CMSEditor } from "./components/cms-editor";
 import { CMSMedia } from "./components/cms-media";
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
         Component: CMSLayout,
         children: [
           { path: "dashboard", Component: CMSDashboard },
+          { path: "access-requests", Component: CMSAccessRequests },
           { path: "content/:type", Component: CMSContentList },
           { path: "content/:type/:id/edit", Component: CMSEditor },
           { path: "media", Component: CMSMedia },

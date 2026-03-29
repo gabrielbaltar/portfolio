@@ -8,6 +8,7 @@ import type {
   MediaItem,
   Page,
   ProfileData,
+  ProjectAccessRequest,
   Project,
   Recommendation,
   SiteSettings,
@@ -182,6 +183,20 @@ interface ContentVersionRow {
   snapshot: Record<string, unknown>;
   created_at: string;
   created_by?: string | null;
+}
+
+interface ProjectAccessRequestRow {
+  id: string;
+  project_id: string;
+  requester_name: string;
+  requester_email: string;
+  requester_message: string;
+  visitor_token: string;
+  status: ProjectAccessRequest["status"];
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
 }
 
 export function mapSingletonFromRow<T extends { createdAt: string; updatedAt: string }>(
@@ -566,5 +581,21 @@ export function mapContentVersionToRow(item: ContentVersion): ContentVersionRow 
     snapshot: item.snapshot,
     created_at: item.createdAt,
     created_by: item.createdBy ?? null,
+  };
+}
+
+export function mapProjectAccessRequestFromRow(row: ProjectAccessRequestRow): ProjectAccessRequest {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    requesterName: row.requester_name,
+    requesterEmail: row.requester_email,
+    requesterMessage: row.requester_message,
+    visitorToken: row.visitor_token,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    reviewedAt: row.reviewed_at ?? null,
+    reviewedBy: row.reviewed_by ?? null,
   };
 }

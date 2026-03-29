@@ -24,6 +24,7 @@ export type ContentEntityType =
   | "recommendation";
 
 export type MediaVisibility = "public" | "private";
+export type ProjectAccessRequestStatus = "pending" | "approved" | "denied";
 export type PublicContentVisibilityCollection =
   | "projects"
   | "blogPosts"
@@ -316,6 +317,29 @@ export interface ContentVersion {
   snapshot: Record<string, unknown>;
   createdAt: string;
   createdBy?: string | null;
+}
+
+export interface ProjectAccessRequest extends TimestampedEntity {
+  id: string;
+  projectId: string;
+  requesterName: string;
+  requesterEmail: string;
+  requesterMessage: string;
+  visitorToken: string;
+  status: ProjectAccessRequestStatus;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+}
+
+export interface ProjectAccessStatus {
+  hasAccess: boolean;
+  latestStatus: ProjectAccessRequestStatus | null;
+  requestId?: string | null;
+}
+
+export interface SubmitProjectAccessRequestResult extends ProjectAccessStatus {
+  created: boolean;
+  request: ProjectAccessRequest | null;
 }
 
 export interface CMSData {

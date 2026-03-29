@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import {
   CMSAuthProvider,
+  CMSAccessRequests,
   CMSContentList,
   CMSDashboard,
   CMSDataLayout,
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
                 children: [
                   { index: true, element: <Navigate to="/dashboard" replace /> },
                   { path: "dashboard", Component: CMSDashboard },
+                  { path: "access-requests", Component: CMSAccessRequests },
                   { path: "content/:type", Component: CMSContentList },
                   { path: "content/:type/:id/edit", Component: CMSEditor },
                   { path: "media", Component: CMSMedia },

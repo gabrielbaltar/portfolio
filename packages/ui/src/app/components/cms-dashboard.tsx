@@ -7,6 +7,7 @@ import {
   Eye,
   FileText,
   Image,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { useCMS } from "./cms-data";
@@ -104,6 +105,7 @@ export function CMSDashboard() {
     { label: "Novo Projeto", icon: Briefcase, path: "/content/projects?new=1" },
     { label: "Novo Artigo", icon: BookOpen, path: "/content/articles?new=1" },
     { label: "Nova página", icon: FileText, path: "/content/pages?new=1" },
+    { label: "Solicitações de acesso", icon: ShieldCheck, path: "/access-requests" },
     { label: "Upload de mídia", icon: Image, path: "/media" },
   ];
 
