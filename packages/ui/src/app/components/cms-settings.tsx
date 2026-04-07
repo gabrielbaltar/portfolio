@@ -193,7 +193,10 @@ type ExperienceDragItem = {
   type: string;
 };
 
-const EXPERIENCE_DND_TYPE = "CMS_SETTINGS_EXPERIENCE";
+type SortableItem = {
+  id: string;
+  sortOrder: number;
+};
 
 function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
   if (fromIndex === toIndex) return items;
@@ -206,6 +209,47 @@ function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
 
 function reindexSortableItems<T extends { sortOrder: number }>(items: T[]) {
   return items.map((item, index) => ({ ...item, sortOrder: index + 1 }));
+}
+
+function useSortableCollectionState<T extends SortableItem>(initialItems: T[]) {
+  const [items, setItemsState] = useState<T[]>(() => reindexSortableItems(initialItems));
+  const orderSnapshotRef = useRef<T[] | null>(null);
+
+  const setItems = (value: T[] | ((current: T[]) => T[])) => {
+    setItemsState((current) => {
+      const next = typeof value === "function" ? value(current) : value;
+      return reindexSortableItems(next);
+    });
+  };
+
+  const previewMove = (dragIndex: number, hoverIndex: number) => {
+    setItemsState((current) => {
+      if (!orderSnapshotRef.current) {
+        orderSnapshotRef.current = current;
+      }
+
+      return reindexSortableItems(moveArrayItem(current, dragIndex, hoverIndex));
+    });
+  };
+
+  const commitMove = () => {
+    orderSnapshotRef.current = null;
+    setItemsState((current) => reindexSortableItems(current));
+  };
+
+  const cancelMove = () => {
+    if (!orderSnapshotRef.current) return;
+    setItemsState(reindexSortableItems(orderSnapshotRef.current));
+    orderSnapshotRef.current = null;
+  };
+
+  return {
+    items,
+    setItems,
+    previewMove,
+    commitMove,
+    cancelMove,
+  };
 }
 
 function buildExperienceOverrides(experiences: Experience[]) {
@@ -221,15 +265,19 @@ function buildExperienceOverrides(experiences: Experience[]) {
   );
 }
 
-function DraggableExperienceSection({
+function SortableSectionCard({
   index,
   children,
+  dndType,
+  dragLabel,
   onMovePreview,
   onCommit,
   onCancel,
 }: {
   index: number;
   children: React.ReactNode;
+  dndType: string;
+  dragLabel: string;
   onMovePreview: (dragIndex: number, hoverIndex: number) => void;
   onCommit: () => void;
   onCancel: () => void;
@@ -238,8 +286,8 @@ function DraggableExperienceSection({
   const handleRef = useRef<HTMLButtonElement>(null);
 
   const [{ isDragging }, drag] = useDrag({
-    type: EXPERIENCE_DND_TYPE,
-    item: (): ExperienceDragItem => ({ index, type: EXPERIENCE_DND_TYPE }),
+    type: dndType,
+    item: (): ExperienceDragItem => ({ index, type: dndType }),
     end: (_item, monitor) => {
       if (monitor.didDrop()) {
         onCommit();
@@ -253,7 +301,7 @@ function DraggableExperienceSection({
   });
 
   const [{ isOver, canDrop }, drop] = useDrop<ExperienceDragItem, { moved: true } | void, { isOver: boolean; canDrop: boolean }>({
-    accept: EXPERIENCE_DND_TYPE,
+    accept: dndType,
     hover(dragItem, monitor) {
       if (!ref.current) return;
       const dragIndex = dragItem.index;
@@ -300,7 +348,7 @@ function DraggableExperienceSection({
             ref={handleRef}
             type="button"
             className="flex h-7 w-7 items-center justify-center rounded-md border border-[#1f1f1f] bg-[#101010] text-[#777] transition-colors hover:border-[#2f2f2f] hover:text-[#ddd] cursor-grab active:cursor-grabbing"
-            aria-label="Arrastar experiência"
+            aria-label={`Arrastar ${dragLabel}`}
           >
             <GripVertical size={14} />
           </button>
@@ -322,20 +370,55 @@ export function CMSSettings() {
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...cms.data.siteSettings });
   const [profile, setProfile] = useState<ProfileData>(syncProfileAboutFields({ ...cms.data.profile }));
-  const [experiences, setExperiences] = useState<Experience[]>(
-    reindexSortableItems(cms.data.experiences.map((experience) => ({ ...experience, tasks: [...experience.tasks] }))),
+  const {
+    items: experiences,
+    setItems: setExperiences,
+    previewMove: previewExperienceMove,
+    commitMove: commitExperienceOrder,
+    cancelMove: cancelExperienceOrder,
+  } = useSortableCollectionState<Experience>(
+    cms.data.experiences.map((experience) => ({ ...experience, tasks: [...experience.tasks] })),
   );
-  const [education, setEducation] = useState<Education[]>(cms.data.education.map(e => ({ ...e })));
-  const [certs, setCerts] = useState<Certification[]>(cms.data.certifications.map(c => ({ ...c })));
-  const [stack, setStack] = useState<StackItem[]>(cms.data.stack.map(s => ({ ...s })));
-  const [awards, setAwards] = useState<Award[]>(cms.data.awards.map(a => ({ ...a })));
-  const [recs, setRecs] = useState<Recommendation[]>(cms.data.recommendations.map(r => ({ ...r })));
+  const {
+    items: education,
+    setItems: setEducation,
+    previewMove: previewEducationMove,
+    commitMove: commitEducationOrder,
+    cancelMove: cancelEducationOrder,
+  } = useSortableCollectionState<Education>(cms.data.education.map((item) => ({ ...item })));
+  const {
+    items: certs,
+    setItems: setCerts,
+    previewMove: previewCertificationMove,
+    commitMove: commitCertificationOrder,
+    cancelMove: cancelCertificationOrder,
+  } = useSortableCollectionState<Certification>(cms.data.certifications.map((item) => ({ ...item })));
+  const {
+    items: stack,
+    setItems: setStack,
+    previewMove: previewStackMove,
+    commitMove: commitStackOrder,
+    cancelMove: cancelStackOrder,
+  } = useSortableCollectionState<StackItem>(cms.data.stack.map((item) => ({ ...item })));
+  const {
+    items: awards,
+    setItems: setAwards,
+    previewMove: previewAwardMove,
+    commitMove: commitAwardOrder,
+    cancelMove: cancelAwardOrder,
+  } = useSortableCollectionState<Award>(cms.data.awards.map((item) => ({ ...item })));
+  const {
+    items: recs,
+    setItems: setRecs,
+    previewMove: previewRecommendationMove,
+    commitMove: commitRecommendationOrder,
+    cancelMove: cancelRecommendationOrder,
+  } = useSortableCollectionState<Recommendation>(cms.data.recommendations.map((item) => ({ ...item })));
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoDragOver, setPhotoDragOver] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const experienceOrderSnapshotRef = useRef<Experience[] | null>(null);
 
   const isSectionVisible = (sectionId: PortfolioSectionId) => siteSettings.sectionVisibility?.[sectionId] !== false;
 
@@ -428,27 +511,6 @@ export function CMSSettings() {
     toast.success("Salvo!");
   };
 
-  const previewExperienceMove = (dragIndex: number, hoverIndex: number) => {
-    setExperiences((current) => {
-      if (!experienceOrderSnapshotRef.current) {
-        experienceOrderSnapshotRef.current = current;
-      }
-
-      return reindexSortableItems(moveArrayItem(current, dragIndex, hoverIndex));
-    });
-  };
-
-  const commitExperienceOrder = () => {
-    experienceOrderSnapshotRef.current = null;
-    setExperiences((current) => reindexSortableItems(current));
-  };
-
-  const cancelExperienceOrder = () => {
-    if (!experienceOrderSnapshotRef.current) return;
-    setExperiences(reindexSortableItems(experienceOrderSnapshotRef.current));
-    experienceOrderSnapshotRef.current = null;
-  };
-
   const saveProfile = () => {
     const nextProfile = syncProfileAboutFields(profile);
     setProfile(nextProfile);
@@ -457,28 +519,38 @@ export function CMSSettings() {
     toast.success("Configuracoes salvas!");
   };
   const saveEducation = () => {
+    const nextEducation = reindexSortableItems(education);
+    setEducation(nextEducation);
     cms.updateSiteSettings(siteSettings);
-    cms.updateEducation(education);
+    cms.updateEducation(nextEducation);
     toast.success("Salvo!");
   };
   const saveCertifications = () => {
+    const nextCertifications = reindexSortableItems(certs);
+    setCerts(nextCertifications);
     cms.updateSiteSettings(siteSettings);
-    cms.updateCertifications(certs);
+    cms.updateCertifications(nextCertifications);
     toast.success("Salvo!");
   };
   const saveStack = () => {
+    const nextStack = reindexSortableItems(stack);
+    setStack(nextStack);
     cms.updateSiteSettings(siteSettings);
-    cms.updateStack(stack);
+    cms.updateStack(nextStack);
     toast.success("Salvo!");
   };
   const saveAwards = () => {
+    const nextAwards = reindexSortableItems(awards);
+    setAwards(nextAwards);
     cms.updateSiteSettings(siteSettings);
-    cms.updateAwards(awards);
+    cms.updateAwards(nextAwards);
     toast.success("Salvo!");
   };
   const saveRecommendations = () => {
+    const nextRecommendations = reindexSortableItems(recs);
+    setRecs(nextRecommendations);
     cms.updateSiteSettings(siteSettings);
-    cms.updateRecommendations(recs);
+    cms.updateRecommendations(nextRecommendations);
     toast.success("Salvo!");
   };
   const saveCurrentTab = () => {
@@ -844,9 +916,11 @@ export function CMSSettings() {
             A ordem salva aqui é a mesma exibida no portfólio público.
           </div>
           {experiences.map((exp, index) => (
-            <DraggableExperienceSection
+            <SortableSectionCard
               key={exp.id}
               index={index}
+              dndType="CMS_SETTINGS_EXPERIENCE"
+              dragLabel="experiência"
               onMovePreview={previewExperienceMove}
               onCommit={commitExperienceOrder}
               onCancel={cancelExperienceOrder}
@@ -907,17 +981,17 @@ export function CMSSettings() {
                   </button>
                 </div>
                 <button
-                  onClick={() => setExperiences((current) => reindexSortableItems(current.filter((experience) => experience.id !== exp.id)))}
+                  onClick={() => setExperiences((current) => current.filter((experience) => experience.id !== exp.id))}
                   className="text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
                   style={{ fontSize: "12px" }}
                 >
                   <Trash2 size={12} /> Remover
                 </button>
               </Section>
-            </DraggableExperienceSection>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setExperiences((current) => reindexSortableItems([...current, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], taskLineHeight: DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT, sortOrder: current.length + 1 }]))} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
+            <button onClick={() => setExperiences((current) => [...current, { id: Date.now().toString(), company: "", role: "", period: "", location: "", tasks: [""], taskLineHeight: DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT, sortOrder: current.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer transition-colors" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
               <Plus size={12} /> Adicionar
             </button>
             <button onClick={saveExperiences} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90" style={{ fontSize: "13px", backgroundColor: "#fafafa" }}>
@@ -930,8 +1004,20 @@ export function CMSSettings() {
       {/* Education Tab */}
       {tab === "education" && (
         <div className="space-y-4">
-          {education.map((edu) => (
-            <Section key={edu.id} title={edu.degree || "Nova formacao"}>
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {education.map((edu, index) => (
+            <SortableSectionCard
+              key={edu.id}
+              index={index}
+              dndType="CMS_SETTINGS_EDUCATION"
+              dragLabel="formação"
+              onMovePreview={previewEducationMove}
+              onCommit={commitEducationOrder}
+              onCancel={cancelEducationOrder}
+            >
+            <Section title={edu.degree || "Nova formacao"}>
               <VisibilitySwitch
                 label="Mostrar no site"
                 description="Oculta esta formação do portfólio sem remover do CMS."
@@ -949,6 +1035,7 @@ export function CMSSettings() {
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setEducation([...education, { id: Date.now().toString(), degree: "", university: "", period: "", location: "", description: "", sortOrder: education.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
@@ -964,8 +1051,20 @@ export function CMSSettings() {
       {/* Certifications Tab */}
       {tab === "certifications" && (
         <div className="space-y-4">
-          {certs.map((cert) => (
-            <Section key={cert.id} title={cert.title || "Novo certificado"}>
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {certs.map((cert, index) => (
+            <SortableSectionCard
+              key={cert.id}
+              index={index}
+              dndType="CMS_SETTINGS_CERTIFICATIONS"
+              dragLabel="certificado"
+              onMovePreview={previewCertificationMove}
+              onCommit={commitCertificationOrder}
+              onCancel={cancelCertificationOrder}
+            >
+            <Section title={cert.title || "Novo certificado"}>
               <VisibilitySwitch
                 label="Mostrar no site"
                 description="Oculta este certificado do portfólio sem remover do CMS."
@@ -1003,6 +1102,7 @@ export function CMSSettings() {
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setCerts([...certs, { id: Date.now().toString(), title: "", issuer: "", link: "", showLink: false, sortOrder: certs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
@@ -1034,8 +1134,20 @@ export function CMSSettings() {
               />
             </div>
           </Section>
-          {stack.map((item) => (
-            <Section key={item.id} title={item.name || "Nova ferramenta"}>
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {stack.map((item, index) => (
+            <SortableSectionCard
+              key={item.id}
+              index={index}
+              dndType="CMS_SETTINGS_STACK"
+              dragLabel="item de stack"
+              onMovePreview={previewStackMove}
+              onCommit={commitStackOrder}
+              onCancel={cancelStackOrder}
+            >
+            <Section title={item.name || "Nova ferramenta"}>
               <VisibilitySwitch
                 label="Mostrar no site"
                 description="Oculta esta stack do portfólio sem remover do CMS."
@@ -1141,6 +1253,7 @@ export function CMSSettings() {
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setStack([...stack, { id: Date.now().toString(), name: "", description: "", color: "#555", logo: "", logoRadius: DEFAULT_STACK_LOGO_RADIUS, link: "", sortOrder: stack.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
@@ -1156,8 +1269,20 @@ export function CMSSettings() {
       {/* Awards Tab */}
       {tab === "awards" && (
         <div className="space-y-4">
-          {awards.map((award) => (
-            <Section key={award.id} title={award.title || "Novo premio"} defaultOpen={false}>
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {awards.map((award, index) => (
+            <SortableSectionCard
+              key={award.id}
+              index={index}
+              dndType="CMS_SETTINGS_AWARDS"
+              dragLabel="prêmio"
+              onMovePreview={previewAwardMove}
+              onCommit={commitAwardOrder}
+              onCancel={cancelAwardOrder}
+            >
+            <Section title={award.title || "Novo premio"} defaultOpen={false}>
               <VisibilitySwitch
                 label="Mostrar no site"
                 description="Oculta este prêmio do portfólio sem remover do CMS."
@@ -1171,6 +1296,7 @@ export function CMSSettings() {
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setAwards([...awards, { id: Date.now().toString(), title: "", issuer: "", link: "", sortOrder: awards.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
@@ -1186,8 +1312,20 @@ export function CMSSettings() {
       {/* Recommendations Tab */}
       {tab === "recommendations" && (
         <div className="space-y-4">
-          {recs.map((rec) => (
-            <Section key={rec.id} title={rec.name || "Nova recomendacao"} defaultOpen={false}>
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            A ordem salva aqui é a mesma exibida no portfólio público.
+          </div>
+          {recs.map((rec, index) => (
+            <SortableSectionCard
+              key={rec.id}
+              index={index}
+              dndType="CMS_SETTINGS_RECOMMENDATIONS"
+              dragLabel="recomendação"
+              onMovePreview={previewRecommendationMove}
+              onCommit={commitRecommendationOrder}
+              onCancel={cancelRecommendationOrder}
+            >
+            <Section title={rec.name || "Nova recomendacao"} defaultOpen={false}>
               <VisibilitySwitch
                 label="Mostrar no site"
                 description="Oculta esta recomendação do portfólio sem remover do CMS."
@@ -1201,6 +1339,7 @@ export function CMSSettings() {
                 <Trash2 size={12} /> Remover
               </button>
             </Section>
+            </SortableSectionCard>
           ))}
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setRecs([...recs, { id: Date.now().toString(), name: "", role: "", quote: "", sortOrder: recs.length + 1 }])} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#888] hover:text-white cursor-pointer" style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}>
