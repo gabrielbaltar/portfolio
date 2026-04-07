@@ -98,6 +98,7 @@ export function ProfilePhotoCropDialog({
 }: ProfilePhotoCropDialogProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<DragState | null>(null);
+  const previewLoadIdRef = useRef(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<ImageSize | null>(null);
   const [viewportSize, setViewportSize] = useState(0);
@@ -109,6 +110,7 @@ export function ProfilePhotoCropDialog({
 
   useEffect(() => {
     if (!file || !open) {
+      previewLoadIdRef.current += 1;
       setPreviewUrl(null);
       setImageSize(null);
       setImageError(null);
@@ -117,38 +119,53 @@ export function ProfilePhotoCropDialog({
       return;
     }
 
-    const nextPreviewUrl = URL.createObjectURL(file);
-    setPreviewUrl(nextPreviewUrl);
+    const loadId = previewLoadIdRef.current + 1;
+    previewLoadIdRef.current = loadId;
+    let cancelled = false;
+    const reader = new FileReader();
+
     setImageSize(null);
     setImageError(null);
     setZoom(MIN_ZOOM);
     setOffset({ x: 0, y: 0 });
 
-    return () => URL.revokeObjectURL(nextPreviewUrl);
-  }, [file, open]);
+    reader.onload = () => {
+      if (cancelled || previewLoadIdRef.current !== loadId) return;
 
-  useEffect(() => {
-    if (!previewUrl) return;
+      const result = reader.result;
+      if (typeof result !== "string") {
+        setImageError("Nao foi possivel preparar o preview da imagem.");
+        return;
+      }
 
-    let cancelled = false;
-    const image = new Image();
+      setPreviewUrl(result);
 
-    image.onload = () => {
-      if (cancelled) return;
-      setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
+      const image = new Image();
+      image.onload = () => {
+        if (cancelled || previewLoadIdRef.current !== loadId) return;
+        setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
+      };
+      image.onerror = () => {
+        if (cancelled || previewLoadIdRef.current !== loadId) return;
+        setImageError("Nao foi possivel abrir essa imagem.");
+      };
+      image.src = result;
     };
 
-    image.onerror = () => {
-      if (cancelled) return;
-      setImageError("Nao foi possivel abrir essa imagem.");
+    reader.onerror = () => {
+      if (cancelled || previewLoadIdRef.current !== loadId) return;
+      setImageError("Nao foi possivel preparar o preview da imagem.");
     };
 
-    image.src = previewUrl;
+    reader.readAsDataURL(file);
 
     return () => {
       cancelled = true;
+      if (previewLoadIdRef.current === loadId) {
+        previewLoadIdRef.current += 1;
+      }
     };
-  }, [previewUrl]);
+  }, [file, open]);
 
   useEffect(() => {
     if (!open) return;
