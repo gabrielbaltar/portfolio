@@ -8,6 +8,65 @@ const MAX_HEIGHT = 1200;
 const JPEG_QUALITY = 0.75;
 const MAX_FILE_SIZE_BYTES = 500 * 1024; // 500KB target per image
 
+type LoadedImage = {
+  element: HTMLImageElement;
+  width: number;
+  height: number;
+};
+
+export type SquareImageCropConfig = {
+  x: number;
+  y: number;
+  zoom: number;
+  viewportSize: number;
+  outputSize?: number;
+  mimeType?: string;
+  quality?: number;
+  backgroundColor?: string;
+};
+
+function loadImageFromFile(file: File): Promise<LoadedImage> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({
+        element: image,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Nao foi possivel carregar a imagem para o recorte."));
+    };
+
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: string, quality?: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Nao foi possivel gerar a imagem recortada."));
+        return;
+      }
+
+      resolve(blob);
+    }, mimeType, quality);
+  });
+}
+
+function buildDerivedImageName(fileName: string, mimeType: string): string {
+  const extension = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+  const baseName = fileName.replace(/\.[^.]+$/, "") || "profile-photo";
+  return `${baseName}-crop.${extension}`;
+}
+
 /**
  * Compress an image file using canvas.
  * Returns a smaller base64 data URL (JPEG).
@@ -210,4 +269,59 @@ export function getBase64SizeKB(dataUrl: string): number {
   const base64 = dataUrl.split(",")[1] || "";
   // Base64 encodes 3 bytes as 4 chars
   return Math.round((base64.length * 3) / 4 / 1024);
+}
+
+export async function createSquareCroppedImageFile(
+  file: File,
+  config: SquareImageCropConfig,
+): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Selecione uma imagem valida para recortar.");
+  }
+
+  if (!config.viewportSize || config.viewportSize <= 0) {
+    throw new Error("A area de recorte ainda nao esta pronta.");
+  }
+
+  const loaded = await loadImageFromFile(file);
+  const outputSize = Math.max(256, Math.round(config.outputSize ?? 1080));
+  const mimeType = config.mimeType ?? (file.type === "image/png" ? "image/png" : "image/jpeg");
+  const quality = config.quality ?? 0.92;
+  const baseScale = Math.max(outputSize / loaded.width, outputSize / loaded.height);
+  const renderedWidth = loaded.width * baseScale * config.zoom;
+  const renderedHeight = loaded.height * baseScale * config.zoom;
+  const offsetScale = outputSize / config.viewportSize;
+  const drawX = (outputSize - renderedWidth) / 2 + config.x * offsetScale;
+  const drawY = (outputSize - renderedHeight) / 2 + config.y * offsetScale;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas indisponivel para gerar a imagem recortada.");
+  }
+
+  if (mimeType === "image/jpeg") {
+    context.fillStyle = config.backgroundColor ?? "#ffffff";
+    context.fillRect(0, 0, outputSize, outputSize);
+  } else {
+    context.clearRect(0, 0, outputSize, outputSize);
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(loaded.element, drawX, drawY, renderedWidth, renderedHeight);
+
+  const blob = await canvasToBlob(
+    canvas,
+    mimeType,
+    mimeType === "image/png" ? undefined : quality,
+  );
+
+  return new File([blob], buildDerivedImageName(file.name, mimeType), {
+    type: mimeType,
+    lastModified: Date.now(),
+  });
 }

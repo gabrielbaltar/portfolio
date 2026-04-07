@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
 import { LineHeightControl } from "./line-height-control";
+import { ProfilePhotoCropDialog } from "./profile-photo-crop-dialog";
 import { RichTextEditor } from "./rich-text";
 import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
 import {
@@ -418,6 +419,7 @@ export function CMSSettings() {
   const [resetting, setResetting] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoDragOver, setPhotoDragOver] = useState(false);
+  const [profilePhotoDraft, setProfilePhotoDraft] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isSectionVisible = (sectionId: PortfolioSectionId) => siteSettings.sectionVisibility?.[sectionId] !== false;
@@ -603,13 +605,13 @@ export function CMSSettings() {
     }
   };
 
-  const handleProfilePhotoUpload = async (files: FileList | File[]) => {
-    const file = Array.from(files)[0];
-    if (!file) return;
+  const handleProfilePhotoUpload = async (source: FileList | File[] | File) => {
+    const file = source instanceof File ? source : Array.from(source)[0];
+    if (!file) return false;
 
     if (!file.type.startsWith("image/")) {
       toast.error("Selecione uma imagem valida.");
-      return;
+      return false;
     }
 
     setPhotoUploading(true);
@@ -620,11 +622,25 @@ export function CMSSettings() {
       cms.updateProfile(nextProfile);
       setProfile(nextProfile);
       toast.success("Foto enviada e salva.");
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao enviar foto.");
+      return false;
     } finally {
       setPhotoUploading(false);
     }
+  };
+
+  const queueProfilePhotoForEditing = (files: FileList | File[]) => {
+    const file = Array.from(files)[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem valida.");
+      return;
+    }
+
+    setProfilePhotoDraft(file);
   };
 
   const handleStackLogoUpload = async (stackId: string, files: FileList | File[]) => {
@@ -711,7 +727,7 @@ export function CMSSettings() {
                   className="hidden"
                   onChange={(event) => {
                     if (event.target.files?.length) {
-                      void handleProfilePhotoUpload(event.target.files);
+                      queueProfilePhotoForEditing(event.target.files);
                     }
                     event.target.value = "";
                   }}
@@ -727,7 +743,7 @@ export function CMSSettings() {
                     event.preventDefault();
                     setPhotoDragOver(false);
                     if (event.dataTransfer.files.length) {
-                      void handleProfilePhotoUpload(event.dataTransfer.files);
+                      queueProfilePhotoForEditing(event.dataTransfer.files);
                     }
                   }}
                   onClick={() => photoInputRef.current?.click()}
@@ -754,10 +770,10 @@ export function CMSSettings() {
                   )}
                   <div className="space-y-1">
                     <p className="text-[#ddd]" style={{ fontSize: "13px" }}>
-                      {photoUploading ? "Enviando foto..." : photoDragOver ? "Solte para enviar a foto" : "Upload original da foto de perfil"}
+                      {photoUploading ? "Enviando foto..." : photoDragOver ? "Solte para ajustar a foto" : "Clique ou arraste para adicionar a foto"}
                     </p>
                     <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-                      O arquivo sobe sem compressao automatica para manter a qualidade original.
+                      Antes de salvar, voce pode arrastar, reposicionar e recortar a imagem do avatar.
                     </p>
                   </div>
                 </button>
@@ -1351,6 +1367,23 @@ export function CMSSettings() {
           </div>
         </div>
       )}
+
+      <ProfilePhotoCropDialog
+        open={Boolean(profilePhotoDraft)}
+        file={profilePhotoDraft}
+        uploading={photoUploading}
+        onOpenChange={(open) => {
+          if (open) return;
+          setProfilePhotoDraft(null);
+        }}
+        onConfirm={async (croppedFile) => {
+          const uploaded = await handleProfilePhotoUpload(croppedFile);
+          if (uploaded) {
+            setProfilePhotoDraft(null);
+          }
+          return uploaded;
+        }}
+      />
 
       <CMSConfirmDialog
         open={resetOpen}
