@@ -194,8 +194,6 @@ export function ProfilePhotoCropDialog({
 
   const metrics = getCropMetrics(viewportSize, imageSize, zoom);
   const isBusy = processing || uploading;
-  const imageLeft = (viewportSize - metrics.renderedWidth) / 2 + offset.x;
-  const imageTop = (viewportSize - metrics.renderedHeight) / 2 + offset.y;
 
   useEffect(() => {
     setOffset((current) => clampOffset(current, metrics));
@@ -312,20 +310,25 @@ export function ProfilePhotoCropDialog({
               onPointerUp={handlePointerEnd}
               onPointerCancel={handlePointerEnd}
             >
-              {previewUrl && imageSize && !imageError ? (
+              {previewUrl && !imageError ? (
                 <>
-                  <img
-                    src={previewUrl}
-                    alt="Preview da foto de perfil"
-                    className="absolute max-w-none select-none"
-                    draggable={false}
+                  <div
+                    className="absolute inset-0"
                     style={{
-                      height: `${metrics.renderedHeight}px`,
-                      left: `${imageLeft}px`,
-                      top: `${imageTop}px`,
-                      width: `${metrics.renderedWidth}px`,
+                      transform: `translate(${offset.x}px, ${offset.y}px)`,
                     }}
-                  />
+                  >
+                    <img
+                      src={previewUrl}
+                      alt="Preview da foto de perfil"
+                      className="absolute inset-0 h-full w-full select-none object-cover"
+                      draggable={false}
+                      style={{
+                        transform: `scale(${zoom})`,
+                        transformOrigin: "center center",
+                      }}
+                    />
+                  </div>
                   <div className="pointer-events-none absolute inset-0">
                     <div
                       className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)]"
@@ -341,6 +344,15 @@ export function ProfilePhotoCropDialog({
                       <Move size={12} />
                       Arraste para enquadrar
                     </div>
+                    {!imageSize ? (
+                      <div
+                        className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/65 px-3 py-1 text-white backdrop-blur-sm"
+                        style={{ fontSize: "11px", lineHeight: "16px" }}
+                      >
+                        <Loader2 size={12} className="animate-spin" />
+                        Lendo dimensoes da imagem...
+                      </div>
+                    ) : null}
                   </div>
                 </>
               ) : (
@@ -398,6 +410,17 @@ export function ProfilePhotoCropDialog({
               <p className="mt-3 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
                 Aumente o zoom para aproximar e ajustar melhor o enquadramento.
               </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#1f1f1f] bg-[#0d0d0d] p-4">
+              <p className="mb-2 text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                Ajuste atual
+              </p>
+              <div className="space-y-1 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                <p>Zoom: {zoom.toFixed(2)}x</p>
+                <p>Horizontal: {Math.round(offset.x)}px</p>
+                <p>Vertical: {Math.round(offset.y)}px</p>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-[#1f1f1f] bg-[#0d0d0d] p-4">
