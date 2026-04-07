@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from "react";
 import { Loader2, Move, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { createSquareCroppedImageFile } from "./image-utils";
@@ -25,7 +25,6 @@ type ImageSize = {
 };
 
 type DragState = {
-  pointerId: number;
   startX: number;
   startY: number;
   originX: number;
@@ -194,6 +193,8 @@ export function ProfilePhotoCropDialog({
 
   const metrics = getCropMetrics(viewportSize, imageSize, zoom);
   const isBusy = processing || uploading;
+  const imageLeft = (viewportSize - metrics.renderedWidth) / 2 + offset.x;
+  const imageTop = (viewportSize - metrics.renderedHeight) / 2 + offset.y;
 
   useEffect(() => {
     setOffset((current) => clampOffset(current, metrics));
@@ -205,13 +206,31 @@ export function ProfilePhotoCropDialog({
     setDragging(false);
   }, [open]);
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const stopDragging = useCallback(() => {
+    dragStateRef.current = null;
+    setDragging(false);
+  }, []);
+
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    const dragState = dragStateRef.current;
+    if (!dragState) return;
+
+    setOffset(
+      clampOffset(
+        {
+          x: dragState.originX + (clientX - dragState.startX),
+          y: dragState.originY + (clientY - dragState.startY),
+        },
+        metrics,
+      ),
+    );
+  }, [metrics]);
+
+  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!metrics.canDrag || isBusy) return;
 
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
     dragStateRef.current = {
-      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       originX: offset.x,
@@ -220,32 +239,48 @@ export function ProfilePhotoCropDialog({
     setDragging(true);
   };
 
-  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const dragState = dragStateRef.current;
-    if (!dragState || dragState.pointerId !== event.pointerId) return;
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!metrics.canDrag || isBusy) return;
 
-    event.preventDefault();
-    setOffset(
-      clampOffset(
-        {
-          x: dragState.originX + (event.clientX - dragState.startX),
-          y: dragState.originY + (event.clientY - dragState.startY),
-        },
-        metrics,
-      ),
-    );
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    dragStateRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      originX: offset.x,
+      originY: offset.y,
+    };
+    setDragging(true);
   };
 
-  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragStateRef.current?.pointerId !== event.pointerId) return;
+  useEffect(() => {
+    if (!dragging) return;
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
+    const handleMouseMove = (event: MouseEvent) => {
+      event.preventDefault();
+      handleDragMove(event.clientX, event.clientY);
+    };
 
-    dragStateRef.current = null;
-    setDragging(false);
-  };
+    const handleTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      event.preventDefault();
+      handleDragMove(touch.clientX, touch.clientY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopDragging);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", stopDragging);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopDragging);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", stopDragging);
+    };
+  }, [dragging, handleDragMove, stopDragging]);
 
   const resetCrop = () => {
     if (isBusy) return;
@@ -305,30 +340,32 @@ export function ProfilePhotoCropDialog({
                 cursor: isBusy ? "default" : dragging ? "grabbing" : metrics.canDrag ? "grab" : "default",
                 touchAction: "none",
               }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerEnd}
-              onPointerCancel={handlePointerEnd}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
             >
               {previewUrl && !imageError ? (
                 <>
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      transform: `translate(${offset.x}px, ${offset.y}px)`,
-                    }}
-                  >
+                  {imageSize ? (
+                    <img
+                      src={previewUrl}
+                      alt="Preview da foto de perfil"
+                      className="absolute max-w-none select-none"
+                      draggable={false}
+                      style={{
+                        height: `${metrics.renderedHeight}px`,
+                        left: `${imageLeft}px`,
+                        top: `${imageTop}px`,
+                        width: `${metrics.renderedWidth}px`,
+                      }}
+                    />
+                  ) : (
                     <img
                       src={previewUrl}
                       alt="Preview da foto de perfil"
                       className="absolute inset-0 h-full w-full select-none object-cover"
                       draggable={false}
-                      style={{
-                        transform: `scale(${zoom})`,
-                        transformOrigin: "center center",
-                      }}
                     />
-                  </div>
+                  )}
                   <div className="pointer-events-none absolute inset-0">
                     <div
                       className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)]"
