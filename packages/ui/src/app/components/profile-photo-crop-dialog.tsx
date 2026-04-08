@@ -27,56 +27,39 @@ type ImageSize = {
 type DragState = {
   startX: number;
   startY: number;
-  originX: number;
-  originY: number;
+  posX: number;
+  posY: number;
 };
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const OUTPUT_SIZE = 1080;
+const FALLBACK_VIEWPORT_SIZE = 420;
 
 function clampValue(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function getCropMetrics(viewportSize: number, imageSize: ImageSize | null, zoom: number) {
+function getPreviewMetrics(viewportSize: number, imageSize: ImageSize | null, zoom: number) {
   if (!viewportSize || !imageSize) {
     return {
-      canDrag: false,
-      maxOffsetX: 0,
-      maxOffsetY: 0,
-      renderedHeight: 0,
-      renderedWidth: 0,
+      renderedWidth: viewportSize,
+      renderedHeight: viewportSize,
+      freeX: 0,
+      freeY: 0,
     };
   }
 
-  const baseScale = Math.max(viewportSize / imageSize.width, viewportSize / imageSize.height);
-  const renderedWidth = imageSize.width * baseScale * zoom;
-  const renderedHeight = imageSize.height * baseScale * zoom;
-  const maxOffsetX = Math.max(0, (renderedWidth - viewportSize) / 2);
-  const maxOffsetY = Math.max(0, (renderedHeight - viewportSize) / 2);
+  const scale = Math.max(viewportSize / imageSize.width, viewportSize / imageSize.height) * zoom;
+  const renderedWidth = imageSize.width * scale;
+  const renderedHeight = imageSize.height * scale;
 
   return {
-    canDrag: maxOffsetX > 0 || maxOffsetY > 0,
-    maxOffsetX,
-    maxOffsetY,
-    renderedHeight,
     renderedWidth,
+    renderedHeight,
+    freeX: viewportSize - renderedWidth,
+    freeY: viewportSize - renderedHeight,
   };
-}
-
-function clampOffset(
-  offset: { x: number; y: number },
-  metrics: ReturnType<typeof getCropMetrics>,
-) {
-  const nextX = clampValue(offset.x, -metrics.maxOffsetX, metrics.maxOffsetX);
-  const nextY = clampValue(offset.y, -metrics.maxOffsetY, metrics.maxOffsetY);
-
-  if (nextX === offset.x && nextY === offset.y) {
-    return offset;
-  }
-
-  return { x: nextX, y: nextY };
 }
 
 function formatImageMeta(file: File, imageSize: ImageSize | null) {
@@ -97,39 +80,36 @@ export function ProfilePhotoCropDialog({
 }: ProfilePhotoCropDialogProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<DragState | null>(null);
-  const previewLoadIdRef = useRef(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<ImageSize | null>(null);
   const [viewportSize, setViewportSize] = useState(0);
   const [zoom, setZoom] = useState(MIN_ZOOM);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!file || !open) {
-      previewLoadIdRef.current += 1;
       setPreviewUrl(null);
       setImageSize(null);
       setImageError(null);
       setZoom(MIN_ZOOM);
-      setOffset({ x: 0, y: 0 });
+      setPosition({ x: 50, y: 50 });
       return;
     }
 
-    const loadId = previewLoadIdRef.current + 1;
-    previewLoadIdRef.current = loadId;
     let cancelled = false;
     const reader = new FileReader();
 
+    setPreviewUrl(null);
     setImageSize(null);
     setImageError(null);
     setZoom(MIN_ZOOM);
-    setOffset({ x: 0, y: 0 });
+    setPosition({ x: 50, y: 50 });
 
     reader.onload = () => {
-      if (cancelled || previewLoadIdRef.current !== loadId) return;
+      if (cancelled) return;
 
       const result = reader.result;
       if (typeof result !== "string") {
@@ -138,21 +118,10 @@ export function ProfilePhotoCropDialog({
       }
 
       setPreviewUrl(result);
-
-      const image = new Image();
-      image.onload = () => {
-        if (cancelled || previewLoadIdRef.current !== loadId) return;
-        setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
-      };
-      image.onerror = () => {
-        if (cancelled || previewLoadIdRef.current !== loadId) return;
-        setImageError("Nao foi possivel abrir essa imagem.");
-      };
-      image.src = result;
     };
 
     reader.onerror = () => {
-      if (cancelled || previewLoadIdRef.current !== loadId) return;
+      if (cancelled) return;
       setImageError("Nao foi possivel preparar o preview da imagem.");
     };
 
@@ -160,9 +129,6 @@ export function ProfilePhotoCropDialog({
 
     return () => {
       cancelled = true;
-      if (previewLoadIdRef.current === loadId) {
-        previewLoadIdRef.current += 1;
-      }
     };
   }, [file, open]);
 
@@ -173,10 +139,12 @@ export function ProfilePhotoCropDialog({
     if (!node) return;
 
     const updateViewportSize = () => {
-      setViewportSize(node.clientWidth);
+      const nextSize = Math.round(node.getBoundingClientRect().width);
+      setViewportSize(nextSize || FALLBACK_VIEWPORT_SIZE);
     };
 
     updateViewportSize();
+    const rafId = window.requestAnimationFrame(updateViewportSize);
 
     const observer = typeof ResizeObserver === "undefined"
       ? null
@@ -186,25 +154,23 @@ export function ProfilePhotoCropDialog({
     window.addEventListener("resize", updateViewportSize);
 
     return () => {
+      window.cancelAnimationFrame(rafId);
       observer?.disconnect();
       window.removeEventListener("resize", updateViewportSize);
     };
   }, [open]);
-
-  const metrics = getCropMetrics(viewportSize, imageSize, zoom);
-  const isBusy = processing || uploading;
-  const imageLeft = (viewportSize - metrics.renderedWidth) / 2 + offset.x;
-  const imageTop = (viewportSize - metrics.renderedHeight) / 2 + offset.y;
-
-  useEffect(() => {
-    setOffset((current) => clampOffset(current, metrics));
-  }, [metrics.maxOffsetX, metrics.maxOffsetY]);
 
   useEffect(() => {
     if (open) return;
     dragStateRef.current = null;
     setDragging(false);
   }, [open]);
+
+  const effectiveViewportSize = viewportSize || FALLBACK_VIEWPORT_SIZE;
+  const previewMetrics = getPreviewMetrics(effectiveViewportSize, imageSize, zoom);
+  const previewLeft = previewMetrics.freeX * (position.x / 100);
+  const previewTop = previewMetrics.freeY * (position.y / 100);
+  const isBusy = processing || uploading;
 
   const stopDragging = useCallback(() => {
     dragStateRef.current = null;
@@ -215,44 +181,16 @@ export function ProfilePhotoCropDialog({
     const dragState = dragStateRef.current;
     if (!dragState) return;
 
-    setOffset(
-      clampOffset(
-        {
-          x: dragState.originX + (clientX - dragState.startX),
-          y: dragState.originY + (clientY - dragState.startY),
-        },
-        metrics,
-      ),
-    );
-  }, [metrics]);
+    const container = previewRef.current;
+    const width = container?.offsetWidth || effectiveViewportSize;
+    const height = container?.offsetHeight || effectiveViewportSize;
+    const deltaX = clientX - dragState.startX;
+    const deltaY = clientY - dragState.startY;
+    const nextX = clampValue(dragState.posX - (deltaX / width) * 100, 0, 100);
+    const nextY = clampValue(dragState.posY - (deltaY / height) * 100, 0, 100);
 
-  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (!metrics.canDrag || isBusy) return;
-
-    event.preventDefault();
-    dragStateRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: offset.x,
-      originY: offset.y,
-    };
-    setDragging(true);
-  };
-
-  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
-    if (!metrics.canDrag || isBusy) return;
-
-    const touch = event.touches[0];
-    if (!touch) return;
-
-    dragStateRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      originX: offset.x,
-      originY: offset.y,
-    };
-    setDragging(true);
-  };
+    setPosition({ x: Math.round(nextX), y: Math.round(nextY) });
+  }, [effectiveViewportSize]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -282,24 +220,56 @@ export function ProfilePhotoCropDialog({
     };
   }, [dragging, handleDragMove, stopDragging]);
 
+  const startDraggingAt = (clientX: number, clientY: number) => {
+    if (isBusy || !previewUrl) return;
+
+    dragStateRef.current = {
+      startX: clientX,
+      startY: clientY,
+      posX: position.x,
+      posY: position.y,
+    };
+    setDragging(true);
+  };
+
+  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    startDraggingAt(event.clientX, event.clientY);
+  };
+
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    startDraggingAt(touch.clientX, touch.clientY);
+  };
+
   const resetCrop = () => {
     if (isBusy) return;
     setZoom(MIN_ZOOM);
-    setOffset({ x: 0, y: 0 });
+    setPosition({ x: 50, y: 50 });
   };
 
   const handleSave = async () => {
-    if (!file || !imageSize || !viewportSize) return;
+    if (!file || !previewUrl) return;
+    if (!imageSize) {
+      toast.error("Aguarde a imagem terminar de carregar antes de salvar.");
+      return;
+    }
 
     try {
       setProcessing(true);
+
+      const offsetX = previewMetrics.freeX * ((position.x - 50) / 100);
+      const offsetY = previewMetrics.freeY * ((position.y - 50) / 100);
+
       const croppedFile = await createSquareCroppedImageFile(file, {
-        x: offset.x,
-        y: offset.y,
+        x: offsetX,
+        y: offsetY,
         zoom,
-        viewportSize,
+        viewportSize: effectiveViewportSize,
         outputSize: OUTPUT_SIZE,
       });
+
       const shouldClose = await onConfirm(croppedFile);
       if (shouldClose !== false) {
         onOpenChange(false);
@@ -319,15 +289,13 @@ export function ProfilePhotoCropDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent
-        className="max-h-[92vh] w-[min(92vw,760px)] max-w-[760px] overflow-y-auto border-[#1f1f1f] bg-[#111111] p-0 text-[#fafafa]"
-      >
+      <DialogContent className="max-h-[92vh] w-[min(92vw,760px)] max-w-[760px] overflow-y-auto border-[#1f1f1f] bg-[#111111] p-0 text-[#fafafa]">
         <DialogHeader className="border-b border-[#1f1f1f] px-6 py-5">
           <DialogTitle className="text-[#fafafa]" style={{ fontSize: "18px" }}>
             Ajustar foto de perfil
           </DialogTitle>
           <DialogDescription className="text-[#666]" style={{ fontSize: "13px", lineHeight: "20px" }}>
-            Arraste a imagem para reposicionar e use o zoom para definir o corte final antes de salvar.
+            Arraste a imagem com o mouse para reposicionar e use o zoom para definir o enquadramento final.
           </DialogDescription>
         </DialogHeader>
 
@@ -337,7 +305,7 @@ export function ProfilePhotoCropDialog({
               ref={previewRef}
               className="relative mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-[28px] border border-[#252525] bg-[#080808]"
               style={{
-                cursor: isBusy ? "default" : dragging ? "grabbing" : metrics.canDrag ? "grab" : "default",
+                cursor: isBusy ? "default" : dragging ? "grabbing" : "grab",
                 touchAction: "none",
               }}
               onMouseDown={handleMouseDown}
@@ -351,11 +319,20 @@ export function ProfilePhotoCropDialog({
                       alt="Preview da foto de perfil"
                       className="absolute max-w-none select-none"
                       draggable={false}
+                      onLoad={(event) => {
+                        const current = event.currentTarget;
+                        if (!imageSize) {
+                          setImageSize({
+                            width: current.naturalWidth,
+                            height: current.naturalHeight,
+                          });
+                        }
+                      }}
                       style={{
-                        height: `${metrics.renderedHeight}px`,
-                        left: `${imageLeft}px`,
-                        top: `${imageTop}px`,
-                        width: `${metrics.renderedWidth}px`,
+                        height: `${previewMetrics.renderedHeight}px`,
+                        left: `${previewLeft}px`,
+                        top: `${previewTop}px`,
+                        width: `${previewMetrics.renderedWidth}px`,
                       }}
                     />
                   ) : (
@@ -364,8 +341,16 @@ export function ProfilePhotoCropDialog({
                       alt="Preview da foto de perfil"
                       className="absolute inset-0 h-full w-full select-none object-cover"
                       draggable={false}
+                      onLoad={(event) => {
+                        const current = event.currentTarget;
+                        setImageSize({
+                          width: current.naturalWidth,
+                          height: current.naturalHeight,
+                        });
+                      }}
                     />
                   )}
+
                   <div className="pointer-events-none absolute inset-0">
                     <div
                       className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)]"
@@ -379,17 +364,8 @@ export function ProfilePhotoCropDialog({
                       style={{ fontSize: "11px", lineHeight: "16px" }}
                     >
                       <Move size={12} />
-                      Arraste para enquadrar
+                      Arraste para reposicionar ({position.x}%, {position.y}%)
                     </div>
-                    {!imageSize ? (
-                      <div
-                        className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/65 px-3 py-1 text-white backdrop-blur-sm"
-                        style={{ fontSize: "11px", lineHeight: "16px" }}
-                      >
-                        <Loader2 size={12} className="animate-spin" />
-                        Lendo dimensoes da imagem...
-                      </div>
-                    ) : null}
                   </div>
                 </>
               ) : (
@@ -412,7 +388,7 @@ export function ProfilePhotoCropDialog({
                   Saida final quadrada
                 </p>
                 <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-                  A imagem salva ja vai com o recorte aplicado no arquivo.
+                  O enquadramento do preview e o mesmo usado para gerar o arquivo final.
                 </p>
               </div>
               {file ? (
@@ -445,7 +421,7 @@ export function ProfilePhotoCropDialog({
                 }}
               />
               <p className="mt-3 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-                Aumente o zoom para aproximar e ajustar melhor o enquadramento.
+                Use o zoom para aproximar. Depois arraste a imagem para escolher o enquadramento.
               </p>
             </div>
 
@@ -455,25 +431,16 @@ export function ProfilePhotoCropDialog({
               </p>
               <div className="space-y-1 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
                 <p>Zoom: {zoom.toFixed(2)}x</p>
-                <p>Horizontal: {Math.round(offset.x)}px</p>
-                <p>Vertical: {Math.round(offset.y)}px</p>
+                <p>Horizontal: {position.x}%</p>
+                <p>Vertical: {position.y}%</p>
               </div>
-            </div>
-
-            <div className="rounded-2xl border border-[#1f1f1f] bg-[#0d0d0d] p-4">
-              <p className="mb-2 text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>
-                Dica
-              </p>
-              <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "18px" }}>
-                O recorte foi pensado para o avatar do perfil. Posicione rosto e ombros no centro para um resultado melhor.
-              </p>
             </div>
 
             <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!file || !imageSize || !viewportSize || isBusy || Boolean(imageError)}
+                disabled={!previewUrl || isBusy || Boolean(imageError)}
                 className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[#101010] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ backgroundColor: "#f5f5f5", fontSize: "12px", fontWeight: 600 }}
               >
