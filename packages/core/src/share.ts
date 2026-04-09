@@ -29,7 +29,7 @@ export function richTextToPlainText(value?: string | null) {
 
   return decodeHtmlEntities(
     normalized
-      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<br\b[^>]*>/gi, "\n")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim(),

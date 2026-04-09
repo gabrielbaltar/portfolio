@@ -106,6 +106,13 @@ body,
   color: #ffffff;
 }
 
+br[data-rich-text-break="true"] {
+  display: block;
+  height: 0;
+  line-height: 0;
+  margin-top: 8px;
+}
+
 .availability-indicator {
   position: relative;
   display: inline-flex;

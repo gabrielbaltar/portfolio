@@ -104,6 +104,7 @@ const INLINE_LINE_HEIGHT_OPTIONS = [
 
 const RICH_TEXT_BLOCK_TAGS = new Set(["div", "p", "h1", "h2", "h3", "ul", "ol", "li"]);
 const RICH_TEXT_LINE_HEIGHT_BLOCK_SELECTOR = "div, p, h1, h2, h3, li";
+const RICH_TEXT_BREAK_HTML = '<br data-rich-text-break="true">';
 
 function normalizeInlineTagLabel(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -240,7 +241,9 @@ function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
   const tagName = node.tagName.toLowerCase();
 
   if (tagName === "br") {
-    appendNode(target, doc.createElement("br"));
+    const lineBreak = doc.createElement("br");
+    lineBreak.setAttribute("data-rich-text-break", "true");
+    appendNode(target, lineBreak);
     return;
   }
 
@@ -331,9 +334,8 @@ function sanitizeNode(node: Node, target: HTMLElement, doc: Document) {
 
 function removeEdgeBreaks(value: string) {
   return value
-    .replace(/^(<br\s*\/?>\s*)+/i, "")
-    .replace(/(<br\s*\/?>\s*)+$/i, "")
-    .replace(/(?:<br\s*\/?>\s*){3,}/gi, "<br><br>");
+    .replace(/^(?:<br\b[^>]*>\s*)+/i, "")
+    .replace(/(?:<br\b[^>]*>\s*)+$/i, "");
 }
 
 function getHeadingRenderStyle(tagName: "h1" | "h2" | "h3", lineHeight?: string | null) {
@@ -376,7 +378,7 @@ export function richTextToPlainText(value?: string | null) {
   if (!normalized) return normalized;
   if (typeof window === "undefined") {
     return normalized
-      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<br\b[^>]*>/gi, "\n")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
@@ -408,7 +410,7 @@ function renderNode(node: Node, key: string, theme: Theme): ReactNode {
   const tagName = node.tagName.toLowerCase();
   const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`, theme));
 
-  if (tagName === "br") return <br key={key} />;
+  if (tagName === "br") return <br key={key} data-rich-text-break="true" />;
   if (tagName === "strong" || tagName === "b") return <strong key={key}>{children}</strong>;
   if (tagName === "em" || tagName === "i") return <em key={key}>{children}</em>;
   if (tagName === "u") return <u key={key}>{children}</u>;
@@ -565,7 +567,7 @@ function insertHtmlAtSelection(html: string) {
 }
 
 function insertPlainTextAtSelection(text: string) {
-  const html = escapeHtml(text).replace(/\n/g, "<br>");
+  const html = escapeHtml(text).replace(/\n/g, RICH_TEXT_BREAK_HTML);
   insertHtmlAtSelection(html);
 }
 
@@ -1086,7 +1088,7 @@ export function RichTextEditor({
           return;
         }
         event.preventDefault();
-        insertHtmlAtSelection("<br>");
+        insertHtmlAtSelection(RICH_TEXT_BREAK_HTML);
         commitValue();
       }
     }
