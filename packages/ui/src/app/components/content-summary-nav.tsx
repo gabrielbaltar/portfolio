@@ -64,8 +64,14 @@ function getRailWidth(level: 1 | 2 | 3) {
 
 function getItemIndent(level: 1 | 2 | 3) {
   if (level === 1) return 0;
-  if (level === 2) return 10;
-  return 18;
+  if (level === 2) return 4;
+  return 8;
+}
+
+function getItemGroupOffset(level: 1 | 2 | 3) {
+  if (level === 1) return 0;
+  if (level === 2) return 8;
+  return 14;
 }
 
 function scrollToHeading(id: string) {
@@ -290,6 +296,7 @@ export function ContentSummaryNav({
                   const isActive = item.id === activeId;
                   const isHovered = item.id === hoveredId;
                   const isHighlighted = isActive || isHovered;
+                  const groupOffset = getItemGroupOffset(item.level);
                   return (
                     <button
                       key={item.id}
@@ -310,24 +317,38 @@ export function ContentSummaryNav({
                       }}
                     >
                       <span
-                        className="shrink-0"
+                        className="flex min-w-0 items-start gap-1.5"
                         style={{
-                          minWidth: item.level === 1 ? "18px" : item.level === 2 ? "28px" : "38px",
-                          fontSize: "11px",
-                          lineHeight: "16px",
-                          color: isHighlighted ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
+                          marginLeft: `${groupOffset}px`,
+                          paddingLeft: item.level === 1 ? "0px" : "6px",
+                          borderLeft: item.level === 1
+                            ? "none"
+                            : `1px solid ${isHighlighted ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)"}`,
                         }}
                       >
-                        {item.outlineLabel}
-                      </span>
-                      <span
-                        style={{
-                          paddingLeft: `${getItemIndent(item.level)}px`,
-                          fontSize: "11px",
-                          lineHeight: "16px",
-                        }}
-                      >
-                        {item.title}
+                        <span
+                          className="shrink-0"
+                          style={{
+                            minWidth: item.level === 1 ? "18px" : item.level === 2 ? "26px" : "34px",
+                            fontSize: "11px",
+                            lineHeight: "16px",
+                            fontWeight: item.level === 1 ? 600 : 500,
+                            color: isHighlighted ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
+                          }}
+                        >
+                          {item.outlineLabel}
+                        </span>
+                        <span
+                          className="min-w-0"
+                          style={{
+                            paddingLeft: `${getItemIndent(item.level)}px`,
+                            fontSize: "11px",
+                            lineHeight: "16px",
+                            fontWeight: item.level === 1 ? 600 : 500,
+                          }}
+                        >
+                          {item.title}
+                        </span>
                       </span>
                     </button>
                   );
