@@ -57,15 +57,15 @@ function getSummaryEntry(block: ContentBlock): { title: string; level: 1 | 2 | 3
 }
 
 function getRailWidth(level: 1 | 2 | 3) {
-  if (level === 1) return 32;
-  if (level === 2) return 24;
-  return 18;
+  if (level === 1) return 24;
+  if (level === 2) return 18;
+  return 12;
 }
 
 function getItemIndent(level: 1 | 2 | 3) {
   if (level === 1) return 0;
-  if (level === 2) return 18;
-  return 34;
+  if (level === 2) return 14;
+  return 26;
 }
 
 function scrollToHeading(id: string) {
@@ -117,6 +117,7 @@ export function ContentSummaryNav({
   label: string;
 }) {
   const [activeId, setActiveId] = useState(items[0]?.id || "");
+  const [isOpen, setIsOpen] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
 
   useEffect(() => {
@@ -171,9 +172,23 @@ export function ContentSummaryNav({
   if (items.length < 2) return null;
 
   return (
-    <aside className="fixed right-5 top-1/2 z-30 hidden -translate-y-1/2 min-[1200px]:block" aria-label={label}>
-      <div className="group relative flex items-center justify-end">
-        <div className="flex flex-col items-end gap-3 rounded-full px-2 py-3">
+    <aside
+      className="fixed right-3 top-1/2 z-30 hidden -translate-y-1/2 min-[1200px]:block"
+      aria-label={label}
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+      onFocusCapture={() => setIsOpen(true)}
+      onBlurCapture={(event) => {
+        const nextFocusedElement = event.relatedTarget;
+        if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) return;
+        setIsOpen(false);
+      }}
+    >
+      <div className="relative flex w-[292px] items-center justify-end">
+        <div
+          className="flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
+          style={{ opacity: isOpen ? 0.9 : 0.62 }}
+        >
           {items.map((item) => {
             const isActive = item.id === activeId;
             return (
@@ -187,7 +202,7 @@ export function ContentSummaryNav({
                 className="cursor-pointer rounded-full transition-all duration-200 hover:opacity-100"
                 style={{
                   width: `${getRailWidth(item.level)}px`,
-                  height: "4px",
+                  height: "3px",
                   backgroundColor: isActive ? "var(--text-primary, #fafafa)" : "rgba(127, 127, 127, 0.28)",
                   opacity: isActive ? 1 : 0.78,
                 }}
@@ -197,20 +212,27 @@ export function ContentSummaryNav({
           })}
         </div>
 
-        <div className="pointer-events-none absolute right-full top-1/2 mr-4 w-[320px] -translate-y-1/2 translate-x-3 opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-x-0 group-focus-within:opacity-100">
+        <div
+          className="absolute right-10 top-1/2 w-[244px] -translate-y-1/2 transition-all duration-180"
+          style={{
+            opacity: isOpen ? 1 : 0,
+            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "8px"}) scale(${isOpen ? 1 : 0.985})`,
+            pointerEvents: isOpen ? "auto" : "none",
+          }}
+        >
           <div
-            className="rounded-[26px] border p-4"
+            className="rounded-[22px] border p-3"
             style={{
               backgroundColor: "var(--bg-secondary, #121212)",
               borderColor: "var(--border-primary, #2A2A2A)",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.22)",
+              boxShadow: "0 18px 44px rgba(0, 0, 0, 0.18)",
             }}
           >
             <p
-              className="px-2"
+              className="px-1.5"
               style={{
-                fontSize: "11px",
-                lineHeight: "16px",
+                fontSize: "10px",
+                lineHeight: "14px",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
                 color: "var(--text-secondary, #7A7A7A)",
@@ -219,7 +241,7 @@ export function ContentSummaryNav({
               {label}
             </p>
 
-            <nav className="mt-3 max-h-[68vh] overflow-y-auto pr-1">
+            <nav className="mt-2.5 max-h-[58vh] overflow-y-auto pr-1">
               {items.map((item) => {
                 const isActive = item.id === activeId;
                 return (
@@ -230,7 +252,7 @@ export function ContentSummaryNav({
                       setActiveId(item.id);
                       scrollToHeading(item.id);
                     }}
-                    className="flex w-full cursor-pointer items-start gap-3 rounded-[16px] px-3 py-2.5 text-left transition-colors"
+                    className="flex w-full cursor-pointer items-start gap-2 rounded-[14px] px-2.5 py-1.5 text-left transition-colors"
                     style={{
                       backgroundColor: isActive ? "rgba(255,255,255,0.045)" : "transparent",
                       color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
@@ -239,9 +261,9 @@ export function ContentSummaryNav({
                     <span
                       className="shrink-0"
                       style={{
-                        minWidth: item.level === 1 ? "30px" : item.level === 2 ? "42px" : "56px",
-                        fontSize: "14px",
-                        lineHeight: "20px",
+                        minWidth: item.level === 1 ? "24px" : item.level === 2 ? "36px" : "48px",
+                        fontSize: "12px",
+                        lineHeight: "18px",
                         color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
                       }}
                     >
@@ -250,8 +272,8 @@ export function ContentSummaryNav({
                     <span
                       style={{
                         paddingLeft: `${getItemIndent(item.level)}px`,
-                        fontSize: "14px",
-                        lineHeight: "20px",
+                        fontSize: "12px",
+                        lineHeight: "18px",
                       }}
                     >
                       {item.title}
