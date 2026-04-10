@@ -126,7 +126,7 @@ export function CMSAccessRequests() {
           Solicitações de acesso
         </h1>
         <p style={{ fontSize: "13px", lineHeight: "19.5px", color: "#666" }}>
-          Aprove ou negue pedidos para projetos protegidos por senha sem alterar o fluxo atual de senha.
+          Aprove ou negue pedidos para projetos protegidos por senha. Cada liberação mantém este navegador com acesso por 30 dias.
         </p>
       </div>
 

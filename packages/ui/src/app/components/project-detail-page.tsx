@@ -24,6 +24,7 @@ import { getProjectAccessVisitorToken } from "./project-access-utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+type ApprovedAccessState = "idle" | "checking" | "granted" | "blocked";
 
 function ImageCard({
   src,
@@ -87,8 +88,7 @@ export function ProjectDetailPage() {
   const [requestForm, setRequestForm] = useState({ name: "", email: "", message: "" });
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [accessRequestStatus, setAccessRequestStatus] = useState<ProjectAccessRequestStatus | null>(null);
-  const [approvedAccessGranted, setApprovedAccessGranted] = useState(false);
-  const [checkingApprovedAccess, setCheckingApprovedAccess] = useState(false);
+  const [approvedAccessState, setApprovedAccessState] = useState<ApprovedAccessState>("idle");
   const backTo = getBackTarget(location.state, "/projects");
   const socialLinks = getProfileSocialLinks(profile);
 
@@ -105,7 +105,7 @@ export function ProjectDetailPage() {
     setPasswordInput("");
     setIsUnlocked(false);
     setPasswordError(false);
-    setApprovedAccessGranted(false);
+    setApprovedAccessState("idle");
     setAccessRequestStatus(null);
     setRequestDialogOpen(false);
     setRequestForm({ name: "", email: "", message: "" });
@@ -142,38 +142,46 @@ export function ProjectDetailPage() {
   // Check if project requires password
   const needsPassword = Boolean(project?.password && project.password.trim() !== "");
   const sessionUnlocked = project ? isProjectUnlocked(project.id) : false;
+  const shouldCheckApprovedAccess = Boolean(project && needsPassword && !isUnlocked && !sessionUnlocked);
+  const approvedAccessGranted = approvedAccessState === "granted";
+  const isResolvingApprovedAccess =
+    shouldCheckApprovedAccess &&
+    approvedAccessState !== "granted" &&
+    approvedAccessState !== "blocked";
   const projectUnlocked = project ? !needsPassword || isUnlocked || sessionUnlocked || approvedAccessGranted : false;
 
   useEffect(() => {
-    if (!project || !needsPassword || isUnlocked || sessionUnlocked) {
-      setCheckingApprovedAccess(false);
+    if (!project) {
+      setApprovedAccessState("idle");
+      return;
+    }
+
+    if (!shouldCheckApprovedAccess) {
+      setApprovedAccessState("idle");
       return;
     }
 
     let active = true;
     const visitorToken = getProjectAccessVisitorToken();
 
-    setCheckingApprovedAccess(true);
+    setApprovedAccessState("checking");
     void dataProvider
       .getProjectAccessStatus(project.id, visitorToken)
       .then((status) => {
         if (!active) return;
-        setApprovedAccessGranted(status.hasAccess);
         setAccessRequestStatus(status.latestStatus);
+        setApprovedAccessState(status.hasAccess ? "granted" : "blocked");
       })
       .catch((error) => {
         if (!active) return;
         console.warn("Nao foi possivel verificar o acesso aprovado ao projeto.", error);
-      })
-      .finally(() => {
-        if (!active) return;
-        setCheckingApprovedAccess(false);
+        setApprovedAccessState("blocked");
       });
 
     return () => {
       active = false;
     };
-  }, [project?.id, needsPassword, isUnlocked, sessionUnlocked]);
+  }, [project?.id, shouldCheckApprovedAccess]);
 
   const handleAccessRequestSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -209,7 +217,7 @@ export function ProjectDetailPage() {
       setAccessRequestStatus(result.latestStatus);
 
       if (result.hasAccess) {
-        setApprovedAccessGranted(true);
+        setApprovedAccessState("granted");
         setRequestDialogOpen(false);
         toast.success(t("accessAlreadyGranted"));
         return;
@@ -257,6 +265,35 @@ export function ProjectDetailPage() {
     );
   }
 
+  if (needsPassword && !projectUnlocked && isResolvingApprovedAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif] px-5" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
+        <motion.div
+          className="w-full max-w-[420px] rounded-2xl p-8 text-center"
+          style={{ backgroundColor: "var(--bg-secondary, #121212)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+          initial={{ scale: 0.98, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+            style={{ backgroundColor: "var(--bg-primary, #0B0B0D)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+          >
+            <ShieldCheck size={22} style={{ color: "var(--text-primary, #fafafa)" }} />
+          </div>
+          <p className="mx-auto max-w-[280px]" style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #A1A1A1)" }}>
+            {t("verifyingProjectAccess")}
+          </p>
+          <div
+            className="mt-6 mx-auto h-7 w-7 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: "var(--border-primary, #2A2A2A)", borderTopColor: "var(--text-primary, #fafafa)" }}
+            aria-hidden="true"
+          />
+        </motion.div>
+      </div>
+    );
+  }
+
   // Password gate
   if (!projectUnlocked) {
     return (
@@ -281,11 +318,6 @@ export function ProjectDetailPage() {
             <p className="mb-6" style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #888)" }}>
               {t("protectedProjectDescription")}
             </p>
-            {checkingApprovedAccess && (
-              <p className="mb-4" style={{ fontSize: "12px", lineHeight: "18px", color: "var(--text-secondary, #777)" }}>
-                {t("verifyingProjectAccess")}
-              </p>
-            )}
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
               <input
                 type="password"
