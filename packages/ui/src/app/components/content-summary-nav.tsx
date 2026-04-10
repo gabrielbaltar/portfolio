@@ -195,18 +195,20 @@ export function ContentSummaryNav({
 
   return (
     <aside
-      className="fixed right-6 top-1/2 z-30 w-[268px] -translate-y-1/2 overflow-visible"
+      className="fixed inset-y-12 right-6 z-30 w-[268px] overflow-visible"
       aria-label={label}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-      onFocusCapture={() => setIsOpen(true)}
-      onBlurCapture={(event) => {
-        const nextFocusedElement = event.relatedTarget;
-        if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) return;
-        setIsOpen(false);
-      }}
     >
-      <div className="relative flex w-full items-center justify-end overflow-visible">
+      <div
+        className="relative flex h-full w-full items-center justify-end overflow-visible"
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        onFocusCapture={() => setIsOpen(true)}
+        onBlurCapture={(event) => {
+          const nextFocusedElement = event.relatedTarget;
+          if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) return;
+          setIsOpen(false);
+        }}
+      >
         <div
           className="relative z-10 flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
           style={{ opacity: isOpen ? 0 : 0.62, pointerEvents: isOpen ? "none" : "auto" }}
@@ -249,6 +251,8 @@ export function ContentSummaryNav({
               backgroundColor: "var(--bg-secondary, #121212)",
               borderColor: "var(--border-primary, #2A2A2A)",
               boxShadow: "0 18px 44px rgba(0, 0, 0, 0.18)",
+              maxHeight: "calc(100vh - 96px)",
+              overflow: "hidden",
             }}
           >
             <p
@@ -267,6 +271,8 @@ export function ContentSummaryNav({
             <nav
               className="summary-nav-scroll mt-2.5 max-h-[58vh] overflow-y-auto pr-1"
               style={{
+                maxHeight: "calc(100vh - 148px)",
+                overscrollBehavior: "contain",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
               }}
