@@ -195,7 +195,7 @@ export function ContentSummaryNav({
 
   return (
     <aside
-      className="fixed right-6 top-1/2 z-30 -translate-y-1/2 overflow-visible"
+      className="fixed right-6 top-1/2 z-30 w-[268px] -translate-y-1/2 overflow-visible"
       aria-label={label}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
@@ -206,10 +206,10 @@ export function ContentSummaryNav({
         setIsOpen(false);
       }}
     >
-      <div className="relative flex w-6 items-center justify-end overflow-visible">
+      <div className="relative flex w-full items-center justify-end overflow-visible">
         <div
           className="relative z-10 flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
-          style={{ opacity: isOpen ? 0 : 0.62 }}
+          style={{ opacity: isOpen ? 0 : 0.62, pointerEvents: isOpen ? "none" : "auto" }}
           aria-hidden={isOpen}
         >
           {items.map((item) => {
