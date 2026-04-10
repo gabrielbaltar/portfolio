@@ -25,11 +25,25 @@ body,
   cursor: not-allowed;
 }
 
+.public-app .responsive-page-title,
+.public-app .responsive-content-h1 {
+  font-size: var(--responsive-font-size);
+  line-height: var(--responsive-line-height);
+}
+
 @media (max-width: 768px) {
   .public-app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
   .public-app textarea,
   .public-app select {
     font-size: 16px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .public-app .responsive-page-title,
+  .public-app .responsive-content-h1 {
+    font-size: min(var(--responsive-font-size), var(--responsive-mobile-max-font-size, 24px));
+    line-height: min(var(--responsive-line-height), var(--responsive-mobile-max-line-height, 30px));
   }
 }
 

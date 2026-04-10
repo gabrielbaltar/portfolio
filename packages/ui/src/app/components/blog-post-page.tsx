@@ -20,7 +20,12 @@ import { filterVisibleContent, getArticleCardCopy } from "./site-visibility";
 import { ArticleShareActions } from "./article-share-actions";
 import { getLightboxOriginRect, ImageLightbox, type LightboxOpenPayload, type LightboxOriginRect, type LightboxSlide } from "./image-lightbox";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
-import { ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS, ARTICLE_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
+import {
+  ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS,
+  ARTICLE_TITLE_APPEARANCE_DEFAULTS,
+  resolveResponsiveTextAppearanceStyle,
+  resolveTextAppearanceStyle,
+} from "./text-appearance";
 import { usePageSeo } from "./use-page-seo";
 
 function ImageCard({
@@ -305,7 +310,10 @@ export function BlogPostPage() {
     post.category ? { label: t("categoryLabel"), value: post.category, icon: Tag } : null,
     post.services ? { label: t("topicsLabel"), value: post.services, icon: Tag } : null,
   ].filter(Boolean) as { label: string; value: string; icon: typeof User }[];
-  const titleStyle = resolveTextAppearanceStyle(post.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS);
+  const titleStyle = resolveResponsiveTextAppearanceStyle(post.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS, {
+    maxFontSize: 24,
+    maxLineHeight: 30,
+  });
   const subtitleStyle = resolveTextAppearanceStyle(post.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
 
   return (
@@ -333,7 +341,7 @@ export function BlogPostPage() {
 
         {/* Title */}
         <motion.h1
-          className="mt-4"
+          className="responsive-page-title mt-4"
           style={titleStyle}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

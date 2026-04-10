@@ -17,7 +17,12 @@ import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
-import { PROJECT_SUBTITLE_APPEARANCE_DEFAULTS, PROJECT_TITLE_APPEARANCE_DEFAULTS, resolveTextAppearanceStyle } from "./text-appearance";
+import {
+  PROJECT_SUBTITLE_APPEARANCE_DEFAULTS,
+  PROJECT_TITLE_APPEARANCE_DEFAULTS,
+  resolveResponsiveTextAppearanceStyle,
+  resolveTextAppearanceStyle,
+} from "./text-appearance";
 import { dataProvider } from "./data-provider";
 import { sendProjectAccessRequestEmail } from "./email-service";
 import { getProjectAccessVisitorToken } from "./project-access-utils";
@@ -513,7 +518,10 @@ export function ProjectDetailPage() {
     { label: t("clientLabel"), value: project.client || "Não informado" },
     { label: t("yearLabel"), value: project.year || "Não informado" },
   ];
-  const titleStyle = resolveTextAppearanceStyle(project.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS);
+  const titleStyle = resolveResponsiveTextAppearanceStyle(project.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS, {
+    maxFontSize: 24,
+    maxLineHeight: 30,
+  });
   const subtitleStyle = resolveTextAppearanceStyle(project.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS);
 
   return (
@@ -539,7 +547,7 @@ export function ProjectDetailPage() {
 
         {/* Title */}
         <motion.h1
-          className="mt-4"
+          className="responsive-page-title mt-4"
           style={titleStyle}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

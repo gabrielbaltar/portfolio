@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Check, Copy } from "lucide-react";
 import { type ContentBlock } from "./cms-data";
 import type { ContentListItem } from "@portfolio/core";
@@ -22,6 +22,23 @@ const ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as co
 function getListStyleType(ordered: boolean, depth: number) {
   const styles = ordered ? ORDERED_LIST_STYLE_TYPES : UNORDERED_LIST_STYLE_TYPES;
   return styles[depth % styles.length];
+}
+
+function getResponsiveHeading1Style(lineHeight?: number | null) {
+  const resolvedLineHeight = lineHeight ?? 32;
+
+  return {
+    "--responsive-font-size": "24px",
+    "--responsive-line-height": `${resolvedLineHeight}px`,
+    "--responsive-mobile-max-font-size": "20px",
+    "--responsive-mobile-max-line-height": `${Math.min(resolvedLineHeight, 28)}px`,
+    color: "var(--text-primary, #fafafa)",
+  } as CSSProperties & {
+    "--responsive-font-size": string;
+    "--responsive-line-height": string;
+    "--responsive-mobile-max-font-size": string;
+    "--responsive-mobile-max-line-height": string;
+  };
 }
 
 function ListBlockView({
@@ -194,8 +211,8 @@ export function BlockRenderer({
             return (
               <h1
                 key={i}
-                className="font-['Inter',sans-serif] mt-10 first:mt-0"
-                style={{ fontSize: "24px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "32px", color: "var(--text-primary, #fafafa)" }}
+                className="responsive-content-h1 font-['Inter',sans-serif] mt-10 first:mt-0"
+                style={getResponsiveHeading1Style(blockLineHeight)}
               >
                 <RichTextContent value={block.text} />
               </h1>
