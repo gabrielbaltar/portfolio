@@ -27,6 +27,7 @@ import { dataProvider } from "./data-provider";
 import { sendProjectAccessRequestEmail } from "./email-service";
 import { getProjectAccessVisitorToken } from "./project-access-utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { buildContentSummaryItems, ContentSummaryNav } from "./content-summary-nav";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 type ApprovedAccessState = "idle" | "checking" | "granted" | "blocked";
@@ -523,9 +524,15 @@ export function ProjectDetailPage() {
     maxLineHeight: 30,
   });
   const subtitleStyle = resolveTextAppearanceStyle(project.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS);
+  const contentSummaryItems = buildContentSummaryItems(project.contentBlocks, `project-${project.id}`);
+  const contentSummaryAnchors = Object.fromEntries(
+    contentSummaryItems.map((item) => [item.blockIndex, { id: item.id }]),
+  );
+  const contentSummaryLabel = locale === "en-US" ? "Contents" : "Sumario";
 
   return (
     <div className="min-h-screen font-['Inter',sans-serif]" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
+      <ContentSummaryNav items={contentSummaryItems} label={contentSummaryLabel} />
 
       {/* Header */}
       <div className="max-w-[700px] mx-auto px-5 pt-24 md:pt-28">
@@ -612,7 +619,12 @@ export function ProjectDetailPage() {
       {project.contentBlocks && project.contentBlocks.length > 0 && (
         <div style={{ marginTop: heroImage ? "48px" : `${infoDividerSpacing}px` }}>
           <ScrollReveal className="max-w-[700px] mx-auto px-5">
-            <BlockRenderer blocks={project.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
+            <BlockRenderer
+              blocks={project.contentBlocks}
+              imagesClickable
+              onImageClick={setLightboxImage}
+              summaryAnchors={contentSummaryAnchors}
+            />
           </ScrollReveal>
         </div>
       )}

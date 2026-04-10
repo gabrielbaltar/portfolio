@@ -190,10 +190,12 @@ export function BlockRenderer({
   blocks,
   imagesClickable = false,
   onImageClick,
+  summaryAnchors,
 }: {
   blocks: ContentBlock[];
   imagesClickable?: boolean;
   onImageClick?: (payload: LightboxOpenPayload) => void;
+  summaryAnchors?: Record<number, { id: string }>;
 }) {
   if (!blocks || blocks.length === 0) return null;
 
@@ -201,9 +203,18 @@ export function BlockRenderer({
     <div className="space-y-8">
       {blocks.map((block, i) => {
         const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
+        const summaryAnchor = summaryAnchors?.[i];
 
         if (isShowcaseBlock(block)) {
-          return <ShowcaseBlockView key={i} block={block} variant="public" />;
+          if (!summaryAnchor) {
+            return <ShowcaseBlockView key={i} block={block} variant="public" />;
+          }
+
+          return (
+            <section key={i} id={summaryAnchor.id} style={{ scrollMarginTop: "132px" }}>
+              <ShowcaseBlockView block={block} variant="public" />
+            </section>
+          );
         }
 
         switch (block.type) {
@@ -211,8 +222,12 @@ export function BlockRenderer({
             return (
               <h1
                 key={i}
+                id={summaryAnchor?.id}
                 className="responsive-content-h1 font-['Inter',sans-serif] mt-10 first:mt-0"
-                style={getResponsiveHeading1Style(blockLineHeight)}
+                style={{
+                  ...getResponsiveHeading1Style(blockLineHeight),
+                  scrollMarginTop: summaryAnchor ? "132px" : undefined,
+                }}
               >
                 <RichTextContent value={block.text} />
               </h1>
@@ -221,8 +236,14 @@ export function BlockRenderer({
             return (
               <h2
                 key={i}
+                id={summaryAnchor?.id}
                 className="font-['Inter',sans-serif] mt-8 first:mt-0"
-                style={{ fontSize: "20px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "28px", color: "var(--text-primary, #fafafa)" }}
+                style={{
+                  fontSize: "20px",
+                  lineHeight: blockLineHeight ? `${blockLineHeight}px` : "28px",
+                  color: "var(--text-primary, #fafafa)",
+                  scrollMarginTop: summaryAnchor ? "132px" : undefined,
+                }}
               >
                 <RichTextContent value={block.text} />
               </h2>
@@ -231,8 +252,14 @@ export function BlockRenderer({
             return (
               <h3
                 key={i}
+                id={summaryAnchor?.id}
                 className="font-['Inter',sans-serif] mt-6 first:mt-0"
-                style={{ fontSize: "17px", lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px", color: "var(--text-primary, #fafafa)" }}
+                style={{
+                  fontSize: "17px",
+                  lineHeight: blockLineHeight ? `${blockLineHeight}px` : "24px",
+                  color: "var(--text-primary, #fafafa)",
+                  scrollMarginTop: summaryAnchor ? "132px" : undefined,
+                }}
               >
                 <RichTextContent value={block.text} />
               </h3>

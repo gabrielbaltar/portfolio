@@ -27,6 +27,7 @@ import {
   resolveTextAppearanceStyle,
 } from "./text-appearance";
 import { usePageSeo } from "./use-page-seo";
+import { buildContentSummaryItems, ContentSummaryNav } from "./content-summary-nav";
 
 function ImageCard({
   src,
@@ -315,12 +316,18 @@ export function BlogPostPage() {
     maxLineHeight: 30,
   });
   const subtitleStyle = resolveTextAppearanceStyle(post.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
+  const contentSummaryItems = buildContentSummaryItems(post.contentBlocks, `article-${post.id}`);
+  const contentSummaryAnchors = Object.fromEntries(
+    contentSummaryItems.map((item) => [item.blockIndex, { id: item.id }]),
+  );
+  const contentSummaryLabel = locale === "en-US" ? "Contents" : "Sumario";
 
   return (
     <div
       className="min-h-screen font-['Inter',sans-serif] transition-colors duration-500"
       style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}
     >
+      <ContentSummaryNav items={contentSummaryItems} label={contentSummaryLabel} />
       {/* ======== HEADER ======== */}
       <div className="max-w-[700px] mx-auto px-5 pt-24 md:pt-28">
         {/* Back / Breadcrumb */}
@@ -430,7 +437,12 @@ export function BlogPostPage() {
         {hasContentBlocks ? (
           <ScrollReveal>
             <div className="max-w-[640px]">
-              <BlockRenderer blocks={post.contentBlocks} imagesClickable onImageClick={setLightboxImage} />
+              <BlockRenderer
+                blocks={post.contentBlocks}
+                imagesClickable
+                onImageClick={setLightboxImage}
+                summaryAnchors={contentSummaryAnchors}
+              />
             </div>
           </ScrollReveal>
         ) : hasLegacyContent ? (
