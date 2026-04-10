@@ -117,6 +117,7 @@ export function ContentSummaryNav({
   label: string;
 }) {
   const [activeId, setActiveId] = useState(items[0]?.id || "");
+  const [hoveredId, setHoveredId] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
@@ -125,10 +126,12 @@ export function ContentSummaryNav({
   useEffect(() => {
     if (!items.length) {
       setActiveId("");
+      setHoveredId("");
       return;
     }
 
     setActiveId((current) => (items.some((item) => item.id === current) ? current : items[0].id));
+    setHoveredId((current) => (items.some((item) => item.id === current) ? current : ""));
   }, [idsKey, items]);
 
   useEffect(() => {
@@ -285,6 +288,8 @@ export function ContentSummaryNav({
               >
                 {items.map((item) => {
                   const isActive = item.id === activeId;
+                  const isHovered = item.id === hoveredId;
+                  const isHighlighted = isActive || isHovered;
                   return (
                     <button
                       key={item.id}
@@ -293,10 +298,15 @@ export function ContentSummaryNav({
                         setActiveId(item.id);
                         scrollToHeading(item.id);
                       }}
-                      className="flex w-full cursor-pointer items-start gap-1.5 rounded-[12px] px-2 py-1.5 text-left transition-colors"
+                      onMouseEnter={() => setHoveredId(item.id)}
+                      onMouseLeave={() => setHoveredId("")}
+                      onFocus={() => setHoveredId(item.id)}
+                      onBlur={() => setHoveredId("")}
+                      className="flex w-full cursor-pointer items-start gap-1.5 rounded-[12px] px-2 py-1.5 text-left transition-all duration-200 ease-out"
                       style={{
-                        backgroundColor: isActive ? "rgba(255,255,255,0.045)" : "transparent",
-                        color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
+                        backgroundColor: isHighlighted ? "rgba(255,255,255,0.045)" : "transparent",
+                        color: isHighlighted ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
+                        transform: isHovered && !isActive ? "translateX(-2px)" : "translateX(0px)",
                       }}
                     >
                       <span
@@ -305,7 +315,7 @@ export function ContentSummaryNav({
                           minWidth: item.level === 1 ? "18px" : item.level === 2 ? "28px" : "38px",
                           fontSize: "11px",
                           lineHeight: "16px",
-                          color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
+                          color: isHighlighted ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
                         }}
                       >
                         {item.outlineLabel}
