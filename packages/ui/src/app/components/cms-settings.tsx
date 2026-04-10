@@ -11,6 +11,7 @@ import {
   getProfileAboutParagraphs,
   getPublicContentVisibilityKey,
   syncProfileAboutFields,
+  type HomeGalleryItem,
   type PortfolioSectionId,
   type PublicContentVisibilityCollection,
 } from "@portfolio/core";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
 import { dataProvider } from "./data-provider";
 import { LineHeightControl } from "./line-height-control";
+import { ImagePositionEditorCompact } from "./image-position-editor";
 import { ProfilePhotoCropDialog } from "./profile-photo-crop-dialog";
 import { RichTextEditor } from "./rich-text";
 import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
@@ -183,6 +185,7 @@ const PORTFOLIO_SECTION_FIELDS: Array<{ id: PortfolioSectionId; label: string; d
   { id: "education", label: "Educação", description: "Controla a seção de formação acadêmica." },
   { id: "certifications", label: "Certificações", description: "Mostra ou oculta a lista de certificados." },
   { id: "stack", label: "Stack", description: "Controla a seção de ferramentas e tecnologias." },
+  { id: "gallery", label: "Galeria", description: "Mostra ou oculta a galeria de fotos da home." },
   { id: "awards", label: "Prêmios", description: "Mostra ou oculta a lista de prêmios." },
   { id: "recommendations", label: "Recomendações", description: "Controla os depoimentos e recomendações." },
   { id: "blog", label: "Artigos", description: "Controla a seção de artigos e publicações." },
@@ -364,7 +367,7 @@ function SortableSectionCard({
   );
 }
 
-type SettingsTab = "profile" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
+type SettingsTab = "profile" | "gallery" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
 
 export function CMSSettings() {
   const cms = useCMS();
@@ -463,6 +466,7 @@ export function CMSSettings() {
 
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "profile", label: "Perfil" },
+    { key: "gallery", label: "Galeria" },
     { key: "experience", label: "Experiencia" },
     { key: "education", label: "Educacao" },
     { key: "certifications", label: "Certificados" },
@@ -472,6 +476,7 @@ export function CMSSettings() {
   ];
 
   const aboutParagraphs = getProfileAboutParagraphs(profile);
+  const homeGalleryItems = siteSettings.homeGalleryItems || [];
 
   const updateProfileState = (updater: (current: ProfileData) => ProfileData) => {
     setProfile((current) => syncProfileAboutFields(updater(current)));
@@ -483,6 +488,38 @@ export function CMSSettings() {
       aboutParagraphs: updater(getProfileAboutParagraphs(current)),
     }));
   };
+
+  const updateHomeGalleryItems = (updater: (current: HomeGalleryItem[]) => HomeGalleryItem[]) => {
+    setSiteSettings((current) => ({
+      ...current,
+      homeGalleryItems: updater(current.homeGalleryItems || []),
+    }));
+  };
+
+  const updateHomeGalleryItem = (itemId: string, updater: (current: HomeGalleryItem) => HomeGalleryItem) => {
+    updateHomeGalleryItems((current) => current.map((item) => (item.id === itemId ? updater(item) : item)));
+  };
+
+  const moveHomeGalleryItem = (itemId: string, direction: -1 | 1) => {
+    updateHomeGalleryItems((current) => {
+      const currentIndex = current.findIndex((item) => item.id === itemId);
+      const nextIndex = currentIndex + direction;
+
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      return moveArrayItem(current, currentIndex, nextIndex);
+    });
+  };
+
+  const createHomeGalleryItem = (): HomeGalleryItem => ({
+    id: `home-gallery-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    title: "",
+    subtitle: "",
+    image: "",
+    imagePosition: "50% 50%",
+  });
 
   const updateExperience = (experienceId: string, updater: (current: Experience) => Experience) => {
     setExperiences((current) =>
@@ -519,6 +556,10 @@ export function CMSSettings() {
     cms.updateSiteSettings(siteSettings);
     cms.updateProfile(nextProfile);
     toast.success("Configuracoes salvas!");
+  };
+  const saveGallery = () => {
+    cms.updateSiteSettings(siteSettings);
+    toast.success("Galeria salva!");
   };
   const saveEducation = () => {
     const nextEducation = reindexSortableItems(education);
@@ -559,6 +600,9 @@ export function CMSSettings() {
     switch (tab) {
       case "profile":
         saveProfile();
+        return;
+      case "gallery":
+        saveGallery();
         return;
       case "experience":
         saveExperiences();
@@ -663,6 +707,28 @@ export function CMSSettings() {
       toast.success("Logo enviada e salva.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao enviar logo.");
+    }
+  };
+
+  const handleHomeGalleryImageUpload = async (itemId: string, files: FileList | File[]) => {
+    const file = Array.from(files)[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem valida para a galeria.");
+      return;
+    }
+
+    try {
+      const uploaded = await dataProvider.uploadMedia(file, "public");
+      cms.addMediaItem(uploaded);
+      updateHomeGalleryItem(itemId, (current) => ({
+        ...current,
+        image: uploaded.url,
+      }));
+      toast.success("Foto adicionada na galeria. Salve para publicar.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar foto da galeria.");
     }
   };
 
@@ -920,6 +986,186 @@ export function CMSSettings() {
               style={{ fontSize: "13px", backgroundColor: "#fafafa" }}
             >
               <Save size={14} /> Salvar Perfil
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === "gallery" && (
+        <div className="space-y-4">
+          <Section title="Configuração da seção">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Input
+                label="Título em português"
+                value={siteSettings.homeGalleryTitlePt || ""}
+                onChange={(value) => setSiteSettings({ ...siteSettings, homeGalleryTitlePt: value })}
+                placeholder="Galeria"
+              />
+              <Input
+                label="Título em inglês"
+                value={siteSettings.homeGalleryTitleEn || ""}
+                onChange={(value) => setSiteSettings({ ...siteSettings, homeGalleryTitleEn: value })}
+                placeholder="Gallery"
+              />
+              <div className="md:col-span-2">
+                <TextArea
+                  label="Introdução em português"
+                  value={siteSettings.homeGalleryIntroPt || ""}
+                  onChange={(value) => setSiteSettings({ ...siteSettings, homeGalleryIntroPt: value })}
+                  rows={2}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <TextArea
+                  label="Introdução em inglês"
+                  value={siteSettings.homeGalleryIntroEn || ""}
+                  onChange={(value) => setSiteSettings({ ...siteSettings, homeGalleryIntroEn: value })}
+                  rows={2}
+                />
+              </div>
+            </div>
+          </Section>
+
+          <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+            Essa seção aparece na home depois de Ferramentas. Você pode subir fotos, ajustar o enquadramento e reorganizar a ordem de exibição.
+          </div>
+
+          {homeGalleryItems.length === 0 ? (
+            <div
+              className="flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed text-center"
+              style={{ borderColor: "#242424", backgroundColor: "#101010" }}
+            >
+              <Upload size={18} className="text-[#555]" />
+              <div>
+                <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                  Nenhuma foto adicionada ainda
+                </p>
+                <p className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  Crie os cards da galeria para mostrar eventos, workshops, talks e bastidores.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {homeGalleryItems.map((item, index) => (
+            <Section key={item.id} title={item.title || item.subtitle || `Foto ${index + 1}`}>
+              <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+                <div className="space-y-3">
+                  <input
+                    id={`home-gallery-upload-${item.id}`}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      if (event.target.files?.length) {
+                        void handleHomeGalleryImageUpload(item.id, event.target.files);
+                      }
+                      event.target.value = "";
+                    }}
+                  />
+
+                  {item.image ? (
+                    <ImagePositionEditorCompact
+                      src={item.image}
+                      alt={item.title || item.subtitle || `Foto ${index + 1}`}
+                      position={item.imagePosition || "50% 50%"}
+                      onChange={(position) => updateHomeGalleryItem(item.id, (current) => ({ ...current, imagePosition: position }))}
+                      onRemove={() => updateHomeGalleryItem(item.id, (current) => ({ ...current, image: "" }))}
+                      canMoveBackward={index > 0}
+                      canMoveForward={index < homeGalleryItems.length - 1}
+                      onMoveBackward={() => moveHomeGalleryItem(item.id, -1)}
+                      onMoveForward={() => moveHomeGalleryItem(item.id, 1)}
+                    />
+                  ) : (
+                    <label
+                      htmlFor={`home-gallery-upload-${item.id}`}
+                      className="flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-5 text-center transition-colors hover:border-[#333]"
+                      style={{ borderColor: "#242424", backgroundColor: "#101010" }}
+                    >
+                      <Upload size={18} className="text-[#666]" />
+                      <div>
+                        <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                          Clique para enviar a foto
+                        </p>
+                        <p className="text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                          Você também pode colar uma URL no campo ao lado.
+                        </p>
+                      </div>
+                    </label>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <label
+                      htmlFor={`home-gallery-upload-${item.id}`}
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[#888] transition-colors hover:text-white"
+                      style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+                    >
+                      <Upload size={12} />
+                      {item.image ? "Trocar foto" : "Enviar foto"}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => updateHomeGalleryItem(item.id, (current) => ({ ...current, image: "" }))}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[#888] transition-colors hover:text-white cursor-pointer"
+                      style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+                    >
+                      <Trash2 size={12} />
+                      Limpar imagem
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Input
+                    label="Título"
+                    value={item.title}
+                    onChange={(value) => updateHomeGalleryItem(item.id, (current) => ({ ...current, title: value }))}
+                    placeholder="Workshop de discovery"
+                  />
+                  <TextArea
+                    label="Subtítulo"
+                    value={item.subtitle}
+                    onChange={(value) => updateHomeGalleryItem(item.id, (current) => ({ ...current, subtitle: value }))}
+                    rows={3}
+                  />
+                  <Input
+                    label="Imagem URL"
+                    value={item.image}
+                    onChange={(value) => updateHomeGalleryItem(item.id, (current) => ({ ...current, image: value }))}
+                    placeholder="https://..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateHomeGalleryItems((current) => current.filter((galleryItem) => galleryItem.id !== item.id))}
+                    className="inline-flex items-center gap-2 text-red-400 transition-colors hover:text-red-300 cursor-pointer"
+                    style={{ fontSize: "12px" }}
+                  >
+                    <Trash2 size={12} />
+                    Remover card da galeria
+                  </button>
+                </div>
+              </div>
+            </Section>
+          ))}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => updateHomeGalleryItems((current) => [...current, createHomeGalleryItem()])}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-[#888] transition-colors hover:text-white cursor-pointer"
+              style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
+            >
+              <Plus size={12} />
+              Adicionar foto
+            </button>
+            <button
+              type="button"
+              onClick={saveGallery}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-[#111] cursor-pointer hover:opacity-90"
+              style={{ fontSize: "13px", backgroundColor: "#fafafa" }}
+            >
+              <Save size={14} />
+              Salvar galeria
             </button>
           </div>
         </div>

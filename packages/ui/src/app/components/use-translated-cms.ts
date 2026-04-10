@@ -281,6 +281,10 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addRichText(`siteSettings.projectCardOverrides.${projectId}.title`, override.title || "");
     addRichText(`siteSettings.projectCardOverrides.${projectId}.subtitle`, override.subtitle || "");
   });
+  (data.siteSettings.homeGalleryItems || []).forEach((item, itemIndex) => {
+    addText(`siteSettings.homeGalleryItems.${itemIndex}.title`, item.title || "");
+    addText(`siteSettings.homeGalleryItems.${itemIndex}.subtitle`, item.subtitle || "");
+  });
 
   const profileFields: Array<keyof CMSData["profile"]> = [
     "name",

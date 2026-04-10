@@ -7,6 +7,7 @@ import type {
   ContentListItem,
   Education,
   Experience,
+  HomeGalleryItem,
   MediaItem,
   Page,
   ProfileData,
@@ -28,6 +29,11 @@ export const defaultSiteSettings: SiteSettings = {
   siteDescription: "",
   stackSectionTitlePt: "",
   stackSectionTitleEn: "",
+  homeGalleryTitlePt: "",
+  homeGalleryTitleEn: "",
+  homeGalleryIntroPt: "",
+  homeGalleryIntroEn: "",
+  homeGalleryItems: [],
   templateUrl: "",
   resumeUrl: "",
   defaultLanguage: "pt",
@@ -197,6 +203,24 @@ function normalizeListItems(items: unknown): ContentListItem[] {
   });
 }
 
+function normalizeHomeGalleryItems(items: unknown): HomeGalleryItem[] {
+  if (!Array.isArray(items)) return [];
+
+  return items.map((item, index) => {
+    const record = item && typeof item === "object" ? item as Partial<HomeGalleryItem> : {};
+
+    return {
+      id: typeof record.id === "string" && record.id.trim() ? record.id : `home-gallery-${index + 1}`,
+      title: typeof record.title === "string" ? record.title : "",
+      subtitle: typeof record.subtitle === "string" ? record.subtitle : "",
+      image: typeof record.image === "string" ? record.image : "",
+      imagePosition: typeof record.imagePosition === "string" && record.imagePosition.trim()
+        ? record.imagePosition
+        : "50% 50%",
+    };
+  });
+}
+
 function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
   return (blocks ?? []).map((block) => {
     if (block.type !== "unordered-list" && block.type !== "ordered-list") {
@@ -212,7 +236,11 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
 
 export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMSData {
   const empty = createEmptyCMSData();
-  const siteSettings = { ...empty.siteSettings, ...(data?.siteSettings ?? {}) };
+  const siteSettings = {
+    ...empty.siteSettings,
+    ...(data?.siteSettings ?? {}),
+    homeGalleryItems: normalizeHomeGalleryItems(data?.siteSettings?.homeGalleryItems),
+  };
   const profile = syncProfileAboutFields({ ...empty.profile, ...(data?.profile ?? {}) });
   const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder).map((project) => ({
     ...project,

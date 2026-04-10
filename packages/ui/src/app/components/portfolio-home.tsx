@@ -45,6 +45,19 @@ function getInitials(name: string) {
     .join("");
 }
 
+function getHomeGalleryCardLayout(index: number) {
+  const layouts = [
+    { className: "sm:col-span-7 sm:row-span-2", minHeight: 420 },
+    { className: "sm:col-span-5 sm:row-span-1", minHeight: 200 },
+    { className: "sm:col-span-5 sm:row-span-1", minHeight: 200 },
+    { className: "sm:col-span-4 sm:row-span-1", minHeight: 220 },
+    { className: "sm:col-span-8 sm:row-span-1", minHeight: 220 },
+    { className: "sm:col-span-6 sm:row-span-1", minHeight: 220 },
+  ];
+
+  return layouts[index % layouts.length];
+}
+
 export function PortfolioHome() {
   const { data, isTranslating } = useTranslatedCMS();
   const { siteSettings, profile, projects, experiences, education, certifications, stack, awards, recommendations, blogPosts } = data;
@@ -111,6 +124,17 @@ export function PortfolioHome() {
       ? siteSettings.stackSectionTitleEn?.trim()
       : siteSettings.stackSectionTitlePt?.trim()
   ) || t("stackTitle");
+  const homeGalleryTitle = (
+    lang === "en"
+      ? siteSettings.homeGalleryTitleEn?.trim()
+      : siteSettings.homeGalleryTitlePt?.trim()
+  ) || t("galleryTitle");
+  const homeGalleryIntro = (
+    lang === "en"
+      ? siteSettings.homeGalleryIntroEn?.trim()
+      : siteSettings.homeGalleryIntroPt?.trim()
+  ) || "";
+  const homeGalleryItems = (siteSettings.homeGalleryItems || []).filter((item) => item.image?.trim());
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
   const avatarLabel = getInitials(displayName) || "Foto";
   const socialLinks = getProfileSocialLinks(profile, ["twitter", "linkedin"]).filter((item) => hasExternalUrl(item.url));
@@ -496,6 +520,69 @@ export function PortfolioHome() {
             </StaggerItem>
           ))}
         </StaggerChildren>
+        </ScrollReveal>
+      )}
+
+      {isSectionVisible(siteSettings, "gallery") && homeGalleryItems.length > 0 && (
+        <ScrollReveal as="section" id="gallery" className="max-w-[700px] mx-auto px-5 py-12">
+          <div className="mb-8 space-y-3">
+            <SectionTitle>{homeGalleryTitle}</SectionTitle>
+            {homeGalleryIntro ? (
+              <p style={{ fontSize: "15px", lineHeight: "22px", color: "var(--text-secondary)" }}>
+                {homeGalleryIntro}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:auto-rows-[160px]">
+            {homeGalleryItems.map((item, index) => {
+              const layout = getHomeGalleryCardLayout(index);
+              return (
+                <motion.article
+                  key={item.id}
+                  initial={{ y: 24, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.45, delay: Math.min(index * 0.06, 0.24) }}
+                  whileHover={{ y: -4 }}
+                  className={`group relative overflow-hidden rounded-[22px] border ${layout.className}`}
+                  style={{
+                    minHeight: `${layout.minHeight}px`,
+                    borderColor: "var(--border-primary)",
+                    backgroundColor: "var(--bg-secondary)",
+                  }}
+                >
+                  <ContentImage
+                    src={item.image}
+                    alt={item.title || homeGalleryTitle}
+                    position={item.imagePosition || "50% 50%"}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.16) 42%, rgba(0,0,0,0.72) 100%)",
+                    }}
+                  />
+                  {(item.title || item.subtitle) ? (
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                      {item.title ? (
+                        <p style={{ fontSize: "17px", lineHeight: "22px", color: "#fafafa" }}>
+                          {item.title}
+                        </p>
+                      ) : null}
+                      {item.subtitle ? (
+                        <p className="mt-1.5 max-w-[36ch]" style={{ fontSize: "13px", lineHeight: "19px", color: "rgba(250,250,250,0.76)" }}>
+                          {item.subtitle}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </motion.article>
+              );
+            })}
+          </div>
         </ScrollReveal>
       )}
 

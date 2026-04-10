@@ -8,6 +8,7 @@ export type PortfolioSectionId =
   | "education"
   | "certifications"
   | "stack"
+  | "gallery"
   | "awards"
   | "recommendations"
   | "blog"
@@ -116,6 +117,14 @@ export interface TextAppearance {
   color?: string;
 }
 
+export interface HomeGalleryItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  imagePosition?: string;
+}
+
 export interface SortableEntity {
   sortOrder: number;
 }
@@ -126,6 +135,11 @@ export interface SiteSettings extends TimestampedEntity {
   siteDescription: string;
   stackSectionTitlePt: string;
   stackSectionTitleEn: string;
+  homeGalleryTitlePt: string;
+  homeGalleryTitleEn: string;
+  homeGalleryIntroPt: string;
+  homeGalleryIntroEn: string;
+  homeGalleryItems: HomeGalleryItem[];
   templateUrl: string;
   resumeUrl: string;
   defaultLanguage: Language;

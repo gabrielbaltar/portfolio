@@ -59,6 +59,9 @@ export function NavMenu() {
 
   const rightLinks = [
     ...(isSectionVisible(data.siteSettings, "stack") ? [{ label: t("tools"), id: "tools" }] : []),
+    ...(isSectionVisible(data.siteSettings, "gallery") && (data.siteSettings.homeGalleryItems || []).some((item) => item.image?.trim())
+      ? [{ label: t("galleryTitle"), id: "gallery" }]
+      : []),
     ...(isSectionVisible(data.siteSettings, "blog") ? [{ label: t("blog"), id: "blog" }] : []),
     ...(isSectionVisible(data.siteSettings, "contact") ? [{ label: t("contact"), id: "contact" }] : []),
   ];
