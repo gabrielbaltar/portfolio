@@ -195,7 +195,7 @@ export function ContentSummaryNav({
 
   return (
     <aside
-      className="fixed right-3 top-1/2 z-30 hidden -translate-y-1/2 overflow-visible lg:block"
+      className="fixed right-6 top-1/2 z-30 -translate-y-1/2 overflow-visible"
       aria-label={label}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
@@ -206,7 +206,7 @@ export function ContentSummaryNav({
         setIsOpen(false);
       }}
     >
-      <div className="relative flex items-center justify-end overflow-visible">
+      <div className="relative flex w-6 items-center justify-end overflow-visible">
         <div
           className="relative z-10 flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
           style={{ opacity: isOpen ? 0 : 0.62 }}
@@ -236,10 +236,10 @@ export function ContentSummaryNav({
         </div>
 
         <div
-          className="absolute right-[-16px] top-1/2 z-20 w-[244px] -translate-y-1/2 transition-all duration-180"
+          className="absolute right-0 top-1/2 z-20 w-[244px] -translate-y-1/2 transition-all duration-180"
           style={{
             opacity: isOpen ? 1 : 0,
-            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "8px"}) scale(${isOpen ? 1 : 0.985})`,
+            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "10px"}) scale(${isOpen ? 1 : 0.985})`,
             pointerEvents: isOpen ? "auto" : "none",
           }}
         >
