@@ -138,6 +138,19 @@ function normalizeProjectCardField(value: unknown) {
   return normalized && !isRichTextEmpty(normalized) ? normalized : "";
 }
 
+function normalizeTextAppearanceOverride(value: TextAppearance | undefined) {
+  const normalized: TextAppearance = {};
+
+  if (typeof value?.fontSize === "number") normalized.fontSize = value.fontSize;
+  if (typeof value?.lineHeight === "number") normalized.lineHeight = value.lineHeight;
+  if (typeof value?.fontWeight === "number") normalized.fontWeight = value.fontWeight;
+
+  const normalizedColor = sanitizeAppearanceColor(value?.color || "");
+  if (normalizedColor) normalized.color = normalizedColor;
+
+  return Object.keys(normalized).length ? normalized : undefined;
+}
+
 function attachProjectCardFields(project: Project, siteSettings: SiteSettings) {
   const override = siteSettings.projectCardOverrides?.[project.id];
 
@@ -147,25 +160,31 @@ function attachProjectCardFields(project: Project, siteSettings: SiteSettings) {
     cardSubtitle: override?.subtitle || "",
     cardImage: override?.image || project.cardImage || "",
     cardImagePosition: override?.imagePosition || project.cardImagePosition || project.imagePosition || "50% 50%",
+    titleAppearance: override?.titleAppearance || project.titleAppearance,
+    subtitleAppearance: override?.subtitleAppearance || project.subtitleAppearance,
   };
 }
 
 function splitProjectCardFields(project: Project & ProjectEditorFields) {
-  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, ...persistedProject } = project;
+  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, titleAppearance, subtitleAppearance, ...persistedProject } = project;
   const normalizedCardTitle = normalizeProjectCardField(cardTitle);
   const normalizedCardSubtitle = normalizeProjectCardField(cardSubtitle);
   const normalizedCardImage = typeof cardImage === "string" ? cardImage.trim() : "";
   const normalizedCardImagePosition = typeof cardImagePosition === "string" ? cardImagePosition.trim() : "";
+  const normalizedTitleAppearance = normalizeTextAppearanceOverride(titleAppearance);
+  const normalizedSubtitleAppearance = normalizeTextAppearanceOverride(subtitleAppearance);
 
   return {
     project: persistedProject as Project,
     override:
-      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage
+      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage || normalizedTitleAppearance || normalizedSubtitleAppearance
         ? {
             ...(normalizedCardTitle ? { title: normalizedCardTitle } : {}),
             ...(normalizedCardSubtitle ? { subtitle: normalizedCardSubtitle } : {}),
             ...(normalizedCardImage ? { image: normalizedCardImage } : {}),
             ...(normalizedCardImage && normalizedCardImagePosition ? { imagePosition: normalizedCardImagePosition } : {}),
+            ...(normalizedTitleAppearance ? { titleAppearance: normalizedTitleAppearance } : {}),
+            ...(normalizedSubtitleAppearance ? { subtitleAppearance: normalizedSubtitleAppearance } : {}),
           }
         : null,
   };
@@ -180,25 +199,31 @@ function attachBlogPostCardFields(post: BlogPost, siteSettings: SiteSettings) {
     cardSubtitle: override?.subtitle || post.cardSubtitle || "",
     cardImage: override?.image || post.cardImage || "",
     cardImagePosition: override?.imagePosition || post.cardImagePosition || post.imagePosition || "50% 50%",
+    titleAppearance: override?.titleAppearance || post.titleAppearance,
+    subtitleAppearance: override?.subtitleAppearance || post.subtitleAppearance,
   };
 }
 
 function splitBlogPostCardFields(post: BlogPost & BlogPostEditorFields) {
-  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, ...persistedPost } = post;
+  const { cardTitle, cardSubtitle, cardImage, cardImagePosition, titleAppearance, subtitleAppearance, ...persistedPost } = post;
   const normalizedCardTitle = normalizeProjectCardField(cardTitle);
   const normalizedCardSubtitle = normalizeProjectCardField(cardSubtitle);
   const normalizedCardImage = typeof cardImage === "string" ? cardImage.trim() : "";
   const normalizedCardImagePosition = typeof cardImagePosition === "string" ? cardImagePosition.trim() : "";
+  const normalizedTitleAppearance = normalizeTextAppearanceOverride(titleAppearance);
+  const normalizedSubtitleAppearance = normalizeTextAppearanceOverride(subtitleAppearance);
 
   return {
     post: persistedPost as BlogPost,
     override:
-      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage
+      normalizedCardTitle || normalizedCardSubtitle || normalizedCardImage || normalizedTitleAppearance || normalizedSubtitleAppearance
         ? {
             ...(normalizedCardTitle ? { title: normalizedCardTitle } : {}),
             ...(normalizedCardSubtitle ? { subtitle: normalizedCardSubtitle } : {}),
             ...(normalizedCardImage ? { image: normalizedCardImage } : {}),
             ...(normalizedCardImage && normalizedCardImagePosition ? { imagePosition: normalizedCardImagePosition } : {}),
+            ...(normalizedTitleAppearance ? { titleAppearance: normalizedTitleAppearance } : {}),
+            ...(normalizedSubtitleAppearance ? { subtitleAppearance: normalizedSubtitleAppearance } : {}),
           }
         : null,
   };

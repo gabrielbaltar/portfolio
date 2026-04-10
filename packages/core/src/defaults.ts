@@ -244,6 +244,8 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
   const profile = syncProfileAboutFields({ ...empty.profile, ...(data?.profile ?? {}) });
   const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder).map((project) => ({
     ...project,
+    titleAppearance: siteSettings.projectCardOverrides?.[project.id]?.titleAppearance || project.titleAppearance,
+    subtitleAppearance: siteSettings.projectCardOverrides?.[project.id]?.subtitleAppearance || project.subtitleAppearance,
     cardImage: siteSettings.projectCardOverrides?.[project.id]?.image || project.cardImage || "",
     cardImagePosition:
       siteSettings.projectCardOverrides?.[project.id]?.imagePosition ||
@@ -254,6 +256,8 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
   }));
   const blogPosts = applyExplicitOrder(data?.blogPosts ?? empty.blogPosts, siteSettings.blogPostOrder).map((post) => ({
     ...post,
+    titleAppearance: siteSettings.blogPostCardOverrides?.[post.id]?.titleAppearance || post.titleAppearance,
+    subtitleAppearance: siteSettings.blogPostCardOverrides?.[post.id]?.subtitleAppearance || post.subtitleAppearance,
     cardTitle: siteSettings.blogPostCardOverrides?.[post.id]?.title || post.cardTitle || "",
     cardSubtitle: siteSettings.blogPostCardOverrides?.[post.id]?.subtitle || post.cardSubtitle || "",
     cardImage: siteSettings.blogPostCardOverrides?.[post.id]?.image || post.cardImage || "",

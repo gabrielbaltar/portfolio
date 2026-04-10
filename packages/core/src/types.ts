@@ -152,8 +152,22 @@ export interface SiteSettings extends TimestampedEntity {
   blogPostOrder: string[];
   sectionVisibility: Partial<Record<PortfolioSectionId, boolean>>;
   contentVisibility: Record<string, boolean>;
-  projectCardOverrides: Record<string, { title?: string; subtitle?: string; image?: string; imagePosition?: string }>;
-  blogPostCardOverrides: Record<string, { title?: string; subtitle?: string; image?: string; imagePosition?: string }>;
+  projectCardOverrides: Record<string, {
+    title?: string;
+    subtitle?: string;
+    image?: string;
+    imagePosition?: string;
+    titleAppearance?: TextAppearance;
+    subtitleAppearance?: TextAppearance;
+  }>;
+  blogPostCardOverrides: Record<string, {
+    title?: string;
+    subtitle?: string;
+    image?: string;
+    imagePosition?: string;
+    titleAppearance?: TextAppearance;
+    subtitleAppearance?: TextAppearance;
+  }>;
   experienceOverrides: Record<string, { taskLineHeight?: number }>;
 }
 
