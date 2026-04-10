@@ -195,11 +195,11 @@ export function ContentSummaryNav({
 
   return (
     <aside
-      className="fixed inset-y-12 right-6 z-30 w-[268px] overflow-visible"
+      className="fixed right-6 top-1/2 z-30 w-[268px] -translate-y-1/2 overflow-visible"
       aria-label={label}
     >
       <div
-        className="relative flex h-full w-full items-center justify-end overflow-visible"
+        className="relative flex w-full items-center justify-end overflow-visible"
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         onFocusCapture={() => setIsOpen(true)}
@@ -246,12 +246,13 @@ export function ContentSummaryNav({
           }}
         >
           <div
-            className="rounded-[22px] border p-3"
+            className="flex flex-col rounded-[22px] border p-3"
             style={{
               backgroundColor: "var(--bg-secondary, #121212)",
               borderColor: "var(--border-primary, #2A2A2A)",
               boxShadow: "0 18px 44px rgba(0, 0, 0, 0.18)",
-              maxHeight: "calc(100vh - 96px)",
+              boxSizing: "border-box",
+              maxHeight: "min(620px, calc(100vh - 120px))",
               overflow: "hidden",
             }}
           >
@@ -269,9 +270,10 @@ export function ContentSummaryNav({
             </p>
 
             <nav
-              className="summary-nav-scroll mt-2.5 max-h-[58vh] overflow-y-auto pr-1"
+              className="summary-nav-scroll mt-2.5 overflow-y-auto pr-1"
               style={{
-                maxHeight: "calc(100vh - 148px)",
+                flex: "1 1 auto",
+                minHeight: 0,
                 overscrollBehavior: "contain",
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
