@@ -85,6 +85,7 @@ const INLINE_FONT_SIZE_OPTIONS = [
   { label: "13px", value: "13px" },
   { label: "16px", value: "16px" },
   { label: "18px", value: "18px" },
+  { label: "20px", value: "20px" },
   { label: "22px", value: "22px" },
   { label: "28px", value: "28px" },
   { label: "36px", value: "36px" },

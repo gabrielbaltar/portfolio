@@ -2247,7 +2247,7 @@ export function CMSEditor() {
             defaults={PROJECT_TITLE_APPEARANCE_DEFAULTS}
             defaultColorValue="#EDEDED"
             sample={richTextToPlainText(item.title) || "Titulo do case"}
-            fontSizeRange={{ min: 22, max: 72 }}
+            fontSizeRange={{ min: 20, max: 72 }}
             lineHeightRange={{ min: 28, max: 88 }}
           />
           <TextAppearanceControl
