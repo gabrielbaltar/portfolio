@@ -120,6 +120,7 @@ export function ContentSummaryNav({
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
+  const slotHeight = "min(560px, calc(100dvh - 140px))";
 
   useEffect(() => {
     if (!items.length) {
@@ -195,130 +196,134 @@ export function ContentSummaryNav({
 
   return (
     <aside
-      className="fixed right-6 top-1/2 z-30 w-[268px] -translate-y-1/2 overflow-visible"
+      className="pointer-events-none fixed inset-0 z-30 hidden min-[1024px]:block"
       aria-label={label}
     >
       <div
-        className="relative flex w-full items-center justify-end overflow-visible"
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocusCapture={() => setIsOpen(true)}
-        onBlurCapture={(event) => {
-          const nextFocusedElement = event.relatedTarget;
-          if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) return;
-          setIsOpen(false);
-        }}
+        className="pointer-events-auto absolute right-6 top-1/2 w-[268px] -translate-y-1/2"
+        style={{ height: slotHeight }}
       >
         <div
-          className="relative z-10 flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
-          style={{ opacity: isOpen ? 0 : 0.62, pointerEvents: isOpen ? "none" : "auto" }}
-          aria-hidden={isOpen}
-        >
-          {items.map((item) => {
-            const isActive = item.id === activeId;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveId(item.id);
-                  scrollToHeading(item.id);
-                }}
-                className="cursor-pointer rounded-full transition-all duration-200 hover:opacity-100"
-                style={{
-                  width: `${getRailWidth(item.level)}px`,
-                  height: "3px",
-                  backgroundColor: isActive ? "var(--text-primary, #fafafa)" : "rgba(127, 127, 127, 0.28)",
-                  opacity: isActive ? 1 : 0.78,
-                }}
-                aria-label={item.title}
-              />
-            );
-          })}
-        </div>
-
-        <div
-          className="absolute right-0 top-1/2 z-20 w-[244px] -translate-y-1/2 transition-all duration-180"
-          style={{
-            opacity: isOpen ? 1 : 0,
-            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "10px"}) scale(${isOpen ? 1 : 0.985})`,
-            pointerEvents: isOpen ? "auto" : "none",
+          className="relative h-full w-full overflow-visible"
+          onMouseEnter={() => setIsOpen(true)}
+          onMouseLeave={() => setIsOpen(false)}
+          onFocusCapture={() => setIsOpen(true)}
+          onBlurCapture={(event) => {
+            const nextFocusedElement = event.relatedTarget;
+            if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) return;
+            setIsOpen(false);
           }}
         >
           <div
-            className="flex flex-col rounded-[22px] border p-3"
+            className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
+            style={{ opacity: isOpen ? 0 : 0.62, pointerEvents: isOpen ? "none" : "auto" }}
+            aria-hidden={isOpen}
+          >
+            {items.map((item) => {
+              const isActive = item.id === activeId;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveId(item.id);
+                    scrollToHeading(item.id);
+                  }}
+                  className="cursor-pointer rounded-full transition-all duration-200 hover:opacity-100"
+                  style={{
+                    width: `${getRailWidth(item.level)}px`,
+                    height: "3px",
+                    backgroundColor: isActive ? "var(--text-primary, #fafafa)" : "rgba(127, 127, 127, 0.28)",
+                    opacity: isActive ? 1 : 0.78,
+                  }}
+                  aria-label={item.title}
+                />
+              );
+            })}
+          </div>
+
+          <div
+            className="absolute inset-y-0 right-0 z-20 flex items-center justify-end transition-all duration-180"
             style={{
-              backgroundColor: "var(--bg-secondary, #121212)",
-              borderColor: "var(--border-primary, #2A2A2A)",
-              boxShadow: "0 18px 44px rgba(0, 0, 0, 0.18)",
-              boxSizing: "border-box",
-              maxHeight: "min(620px, calc(100vh - 120px))",
-              overflow: "hidden",
+              opacity: isOpen ? 1 : 0,
+              transform: `translateX(${isOpen ? "0px" : "10px"}) scale(${isOpen ? 1 : 0.985})`,
+              pointerEvents: isOpen ? "auto" : "none",
             }}
           >
-            <p
-              className="px-1.5"
+            <div
+              className="flex h-full w-[244px] flex-col rounded-[22px] border p-3"
               style={{
-                fontSize: "10px",
-                lineHeight: "14px",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--text-secondary, #7A7A7A)",
+                backgroundColor: "var(--bg-secondary, #121212)",
+                borderColor: "var(--border-primary, #2A2A2A)",
+                boxShadow: "0 18px 44px rgba(0, 0, 0, 0.18)",
+                boxSizing: "border-box",
+                overflow: "hidden",
               }}
             >
-              {label}
-            </p>
+              <p
+                className="px-1.5"
+                style={{
+                  fontSize: "10px",
+                  lineHeight: "14px",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--text-secondary, #7A7A7A)",
+                }}
+              >
+                {label}
+              </p>
 
-            <nav
-              className="summary-nav-scroll mt-2.5 overflow-y-auto pr-1"
-              style={{
-                flex: "1 1 auto",
-                minHeight: 0,
-                overscrollBehavior: "contain",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-            >
-              {items.map((item) => {
-                const isActive = item.id === activeId;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveId(item.id);
-                      scrollToHeading(item.id);
-                    }}
-                    className="flex w-full cursor-pointer items-start gap-2 rounded-[14px] px-2.5 py-1.5 text-left transition-colors"
-                    style={{
-                      backgroundColor: isActive ? "rgba(255,255,255,0.045)" : "transparent",
-                      color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
-                    }}
-                  >
-                    <span
-                      className="shrink-0"
+              <nav
+                className="summary-nav-scroll mt-2.5 overflow-y-auto pr-1"
+                style={{
+                  flex: "1 1 auto",
+                  minHeight: 0,
+                  overscrollBehavior: "contain",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                }}
+              >
+                {items.map((item) => {
+                  const isActive = item.id === activeId;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveId(item.id);
+                        scrollToHeading(item.id);
+                      }}
+                      className="flex w-full cursor-pointer items-start gap-2 rounded-[14px] px-2.5 py-1.5 text-left transition-colors"
                       style={{
-                        minWidth: item.level === 1 ? "24px" : item.level === 2 ? "36px" : "48px",
-                        fontSize: "12px",
-                        lineHeight: "18px",
-                        color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
+                        backgroundColor: isActive ? "rgba(255,255,255,0.045)" : "transparent",
+                        color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
                       }}
                     >
-                      {item.outlineLabel}
-                    </span>
-                    <span
-                      style={{
-                        paddingLeft: `${getItemIndent(item.level)}px`,
-                        fontSize: "12px",
-                        lineHeight: "18px",
-                      }}
-                    >
-                      {item.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
+                      <span
+                        className="shrink-0"
+                        style={{
+                          minWidth: item.level === 1 ? "24px" : item.level === 2 ? "36px" : "48px",
+                          fontSize: "12px",
+                          lineHeight: "18px",
+                          color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
+                        }}
+                      >
+                        {item.outlineLabel}
+                      </span>
+                      <span
+                        style={{
+                          paddingLeft: `${getItemIndent(item.level)}px`,
+                          fontSize: "12px",
+                          lineHeight: "18px",
+                        }}
+                      >
+                        {item.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
         </div>
       </div>
