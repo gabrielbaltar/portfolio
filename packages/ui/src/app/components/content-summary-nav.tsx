@@ -118,6 +118,7 @@ export function ContentSummaryNav({
 }) {
   const [activeId, setActiveId] = useState(items[0]?.id || "");
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
 
   useEffect(() => {
@@ -169,11 +170,32 @@ export function ContentSummaryNav({
     };
   }, [idsKey, items]);
 
-  if (items.length < 2) return null;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px) and (hover: hover) and (pointer: fine)");
+
+    const syncViewport = () => {
+      setIsDesktopViewport(mediaQuery.matches);
+      if (!mediaQuery.matches) setIsOpen(false);
+    };
+
+    syncViewport();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncViewport);
+      return () => mediaQuery.removeEventListener("change", syncViewport);
+    }
+
+    mediaQuery.addListener(syncViewport);
+    return () => mediaQuery.removeListener(syncViewport);
+  }, []);
+
+  if (items.length < 2 || !isDesktopViewport) return null;
 
   return (
     <aside
-      className="fixed right-3 top-1/2 z-30 hidden -translate-y-1/2 min-[1200px]:block"
+      className="fixed right-3 top-1/2 z-30 hidden -translate-y-1/2 overflow-visible lg:block"
       aria-label={label}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
@@ -184,9 +206,9 @@ export function ContentSummaryNav({
         setIsOpen(false);
       }}
     >
-      <div className="relative flex w-[292px] items-center justify-end">
+      <div className="relative flex items-center justify-end overflow-visible">
         <div
-          className="flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
+          className="relative z-10 flex flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
           style={{ opacity: isOpen ? 0.9 : 0.62 }}
         >
           {items.map((item) => {
@@ -213,10 +235,10 @@ export function ContentSummaryNav({
         </div>
 
         <div
-          className="absolute right-10 top-1/2 w-[244px] -translate-y-1/2 transition-all duration-180"
+          className="absolute right-[-10px] top-1/2 z-20 w-[244px] -translate-y-1/2 transition-all duration-180"
           style={{
             opacity: isOpen ? 1 : 0,
-            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "8px"}) scale(${isOpen ? 1 : 0.985})`,
+            transform: `translateY(-50%) translateX(${isOpen ? "0px" : "6px"}) scale(${isOpen ? 1 : 0.985})`,
             pointerEvents: isOpen ? "auto" : "none",
           }}
         >
