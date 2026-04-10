@@ -57,15 +57,15 @@ function getSummaryEntry(block: ContentBlock): { title: string; level: 1 | 2 | 3
 }
 
 function getRailWidth(level: 1 | 2 | 3) {
-  if (level === 1) return 24;
-  if (level === 2) return 18;
-  return 12;
+  if (level === 1) return 20;
+  if (level === 2) return 15;
+  return 10;
 }
 
 function getItemIndent(level: 1 | 2 | 3) {
   if (level === 1) return 0;
-  if (level === 2) return 14;
-  return 26;
+  if (level === 2) return 10;
+  return 18;
 }
 
 function scrollToHeading(id: string) {
@@ -120,7 +120,7 @@ export function ContentSummaryNav({
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
-  const slotHeight = "min(560px, calc(100dvh - 140px))";
+  const slotHeight = "min(500px, calc(100dvh - 160px))";
 
   useEffect(() => {
     if (!items.length) {
@@ -200,7 +200,7 @@ export function ContentSummaryNav({
       aria-label={label}
     >
       <div
-        className="pointer-events-auto absolute right-6 top-1/2 w-[268px] -translate-y-1/2"
+        className="pointer-events-auto absolute right-6 top-1/2 w-[236px] -translate-y-1/2"
         style={{ height: slotHeight }}
       >
         <div
@@ -215,7 +215,7 @@ export function ContentSummaryNav({
           }}
         >
           <div
-            className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 flex-col items-end gap-2 rounded-full px-1.5 py-2 transition-opacity duration-200"
+            className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 flex-col items-end gap-1.5 rounded-full px-1 py-1.5 transition-opacity duration-200"
             style={{ opacity: isOpen ? 0 : 0.62, pointerEvents: isOpen ? "none" : "auto" }}
             aria-hidden={isOpen}
           >
@@ -232,7 +232,7 @@ export function ContentSummaryNav({
                   className="cursor-pointer rounded-full transition-all duration-200 hover:opacity-100"
                   style={{
                     width: `${getRailWidth(item.level)}px`,
-                    height: "3px",
+                    height: "2px",
                     backgroundColor: isActive ? "var(--text-primary, #fafafa)" : "rgba(127, 127, 127, 0.28)",
                     opacity: isActive ? 1 : 0.78,
                   }}
@@ -251,7 +251,7 @@ export function ContentSummaryNav({
             }}
           >
             <div
-              className="flex h-full w-[244px] flex-col rounded-[22px] border p-3"
+              className="flex h-full w-[214px] flex-col rounded-[18px] border p-2.5"
               style={{
                 backgroundColor: "var(--bg-secondary, #121212)",
                 borderColor: "var(--border-primary, #2A2A2A)",
@@ -274,7 +274,7 @@ export function ContentSummaryNav({
               </p>
 
               <nav
-                className="summary-nav-scroll mt-2.5 overflow-y-auto pr-1"
+                className="summary-nav-scroll mt-2 overflow-y-auto pr-0.5"
                 style={{
                   flex: "1 1 auto",
                   minHeight: 0,
@@ -293,7 +293,7 @@ export function ContentSummaryNav({
                         setActiveId(item.id);
                         scrollToHeading(item.id);
                       }}
-                      className="flex w-full cursor-pointer items-start gap-2 rounded-[14px] px-2.5 py-1.5 text-left transition-colors"
+                      className="flex w-full cursor-pointer items-start gap-1.5 rounded-[12px] px-2 py-1.5 text-left transition-colors"
                       style={{
                         backgroundColor: isActive ? "rgba(255,255,255,0.045)" : "transparent",
                         color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #9A9A9A)",
@@ -302,9 +302,9 @@ export function ContentSummaryNav({
                       <span
                         className="shrink-0"
                         style={{
-                          minWidth: item.level === 1 ? "24px" : item.level === 2 ? "36px" : "48px",
-                          fontSize: "12px",
-                          lineHeight: "18px",
+                          minWidth: item.level === 1 ? "18px" : item.level === 2 ? "28px" : "38px",
+                          fontSize: "11px",
+                          lineHeight: "16px",
                           color: isActive ? "var(--text-primary, #fafafa)" : "var(--text-secondary, #7A7A7A)",
                         }}
                       >
@@ -313,8 +313,8 @@ export function ContentSummaryNav({
                       <span
                         style={{
                           paddingLeft: `${getItemIndent(item.level)}px`,
-                          fontSize: "12px",
-                          lineHeight: "18px",
+                          fontSize: "11px",
+                          lineHeight: "16px",
                         }}
                       >
                         {item.title}
