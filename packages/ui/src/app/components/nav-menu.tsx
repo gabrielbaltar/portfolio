@@ -91,6 +91,11 @@ export function NavMenu() {
   const desktopSplitIndex = Math.ceil(sectionLinks.length / 2);
   const leftLinks = sectionLinks.slice(0, desktopSplitIndex);
   const rightLinks = sectionLinks.slice(desktopSplitIndex);
+  const certificationLink = rightLinks.find((link) => link.id === "certifications");
+  const desktopLeftLinks = certificationLink ? [...leftLinks, certificationLink] : leftLinks;
+  const desktopRightLinks = certificationLink
+    ? rightLinks.filter((link) => link.id !== "certifications")
+    : rightLinks;
 
   const handleClick = (id: string) => {
     setIsOpen(false);
@@ -196,7 +201,7 @@ export function NavMenu() {
 
               {/* Desktop: Left links + lang/theme */}
               <div className="hidden md:flex items-center gap-5 flex-1 justify-end">
-                {leftLinks.map((link, i) => (
+                {desktopLeftLinks.map((link, i) => (
                   <motion.button
                     key={link.id}
                     initial={{ opacity: 0, y: -8 }}
@@ -238,12 +243,12 @@ export function NavMenu() {
 
               {/* Desktop: Right links + controls */}
               <div className="hidden md:flex items-center gap-5 flex-1 justify-start">
-                {rightLinks.map((link, i) => (
+                {desktopRightLinks.map((link, i) => (
                   <motion.button
                     key={link.id}
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 0.7, y: 0 }}
-                    transition={{ delay: 0.05 * (i + 4), duration: 0.3 }}
+                    transition={{ delay: 0.05 * (i + desktopLeftLinks.length), duration: 0.3 }}
                     whileHover={{ opacity: 1, y: -1, transition: { duration: 0.1 } }}
                     onClick={() => handleClick(link.id)}
                     className="whitespace-nowrap cursor-pointer font-['Inter',sans-serif] bg-transparent border-none transition-all duration-100"
