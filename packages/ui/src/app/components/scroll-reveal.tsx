@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -8,6 +8,7 @@ interface ScrollRevealProps {
   direction?: "up" | "left" | "right" | "none";
   id?: string;
   as?: "div" | "section" | "footer" | "header";
+  style?: CSSProperties;
 }
 
 export function ScrollReveal({
@@ -17,6 +18,7 @@ export function ScrollReveal({
   direction = "up",
   id,
   as = "div",
+  style,
 }: ScrollRevealProps) {
   const initial: Record<string, number> = { opacity: 0 };
   const animate: Record<string, number> = { opacity: 1 };
@@ -38,6 +40,7 @@ export function ScrollReveal({
     <Component
       id={id}
       className={className}
+      style={style}
       initial={initial}
       whileInView={animate}
       viewport={{ once: true, margin: "-60px" }}

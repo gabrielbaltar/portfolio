@@ -148,6 +148,7 @@ export interface SiteSettings extends TimestampedEntity {
   footerCopyright: string;
   seoTitle: string;
   seoDescription: string;
+  homeSectionOrder: PortfolioSectionId[];
   projectOrder: string[];
   blogPostOrder: string[];
   sectionVisibility: Partial<Record<PortfolioSectionId, boolean>>;

@@ -8,6 +8,8 @@ import {
   DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
   DEFAULT_STACK_LOGO_RADIUS,
   getProfileAboutParagraphs,
+  normalizePortfolioSectionOrder,
+  type PortfolioSectionId,
 } from "@portfolio/core";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
@@ -135,6 +137,12 @@ export function PortfolioHome() {
       : siteSettings.homeGalleryIntroPt?.trim()
   ) || "";
   const homeGalleryItems = (siteSettings.homeGalleryItems || []).filter((item) => item.image?.trim());
+  const orderedHomeSections = normalizePortfolioSectionOrder(siteSettings.homeSectionOrder);
+  const homeSectionOrderMap = new Map<PortfolioSectionId, number>(
+    orderedHomeSections.map((sectionId, index) => [sectionId, index]),
+  );
+  const getSectionOrderValue = (sectionId: PortfolioSectionId) =>
+    homeSectionOrderMap.get(sectionId) ?? orderedHomeSections.length;
   const displayName = profile.name || siteSettings.siteTitle || "Portfolio";
   const avatarLabel = getInitials(displayName) || "Foto";
   const socialLinks = getProfileSocialLinks(profile, ["twitter", "linkedin"]).filter((item) => hasExternalUrl(item.url));
@@ -297,9 +305,15 @@ export function PortfolioHome() {
         </motion.div>
       </header>
 
+      <div className="flex flex-col">
       {/* About Me */}
       {isSectionVisible(siteSettings, "about") && (hasAboutTitle || aboutParagraphs.length > 0) && (
-        <ScrollReveal as="section" id="about" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="about"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("about") }}
+        >
           <SectionTitle>
             {hasAboutTitle ? <RichTextContent value={profile.aboutTitle} /> : t("aboutMe")}
           </SectionTitle>
@@ -315,7 +329,12 @@ export function PortfolioHome() {
 
       {/* Projects */}
       {isSectionVisible(siteSettings, "projects") && displayedProjects.length > 0 && (
-        <ScrollReveal as="section" id="projects" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="projects"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("projects") }}
+        >
         <div className="flex items-center justify-between mb-8">
           <SectionTitle>{t("projectsTitle")}</SectionTitle>
           <Link
@@ -351,7 +370,12 @@ export function PortfolioHome() {
 
       {/* Experience */}
       {isSectionVisible(siteSettings, "experience") && visibleExperiences.length > 0 && (
-        <ScrollReveal as="section" id="experience" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="experience"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("experience") }}
+        >
         <SectionTitle>{t("experienceTitle")}</SectionTitle>
         <div className="mt-8 space-y-0">
           {visibleExperiences.map((exp) => (
@@ -405,7 +429,12 @@ export function PortfolioHome() {
 
       {/* Education */}
       {isSectionVisible(siteSettings, "education") && visibleEducation.length > 0 && (
-        <ScrollReveal as="section" id="education" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="education"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("education") }}
+        >
         <SectionTitle>{t("educationTitle")}</SectionTitle>
         <div className="mt-8 space-y-0">
           {visibleEducation.map((edu) => (
@@ -447,7 +476,12 @@ export function PortfolioHome() {
 
       {/* Certifications */}
       {isSectionVisible(siteSettings, "certifications") && visibleCertifications.length > 0 && (
-        <ScrollReveal as="section" id="certifications" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="certifications"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("certifications") }}
+        >
         <SectionTitle>{t("certificationsTitle")}</SectionTitle>
         <div className="mt-8 space-y-4">
           {visibleCertifications.map((cert) => (
@@ -479,7 +513,12 @@ export function PortfolioHome() {
 
       {/* Stack / Tools */}
       {isSectionVisible(siteSettings, "stack") && visibleStack.length > 0 && (
-        <ScrollReveal as="section" id="tools" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="tools"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("stack") }}
+        >
         <SectionTitle>{stackSectionTitle}</SectionTitle>
         <StaggerChildren className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {visibleStack.map((item) => (
@@ -524,7 +563,12 @@ export function PortfolioHome() {
       )}
 
       {isSectionVisible(siteSettings, "gallery") && homeGalleryItems.length > 0 && (
-        <ScrollReveal as="section" id="gallery" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="gallery"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("gallery") }}
+        >
           <div className="mb-8 space-y-3">
             <SectionTitle>{homeGalleryTitle}</SectionTitle>
             {homeGalleryIntro ? (
@@ -588,7 +632,12 @@ export function PortfolioHome() {
 
       {/* Awards */}
       {isSectionVisible(siteSettings, "awards") && visibleAwards.length > 0 && (
-        <ScrollReveal as="section" id="awards" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="awards"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("awards") }}
+        >
         <SectionTitle>{t("awardsTitle")}</SectionTitle>
         <div className="mt-8 space-y-4">
           {visibleAwards.map((award) => (
@@ -620,7 +669,12 @@ export function PortfolioHome() {
 
       {/* Recommendations */}
       {isSectionVisible(siteSettings, "recommendations") && visibleRecommendations.length > 0 && (
-        <ScrollReveal as="section" id="recommendations" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="recommendations"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("recommendations") }}
+        >
         <SectionTitle>{t("recommendationsTitle")}</SectionTitle>
         <div className="mt-8 space-y-8">
           {visibleRecommendations.map((rec) => (
@@ -642,7 +696,12 @@ export function PortfolioHome() {
 
       {/* Blog / Articles */}
       {isSectionVisible(siteSettings, "blog") && displayedBlogPosts.length > 0 && (
-        <ScrollReveal as="section" id="blog" className="max-w-[700px] mx-auto px-5 py-12">
+        <ScrollReveal
+          as="section"
+          id="blog"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("blog") }}
+        >
         <div className="flex items-center justify-between mb-8">
           <SectionTitle>{t("articlesTitle")}</SectionTitle>
           <Link
@@ -689,7 +748,12 @@ export function PortfolioHome() {
 
       {/* Contact / Let's Talk */}
       {isSectionVisible(siteSettings, "contact") && (
-        <ScrollReveal as="footer" id="contact" className="max-w-[700px] mx-auto px-5 py-16">
+        <ScrollReveal
+          as="footer"
+          id="contact"
+          className="max-w-[700px] mx-auto px-5 py-16"
+          style={{ order: getSectionOrderValue("contact") }}
+        >
         <SectionTitle>{t("letsTalk")}</SectionTitle>
 
         <div className="mt-8 flex flex-col md:flex-row gap-8">
@@ -779,6 +843,7 @@ export function PortfolioHome() {
         </div>
         </ScrollReveal>
       )}
+      </div>
     </div>
   );
 }

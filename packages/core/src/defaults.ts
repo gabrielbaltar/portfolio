@@ -20,6 +20,7 @@ import {
   DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
 } from "./experience";
 import { clampStackLogoRadius, DEFAULT_STACK_LOGO_RADIUS } from "./stack";
+import { normalizePortfolioSectionOrder } from "./visibility";
 
 const now = new Date().toISOString();
 
@@ -42,6 +43,7 @@ export const defaultSiteSettings: SiteSettings = {
   footerCopyright: "",
   seoTitle: "",
   seoDescription: "",
+  homeSectionOrder: normalizePortfolioSectionOrder([]),
   projectOrder: [],
   blogPostOrder: [],
   sectionVisibility: {},
@@ -239,6 +241,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
   const siteSettings = {
     ...empty.siteSettings,
     ...(data?.siteSettings ?? {}),
+    homeSectionOrder: normalizePortfolioSectionOrder(data?.siteSettings?.homeSectionOrder),
     homeGalleryItems: normalizeHomeGalleryItems(data?.siteSettings?.homeGalleryItems),
   };
   const profile = syncProfileAboutFields({ ...empty.profile, ...(data?.profile ?? {}) });

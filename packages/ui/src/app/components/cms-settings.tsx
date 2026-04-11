@@ -9,6 +9,7 @@ import {
   DEFAULT_STACK_LOGO_RADIUS,
   clampExperienceTaskLineHeight,
   getProfileAboutParagraphs,
+  normalizePortfolioSectionOrder,
   getPublicContentVisibilityKey,
   syncProfileAboutFields,
   type HomeGalleryItem,
@@ -202,6 +203,10 @@ type SortableItem = {
   sortOrder: number;
 };
 
+type HomeSectionSortableItem = SortableItem & {
+  id: PortfolioSectionId;
+};
+
 function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
   if (fromIndex === toIndex) return items;
 
@@ -213,6 +218,17 @@ function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
 
 function reindexSortableItems<T extends { sortOrder: number }>(items: T[]) {
   return items.map((item, index) => ({ ...item, sortOrder: index + 1 }));
+}
+
+function areSectionOrdersEqual(left: PortfolioSectionId[], right: PortfolioSectionId[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function buildHomeSectionSortableItems(order: PortfolioSectionId[] | undefined): HomeSectionSortableItem[] {
+  return normalizePortfolioSectionOrder(order).map((id, index) => ({
+    id,
+    sortOrder: index + 1,
+  }));
 }
 
 function useSortableCollectionState<T extends SortableItem>(initialItems: T[]) {
@@ -373,7 +389,16 @@ export function CMSSettings() {
   const cms = useCMS();
   const [tab, setTab] = useState<SettingsTab>("profile");
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({ ...cms.data.siteSettings });
+  const siteSettingsRef = useRef<SiteSettings>({ ...cms.data.siteSettings });
   const [profile, setProfile] = useState<ProfileData>(syncProfileAboutFields({ ...cms.data.profile }));
+  const {
+    items: homeSections,
+    previewMove: previewHomeSectionMove,
+    commitMove: commitHomeSectionOrder,
+    cancelMove: cancelHomeSectionOrder,
+  } = useSortableCollectionState<HomeSectionSortableItem>(
+    buildHomeSectionSortableItems(cms.data.siteSettings.homeSectionOrder),
+  );
   const {
     items: experiences,
     setItems: setExperiences,
@@ -425,10 +450,33 @@ export function CMSSettings() {
   const [profilePhotoDraft, setProfilePhotoDraft] = useState<File | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    siteSettingsRef.current = siteSettings;
+  }, [siteSettings]);
+
+  const updateSiteSettingsState = (updater: (current: SiteSettings) => SiteSettings) => {
+    const nextSettings = updater(siteSettingsRef.current);
+    siteSettingsRef.current = nextSettings;
+    setSiteSettings(nextSettings);
+    return nextSettings;
+  };
+
+  const persistSiteSettingsState = (
+    updater: (current: SiteSettings) => SiteSettings,
+    successMessage?: string,
+  ) => {
+    const nextSettings = updateSiteSettingsState(updater);
+    cms.updateSiteSettings(nextSettings);
+    if (successMessage) {
+      toast.success(successMessage);
+    }
+    return nextSettings;
+  };
+
   const isSectionVisible = (sectionId: PortfolioSectionId) => siteSettings.sectionVisibility?.[sectionId] !== false;
 
   const setSectionVisibility = (sectionId: PortfolioSectionId, visible: boolean) => {
-    setSiteSettings((current) => {
+    updateSiteSettingsState((current) => {
       const nextVisibility = { ...(current.sectionVisibility || {}) };
       if (visible) {
         delete nextVisibility[sectionId];
@@ -447,7 +495,7 @@ export function CMSSettings() {
     siteSettings.contentVisibility?.[getPublicContentVisibilityKey(collection, id)] !== false;
 
   const setItemVisibility = (collection: PublicContentVisibilityCollection, id: string, visible: boolean) => {
-    setSiteSettings((current) => {
+    updateSiteSettingsState((current) => {
       const key = getPublicContentVisibilityKey(collection, id);
       const nextVisibility = { ...(current.contentVisibility || {}) };
 
@@ -478,6 +526,18 @@ export function CMSSettings() {
   const aboutParagraphs = getProfileAboutParagraphs(profile);
   const homeGalleryItems = siteSettings.homeGalleryItems || [];
 
+  useEffect(() => {
+    const nextOrder = homeSections.map((item) => item.id);
+    if (areSectionOrdersEqual(normalizePortfolioSectionOrder(siteSettingsRef.current.homeSectionOrder), nextOrder)) {
+      return;
+    }
+
+    updateSiteSettingsState((current) => ({
+      ...current,
+      homeSectionOrder: nextOrder,
+    }));
+  }, [homeSections]);
+
   const updateProfileState = (updater: (current: ProfileData) => ProfileData) => {
     setProfile((current) => syncProfileAboutFields(updater(current)));
   };
@@ -490,10 +550,31 @@ export function CMSSettings() {
   };
 
   const updateHomeGalleryItems = (updater: (current: HomeGalleryItem[]) => HomeGalleryItem[]) => {
-    setSiteSettings((current) => ({
+    updateSiteSettingsState((current) => ({
       ...current,
       homeGalleryItems: updater(current.homeGalleryItems || []),
     }));
+  };
+
+  const persistHomeGalleryItems = (
+    updater: (current: HomeGalleryItem[]) => HomeGalleryItem[],
+    successMessage?: string,
+  ) => {
+    persistSiteSettingsState((current) => ({
+      ...current,
+      homeGalleryItems: updater(current.homeGalleryItems || []),
+    }), successMessage);
+  };
+
+  const persistHomeSectionOrder = () => {
+    const nextOrder = homeSections.map((item) => item.id);
+    commitHomeSectionOrder();
+    const nextSettings = updateSiteSettingsState((current) => ({
+      ...current,
+      homeSectionOrder: nextOrder,
+    }));
+    cms.updateSiteSettings(nextSettings);
+    toast.success("Ordem da home publicada.");
   };
 
   const updateHomeGalleryItem = (itemId: string, updater: (current: HomeGalleryItem) => HomeGalleryItem) => {
@@ -501,7 +582,7 @@ export function CMSSettings() {
   };
 
   const moveHomeGalleryItem = (itemId: string, direction: -1 | 1) => {
-    updateHomeGalleryItems((current) => {
+    persistHomeGalleryItems((current) => {
       const currentIndex = current.findIndex((item) => item.id === itemId);
       const nextIndex = currentIndex + direction;
 
@@ -553,12 +634,12 @@ export function CMSSettings() {
   const saveProfile = () => {
     const nextProfile = syncProfileAboutFields(profile);
     setProfile(nextProfile);
-    cms.updateSiteSettings(siteSettings);
+    cms.updateSiteSettings(siteSettingsRef.current);
     cms.updateProfile(nextProfile);
     toast.success("Configuracoes salvas!");
   };
   const saveGallery = () => {
-    cms.updateSiteSettings(siteSettings);
+    cms.updateSiteSettings(siteSettingsRef.current);
     toast.success("Galeria salva!");
   };
   const saveEducation = () => {
@@ -722,11 +803,14 @@ export function CMSSettings() {
     try {
       const uploaded = await dataProvider.uploadMedia(file, "public");
       cms.addMediaItem(uploaded);
-      updateHomeGalleryItem(itemId, (current) => ({
-        ...current,
-        image: uploaded.url,
-      }));
-      toast.success("Foto adicionada na galeria. Salve para publicar.");
+      persistHomeGalleryItems((current) => current.map((item) => (
+        item.id === itemId
+          ? {
+            ...item,
+            image: uploaded.url,
+          }
+          : item
+      )), "Foto adicionada na galeria e publicada.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao enviar foto da galeria.");
     }
@@ -964,6 +1048,42 @@ export function CMSSettings() {
               </div>
             </Section>
 
+            <Section title="Ordem das seções da home">
+              <div className="space-y-3">
+                <p className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  Arraste para reorganizar a sequência da home. A ordem salva aqui também orienta a navegação pública.
+                </p>
+                {homeSections.map((section, index) => {
+                  const metadata = PORTFOLIO_SECTION_FIELDS.find((item) => item.id === section.id);
+                  if (!metadata) return null;
+
+                  return (
+                    <SortableSectionCard
+                      key={section.id}
+                      index={index}
+                      dndType="CMS_SETTINGS_HOME_SECTIONS"
+                      dragLabel={`seção ${metadata.label}`}
+                      onMovePreview={previewHomeSectionMove}
+                      onCommit={persistHomeSectionOrder}
+                      onCancel={cancelHomeSectionOrder}
+                    >
+                      <div
+                        className="rounded-xl border px-4 py-3"
+                        style={{ backgroundColor: "#101010", borderColor: "#1a1a1a" }}
+                      >
+                        <p className="text-[#ddd]" style={{ fontSize: "13px", lineHeight: "19px" }}>
+                          {metadata.label}
+                        </p>
+                        <p className="mt-1 text-[#666]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+                          {metadata.description}
+                        </p>
+                      </div>
+                    </SortableSectionCard>
+                  );
+                })}
+              </div>
+            </Section>
+
             <Section title="Site & SEO" defaultOpen={false}>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 min-[1680px]:grid-cols-3">
                 <Input label="Titulo do site" value={siteSettings.siteTitle} onChange={(v) => setSiteSettings({ ...siteSettings, siteTitle: v })} />
@@ -1027,7 +1147,7 @@ export function CMSSettings() {
           </Section>
 
           <div className="rounded-xl border border-[#1a1a1a] bg-[#0e0e0e] p-3 text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
-            Essa seção aparece na home depois de Ferramentas. Você pode subir fotos, ajustar o enquadramento e reorganizar a ordem de exibição.
+            A galeria só aparece na home quando existe pelo menos uma foto publicada. Uploads, remoções e reordenação estrutural são publicados automaticamente; títulos e textos continuam sendo salvos pelo botão abaixo.
           </div>
 
           {homeGalleryItems.length === 0 ? (
@@ -1070,7 +1190,11 @@ export function CMSSettings() {
                       alt={item.title || item.subtitle || `Foto ${index + 1}`}
                       position={item.imagePosition || "50% 50%"}
                       onChange={(position) => updateHomeGalleryItem(item.id, (current) => ({ ...current, imagePosition: position }))}
-                      onRemove={() => updateHomeGalleryItem(item.id, (current) => ({ ...current, image: "" }))}
+                      onRemove={() => persistHomeGalleryItems((current) => current.map((galleryItem) => (
+                        galleryItem.id === item.id
+                          ? { ...galleryItem, image: "" }
+                          : galleryItem
+                      )))}
                       canMoveBackward={index > 0}
                       canMoveForward={index < homeGalleryItems.length - 1}
                       onMoveBackward={() => moveHomeGalleryItem(item.id, -1)}
@@ -1105,7 +1229,11 @@ export function CMSSettings() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => updateHomeGalleryItem(item.id, (current) => ({ ...current, image: "" }))}
+                      onClick={() => persistHomeGalleryItems((current) => current.map((galleryItem) => (
+                        galleryItem.id === item.id
+                          ? { ...galleryItem, image: "" }
+                          : galleryItem
+                      )))}
                       className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[#888] transition-colors hover:text-white cursor-pointer"
                       style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
                     >
@@ -1136,7 +1264,7 @@ export function CMSSettings() {
                   />
                   <button
                     type="button"
-                    onClick={() => updateHomeGalleryItems((current) => current.filter((galleryItem) => galleryItem.id !== item.id))}
+                    onClick={() => persistHomeGalleryItems((current) => current.filter((galleryItem) => galleryItem.id !== item.id))}
                     className="inline-flex items-center gap-2 text-red-400 transition-colors hover:text-red-300 cursor-pointer"
                     style={{ fontSize: "12px" }}
                   >
@@ -1151,7 +1279,7 @@ export function CMSSettings() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => updateHomeGalleryItems((current) => [...current, createHomeGalleryItem()])}
+              onClick={() => persistHomeGalleryItems((current) => [...current, createHomeGalleryItem()])}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-[#888] transition-colors hover:text-white cursor-pointer"
               style={{ fontSize: "12px", border: "1px solid #1e1e1e" }}
             >

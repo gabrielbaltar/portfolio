@@ -7,6 +7,7 @@ import svgPaths from "../../imports/svg-149u5mwuo1";
 import { useLocation } from "react-router";
 import { useCMS } from "./cms-data";
 import { isSectionVisible } from "./site-visibility";
+import { normalizePortfolioSectionOrder } from "@portfolio/core";
 
 export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,21 +51,46 @@ export function NavMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const leftLinks = [
-    { label: t("about"), id: "intro" },
-    ...(isSectionVisible(data.siteSettings, "projects") ? [{ label: t("projects"), id: "projects" }] : []),
-    ...(isSectionVisible(data.siteSettings, "experience") ? [{ label: t("experience"), id: "experience" }] : []),
-    ...(isSectionVisible(data.siteSettings, "education") ? [{ label: t("education"), id: "education" }] : []),
-  ];
+  const orderedSections = normalizePortfolioSectionOrder(data.siteSettings.homeSectionOrder);
+  const sectionLinks = orderedSections.flatMap((sectionId) => {
+    if (!isSectionVisible(data.siteSettings, sectionId)) {
+      return [];
+    }
 
-  const rightLinks = [
-    ...(isSectionVisible(data.siteSettings, "stack") ? [{ label: t("tools"), id: "tools" }] : []),
-    ...(isSectionVisible(data.siteSettings, "gallery") && (data.siteSettings.homeGalleryItems || []).some((item) => item.image?.trim())
-      ? [{ label: t("galleryTitle"), id: "gallery" }]
-      : []),
-    ...(isSectionVisible(data.siteSettings, "blog") ? [{ label: t("blog"), id: "blog" }] : []),
-    ...(isSectionVisible(data.siteSettings, "contact") ? [{ label: t("contact"), id: "contact" }] : []),
-  ];
+    const baseLink = (label: string, id: string) => [{ label, id }];
+
+    switch (sectionId) {
+      case "about":
+        return baseLink(t("about"), "about");
+      case "projects":
+        return baseLink(t("projects"), "projects");
+      case "experience":
+        return baseLink(t("experience"), "experience");
+      case "education":
+        return baseLink(t("education"), "education");
+      case "certifications":
+        return baseLink(t("certificationsTitle"), "certifications");
+      case "stack":
+        return baseLink(t("tools"), "tools");
+      case "gallery":
+        return (data.siteSettings.homeGalleryItems || []).some((item) => item.image?.trim())
+          ? baseLink(t("galleryTitle"), "gallery")
+          : [];
+      case "awards":
+        return baseLink(t("awardsTitle"), "awards");
+      case "recommendations":
+        return baseLink(t("recommendationsTitle"), "recommendations");
+      case "blog":
+        return baseLink(t("blog"), "blog");
+      case "contact":
+        return baseLink(t("contact"), "contact");
+      default:
+        return [];
+    }
+  });
+  const desktopSplitIndex = Math.ceil(sectionLinks.length / 2);
+  const leftLinks = sectionLinks.slice(0, desktopSplitIndex);
+  const rightLinks = sectionLinks.slice(desktopSplitIndex);
 
   const handleClick = (id: string) => {
     setIsOpen(false);
