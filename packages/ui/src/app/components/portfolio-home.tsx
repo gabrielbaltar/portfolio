@@ -516,18 +516,18 @@ export function PortfolioHome() {
         <ScrollReveal
           as="section"
           id="tools"
-          className="max-w-[700px] mx-auto px-5 py-12"
+          className="w-full max-w-[700px] mx-auto px-5 py-12"
           style={{ order: getSectionOrderValue("stack") }}
         >
         <SectionTitle>{stackSectionTitle}</SectionTitle>
-        <StaggerChildren className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StaggerChildren className="mt-8 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
           {visibleStack.map((item) => (
-            <StaggerItem key={item.id}>
+            <StaggerItem key={item.id} className="w-full">
               <a
                 href={item.link || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 rounded-lg transition-colors group"
+                className="group flex w-full items-center gap-3 rounded-lg p-3 transition-colors"
                 style={{
                   border: "1px solid var(--border-primary)",
                   backgroundColor: "var(--bg-secondary)",
