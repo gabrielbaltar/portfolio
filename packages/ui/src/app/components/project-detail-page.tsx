@@ -18,6 +18,7 @@ import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
 import {
+  DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
   PROJECT_SUBTITLE_APPEARANCE_DEFAULTS,
   PROJECT_TITLE_APPEARANCE_DEFAULTS,
   resolveResponsiveTextAppearanceStyle,
@@ -574,10 +575,11 @@ export function ProjectDetailPage() {
     { label: t("clientLabel"), value: project.client || "Não informado" },
     { label: t("yearLabel"), value: project.year || "Não informado" },
   ];
-  const titleStyle = resolveResponsiveTextAppearanceStyle(project.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS, {
-    maxFontSize: 22,
-    maxLineHeight: 28,
-  });
+  const titleStyle = resolveResponsiveTextAppearanceStyle(
+    project.titleAppearance,
+    PROJECT_TITLE_APPEARANCE_DEFAULTS,
+    DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
+  );
   const subtitleStyle = resolveTextAppearanceStyle(project.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS);
   const contentSummaryItems = buildContentSummaryItems(project.contentBlocks, `project-${project.id}`);
   const contentSummaryAnchors = Object.fromEntries(

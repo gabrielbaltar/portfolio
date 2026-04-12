@@ -1,12 +1,39 @@
 import type { CSSProperties } from "react";
 import type { TextAppearance } from "@portfolio/core";
 
-type TextAppearanceDefaults = Required<Pick<TextAppearance, "fontSize" | "lineHeight" | "fontWeight" | "color">>;
+export type TextAppearanceDefaults = Required<Pick<TextAppearance, "fontSize" | "lineHeight" | "fontWeight" | "color">>;
+export type ResponsiveTextAppearanceLimits = {
+  tablet: { maxFontSize: number; maxLineHeight: number };
+  mobile: { maxFontSize: number; maxLineHeight: number };
+};
+
+type ResponsiveTextAppearanceValues = {
+  baseFontSize: number;
+  baseLineHeight: number;
+  tabletDefault: { fontSize: number; lineHeight: number };
+  tablet: { fontSize: number; lineHeight: number };
+  mobileDefault: { fontSize: number; lineHeight: number };
+  mobile: { fontSize: number; lineHeight: number };
+};
+
 type ResponsiveTextAppearanceStyle = CSSProperties & {
   "--responsive-font-size": string;
   "--responsive-line-height": string;
-  "--responsive-mobile-max-font-size": string;
-  "--responsive-mobile-max-line-height": string;
+  "--responsive-tablet-font-size": string;
+  "--responsive-tablet-line-height": string;
+  "--responsive-mobile-font-size": string;
+  "--responsive-mobile-line-height": string;
+};
+
+export const DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS: ResponsiveTextAppearanceLimits = {
+  tablet: {
+    maxFontSize: 24,
+    maxLineHeight: 30,
+  },
+  mobile: {
+    maxFontSize: 22,
+    maxLineHeight: 28,
+  },
 };
 
 export const PROJECT_TITLE_APPEARANCE_DEFAULTS: TextAppearanceDefaults = {
@@ -49,19 +76,53 @@ export function resolveTextAppearanceStyle(
   };
 }
 
+export function getResponsiveTextAppearanceValues(
+  appearance: TextAppearance | undefined,
+  defaults: TextAppearanceDefaults,
+  responsiveLimits: ResponsiveTextAppearanceLimits,
+): ResponsiveTextAppearanceValues {
+  const baseFontSize = appearance?.fontSize ?? defaults.fontSize;
+  const baseLineHeight = appearance?.lineHeight ?? defaults.lineHeight;
+  const tabletDefault = {
+    fontSize: Math.min(baseFontSize, responsiveLimits.tablet.maxFontSize),
+    lineHeight: Math.min(baseLineHeight, responsiveLimits.tablet.maxLineHeight),
+  };
+  const tablet = {
+    fontSize: appearance?.tablet?.fontSize ?? tabletDefault.fontSize,
+    lineHeight: appearance?.tablet?.lineHeight ?? tabletDefault.lineHeight,
+  };
+  const mobileDefault = {
+    fontSize: Math.min(tablet.fontSize, responsiveLimits.mobile.maxFontSize),
+    lineHeight: Math.min(tablet.lineHeight, responsiveLimits.mobile.maxLineHeight),
+  };
+
+  return {
+    baseFontSize,
+    baseLineHeight,
+    tabletDefault,
+    tablet,
+    mobileDefault,
+    mobile: {
+      fontSize: appearance?.mobile?.fontSize ?? mobileDefault.fontSize,
+      lineHeight: appearance?.mobile?.lineHeight ?? mobileDefault.lineHeight,
+    },
+  };
+}
+
 export function resolveResponsiveTextAppearanceStyle(
   appearance: TextAppearance | undefined,
   defaults: TextAppearanceDefaults,
-  mobileLimits: { maxFontSize: number; maxLineHeight: number },
+  responsiveLimits: ResponsiveTextAppearanceLimits,
 ): ResponsiveTextAppearanceStyle {
-  const fontSize = appearance?.fontSize ?? defaults.fontSize;
-  const lineHeight = appearance?.lineHeight ?? defaults.lineHeight;
+  const values = getResponsiveTextAppearanceValues(appearance, defaults, responsiveLimits);
 
   return {
-    "--responsive-font-size": `${fontSize}px`,
-    "--responsive-line-height": `${lineHeight}px`,
-    "--responsive-mobile-max-font-size": `${Math.min(fontSize, mobileLimits.maxFontSize)}px`,
-    "--responsive-mobile-max-line-height": `${Math.min(lineHeight, mobileLimits.maxLineHeight)}px`,
+    "--responsive-font-size": `${values.baseFontSize}px`,
+    "--responsive-line-height": `${values.baseLineHeight}px`,
+    "--responsive-tablet-font-size": `${values.tablet.fontSize}px`,
+    "--responsive-tablet-line-height": `${values.tablet.lineHeight}px`,
+    "--responsive-mobile-font-size": `${values.mobile.fontSize}px`,
+    "--responsive-mobile-line-height": `${values.mobile.lineHeight}px`,
     fontSize: "var(--responsive-font-size)",
     lineHeight: "var(--responsive-line-height)",
     fontWeight: appearance?.fontWeight ?? defaults.fontWeight,

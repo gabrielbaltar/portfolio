@@ -39,11 +39,19 @@ body,
   }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 500px) and (max-width: 768px) {
   .public-app .responsive-page-title,
   .public-app .responsive-content-h1 {
-    font-size: min(var(--responsive-font-size), var(--responsive-mobile-max-font-size, 24px));
-    line-height: min(var(--responsive-line-height), var(--responsive-mobile-max-line-height, 30px));
+    font-size: var(--responsive-tablet-font-size, var(--responsive-font-size));
+    line-height: var(--responsive-tablet-line-height, var(--responsive-line-height));
+  }
+}
+
+@media (max-width: 499px) {
+  .public-app .responsive-page-title,
+  .public-app .responsive-content-h1 {
+    font-size: var(--responsive-mobile-font-size, var(--responsive-tablet-font-size, var(--responsive-font-size)));
+    line-height: var(--responsive-mobile-line-height, var(--responsive-tablet-line-height, var(--responsive-line-height)));
   }
 }
 

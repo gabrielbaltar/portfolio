@@ -101,7 +101,7 @@ export type ContentBlock =
   | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number; galleryImages?: string[]; galleryPositions?: string[] }
   | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; borderRadius?: number; fit?: "contain" | "cover"; zoom?: number }
   | { type: "divider"; spacing?: number }
-  | { type: "quote"; text: string; author: string; lineHeight?: number }
+  | { type: "quote"; text: string; author: string; lineHeight?: number; accentColor?: string }
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
   | { type: "embed"; url: string; caption: string; height?: number };
 
@@ -110,11 +110,18 @@ export interface TimestampedEntity {
   updatedAt: string;
 }
 
+export interface TextAppearanceBreakpoint {
+  fontSize?: number;
+  lineHeight?: number;
+}
+
 export interface TextAppearance {
   fontSize?: number;
   lineHeight?: number;
   fontWeight?: number;
   color?: string;
+  tablet?: TextAppearanceBreakpoint;
+  mobile?: TextAppearanceBreakpoint;
 }
 
 export interface HomeGalleryItem {

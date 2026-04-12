@@ -39,9 +39,12 @@ import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
 import {
   ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS,
   ARTICLE_TITLE_APPEARANCE_DEFAULTS,
+  DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
   PROJECT_SUBTITLE_APPEARANCE_DEFAULTS,
   PROJECT_TITLE_APPEARANCE_DEFAULTS,
+  getResponsiveTextAppearanceValues,
   resolveTextAppearanceStyle,
+  type ResponsiveTextAppearanceLimits,
 } from "./text-appearance";
 import {
   appendChildListItem,
@@ -148,6 +151,18 @@ function normalizeTextAppearanceOverride(value: TextAppearance | undefined) {
 
   const normalizedColor = sanitizeAppearanceColor(value?.color || "");
   if (normalizedColor) normalized.color = normalizedColor;
+
+  if (typeof value?.tablet?.fontSize === "number" || typeof value?.tablet?.lineHeight === "number") {
+    normalized.tablet = {};
+    if (typeof value.tablet?.fontSize === "number") normalized.tablet.fontSize = value.tablet.fontSize;
+    if (typeof value.tablet?.lineHeight === "number") normalized.tablet.lineHeight = value.tablet.lineHeight;
+  }
+
+  if (typeof value?.mobile?.fontSize === "number" || typeof value?.mobile?.lineHeight === "number") {
+    normalized.mobile = {};
+    if (typeof value.mobile?.fontSize === "number") normalized.mobile.fontSize = value.mobile.fontSize;
+    if (typeof value.mobile?.lineHeight === "number") normalized.mobile.lineHeight = value.mobile.lineHeight;
+  }
 
   return Object.keys(normalized).length ? normalized : undefined;
 }
@@ -324,6 +339,7 @@ function sanitizeAppearanceColor(value: string) {
 function buildAppearanceValue(
   nextValue: TextAppearance,
   defaults: { fontSize: number; lineHeight: number; fontWeight: number; color: string },
+  responsiveLimits?: ResponsiveTextAppearanceLimits,
 ) {
   const normalized: TextAppearance = {};
 
@@ -333,6 +349,36 @@ function buildAppearanceValue(
 
   const normalizedColor = sanitizeAppearanceColor(nextValue.color || "");
   if (normalizedColor) normalized.color = normalizedColor;
+
+  if (responsiveLimits) {
+    const responsiveValues = getResponsiveTextAppearanceValues(nextValue, defaults, responsiveLimits);
+
+    if (
+      typeof nextValue.tablet?.fontSize === "number" && nextValue.tablet.fontSize !== responsiveValues.tabletDefault.fontSize ||
+      typeof nextValue.tablet?.lineHeight === "number" && nextValue.tablet.lineHeight !== responsiveValues.tabletDefault.lineHeight
+    ) {
+      normalized.tablet = {};
+      if (typeof nextValue.tablet?.fontSize === "number" && nextValue.tablet.fontSize !== responsiveValues.tabletDefault.fontSize) {
+        normalized.tablet.fontSize = nextValue.tablet.fontSize;
+      }
+      if (typeof nextValue.tablet?.lineHeight === "number" && nextValue.tablet.lineHeight !== responsiveValues.tabletDefault.lineHeight) {
+        normalized.tablet.lineHeight = nextValue.tablet.lineHeight;
+      }
+    }
+
+    if (
+      typeof nextValue.mobile?.fontSize === "number" && nextValue.mobile.fontSize !== responsiveValues.mobileDefault.fontSize ||
+      typeof nextValue.mobile?.lineHeight === "number" && nextValue.mobile.lineHeight !== responsiveValues.mobileDefault.lineHeight
+    ) {
+      normalized.mobile = {};
+      if (typeof nextValue.mobile?.fontSize === "number" && nextValue.mobile.fontSize !== responsiveValues.mobileDefault.fontSize) {
+        normalized.mobile.fontSize = nextValue.mobile.fontSize;
+      }
+      if (typeof nextValue.mobile?.lineHeight === "number" && nextValue.mobile.lineHeight !== responsiveValues.mobileDefault.lineHeight) {
+        normalized.mobile.lineHeight = nextValue.mobile.lineHeight;
+      }
+    }
+  }
 
   return Object.keys(normalized).length ? normalized : undefined;
 }
@@ -346,6 +392,7 @@ function TextAppearanceControl({
   sample,
   fontSizeRange,
   lineHeightRange,
+  responsiveLimits,
 }: {
   label: string;
   value?: TextAppearance;
@@ -355,17 +402,57 @@ function TextAppearanceControl({
   sample: string;
   fontSizeRange: { min: number; max: number; step?: number };
   lineHeightRange: { min: number; max: number; step?: number };
+  responsiveLimits?: ResponsiveTextAppearanceLimits;
 }) {
   const currentFontSize = value?.fontSize ?? defaults.fontSize;
   const currentLineHeight = value?.lineHeight ?? defaults.lineHeight;
   const currentFontWeight = value?.fontWeight ?? defaults.fontWeight;
   const currentColor = value?.color || defaults.color;
+  const responsiveValues = responsiveLimits ? getResponsiveTextAppearanceValues(value, defaults, responsiveLimits) : undefined;
 
   const updateAppearance = (patch: Partial<TextAppearance>) => {
-    onChange(buildAppearanceValue({ ...value, ...patch }, defaults));
+    onChange(buildAppearanceValue({ ...value, ...patch }, defaults, responsiveLimits));
+  };
+
+  const updateResponsiveAppearance = (breakpoint: "tablet" | "mobile", patch: { fontSize?: number; lineHeight?: number }) => {
+    onChange(
+      buildAppearanceValue(
+        {
+          ...value,
+          [breakpoint]: {
+            ...(value?.[breakpoint] ?? {}),
+            ...patch,
+          },
+        },
+        defaults,
+        responsiveLimits,
+      ),
+    );
+  };
+
+  const resetResponsiveAppearance = (breakpoint: "tablet" | "mobile") => {
+    onChange(buildAppearanceValue({ ...value, [breakpoint]: undefined }, defaults, responsiveLimits));
   };
 
   const weightOptions = [400, 500, 600, 700];
+  const responsiveSections = responsiveValues
+    ? [
+        {
+          key: "tablet" as const,
+          label: "Tablet",
+          description: "500px a 768px",
+          fontSize: responsiveValues.tablet.fontSize,
+          lineHeight: responsiveValues.tablet.lineHeight,
+        },
+        {
+          key: "mobile" as const,
+          label: "Mobile",
+          description: "Abaixo de 500px",
+          fontSize: responsiveValues.mobile.fontSize,
+          lineHeight: responsiveValues.mobile.lineHeight,
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-4 rounded-[14px] border p-4" style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}>
@@ -373,7 +460,9 @@ function TextAppearanceControl({
         <div>
           <p className="text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>{label}</p>
           <p className="mt-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
-            Ajuste tamanho, peso, entrelinhas e cor do texto desta seção.
+            {responsiveLimits
+              ? "Ajuste a base do texto e, se precisar, defina tamanhos especificos para tablet e mobile."
+              : "Ajuste tamanho, peso, entrelinhas e cor do texto desta seção."}
           </p>
         </div>
         <button
@@ -475,6 +564,73 @@ function TextAppearanceControl({
           </div>
         </div>
       </div>
+
+      {responsiveSections.length > 0 && (
+        <div className="space-y-3 rounded-[12px] border p-4" style={{ borderColor: "#1e1e1e", backgroundColor: "#141414" }}>
+          <div>
+            <p className="text-[#ddd]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Ajustes responsivos
+            </p>
+            <p className="mt-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+              Esses valores entram apenas nos breakpoints menores da página interna.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
+            {responsiveSections.map((section) => (
+              <div
+                key={section.key}
+                className="space-y-3 rounded-[12px] border p-4"
+                style={{ borderColor: "#1e1e1e", backgroundColor: "#101010" }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>{section.label}</p>
+                    <p className="mt-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>{section.description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => resetResponsiveAppearance(section.key)}
+                    className="rounded-[10px] border px-3 py-1.5 text-[#888] transition-colors hover:text-[#fafafa]"
+                    style={{ borderColor: "#1e1e1e", fontSize: "11px", lineHeight: "16px" }}
+                  >
+                    Resetar
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Tamanho</span>
+                    <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{section.fontSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={fontSizeRange.min}
+                    max={fontSizeRange.max}
+                    step={fontSizeRange.step || 1}
+                    value={section.fontSize}
+                    onChange={(event) => updateResponsiveAppearance(section.key, { fontSize: Number(event.target.value) })}
+                    className="w-full accent-[#fafafa]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Entrelinhas</span>
+                    <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{section.lineHeight}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={lineHeightRange.min}
+                    max={lineHeightRange.max}
+                    step={lineHeightRange.step || 1}
+                    value={section.lineHeight}
+                    onChange={(event) => updateResponsiveAppearance(section.key, { lineHeight: Number(event.target.value) })}
+                    className="w-full accent-[#fafafa]"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1340,7 +1496,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                 return (
                   <div key={i} className="space-y-2">
                     {renderPreviewLineHeightControl(i, block)}
-                    <blockquote className="border-l-2 pl-4 py-2 my-6" style={{ borderColor: "#333" }}>
+                    <blockquote className="border-l-2 pl-4 py-2 my-6" style={{ borderColor: sanitizeAppearanceColor(block.accentColor || "") || "#00ff3c" }}>
                       {renderBlockRichText(i, "text", (block as any).text, "Texto da citacao...", "text-[#ccc] italic", { fontSize: "15px", lineHeight: `${getBlockLineHeight(block)}px` })}
                       {(block as any).author && (
                         <cite className="text-[#666] not-italic block mt-2" style={{ fontSize: "12px" }}>— {(block as any).author}</cite>
@@ -2284,6 +2440,7 @@ export function CMSEditor() {
             sample={richTextToPlainText(item.title) || "Titulo do case"}
             fontSizeRange={{ min: 20, max: 72 }}
             lineHeightRange={{ min: 28, max: 88 }}
+            responsiveLimits={DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS}
           />
           <TextAppearanceControl
             label="Aparencia do subtitulo da pagina"
@@ -2599,6 +2756,7 @@ export function CMSEditor() {
             sample={richTextToPlainText(item.title) || "Titulo do artigo"}
             fontSizeRange={{ min: 20, max: 72 }}
             lineHeightRange={{ min: 26, max: 88 }}
+            responsiveLimits={DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS}
           />
           <TextAppearanceControl
             label="Aparencia do subtitulo da pagina"

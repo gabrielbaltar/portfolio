@@ -23,6 +23,7 @@ import { RichTextContent, richTextToPlainText } from "./rich-text";
 import {
   ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS,
   ARTICLE_TITLE_APPEARANCE_DEFAULTS,
+  DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
   resolveResponsiveTextAppearanceStyle,
   resolveTextAppearanceStyle,
 } from "./text-appearance";
@@ -311,10 +312,11 @@ export function BlogPostPage() {
     post.category ? { label: t("categoryLabel"), value: post.category, icon: Tag } : null,
     post.services ? { label: t("topicsLabel"), value: post.services, icon: Tag } : null,
   ].filter(Boolean) as { label: string; value: string; icon: typeof User }[];
-  const titleStyle = resolveResponsiveTextAppearanceStyle(post.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS, {
-    maxFontSize: 22,
-    maxLineHeight: 28,
-  });
+  const titleStyle = resolveResponsiveTextAppearanceStyle(
+    post.titleAppearance,
+    ARTICLE_TITLE_APPEARANCE_DEFAULTS,
+    DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
+  );
   const subtitleStyle = resolveTextAppearanceStyle(post.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
   const contentSummaryItems = buildContentSummaryItems(post.contentBlocks, `article-${post.id}`);
   const contentSummaryAnchors = Object.fromEntries(

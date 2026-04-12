@@ -217,6 +217,13 @@ function isUploadableVideoFile(file: File) {
   return file.type.startsWith("video/") || /\.(mp4|m4v|mov|webm|ogv|ogg)$/i.test(file.name);
 }
 
+function sanitizeHexColor(value?: string | null) {
+  const normalized = (value || "").trim();
+  if (!normalized) return undefined;
+  if (/^#[\da-f]{3}$/i.test(normalized) || /^#[\da-f]{6}$/i.test(normalized)) return normalized;
+  return undefined;
+}
+
 function ListBlockEditor({
   items,
   onChange,
@@ -1855,6 +1862,25 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
               style={{ fontSize: "12px" }}
               placeholder="Autor (opcional)..."
             />
+            <div className="space-y-1">
+              <span className="block text-[#666]" style={{ fontSize: "11px" }}>Cor da barra lateral</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={sanitizeHexColor((block as any).accentColor) || "#00ff3c"}
+                  onChange={(e) => onChange({ ...block, accentColor: e.target.value } as ContentBlock)}
+                  className="h-9 w-10 rounded cursor-pointer border-none p-0"
+                  style={{ backgroundColor: "transparent" }}
+                />
+                <SelectionProtectedInput
+                  value={sanitizeHexColor((block as any).accentColor) || ""}
+                  onChange={(e) => onChange({ ...block, accentColor: e.target.value } as ContentBlock)}
+                  className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded px-2.5 py-1.5 text-[#aaa] focus:outline-none focus:border-[#555]"
+                  style={{ fontSize: "12px" }}
+                  placeholder="#00ff3c"
+                />
+              </div>
+            </div>
           </div>
         )}
 

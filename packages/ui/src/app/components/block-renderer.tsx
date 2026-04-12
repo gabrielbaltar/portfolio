@@ -24,20 +24,31 @@ function getListStyleType(ordered: boolean, depth: number) {
   return styles[depth % styles.length];
 }
 
+function sanitizeHexColor(value?: string | null) {
+  const normalized = (value || "").trim();
+  if (!normalized) return undefined;
+  if (/^#[\da-f]{3}$/i.test(normalized) || /^#[\da-f]{6}$/i.test(normalized)) return normalized;
+  return undefined;
+}
+
 function getResponsiveHeading1Style(lineHeight?: number | null) {
   const resolvedLineHeight = lineHeight ?? 32;
 
   return {
     "--responsive-font-size": "24px",
     "--responsive-line-height": `${resolvedLineHeight}px`,
-    "--responsive-mobile-max-font-size": "20px",
-    "--responsive-mobile-max-line-height": `${Math.min(resolvedLineHeight, 28)}px`,
+    "--responsive-tablet-font-size": "22px",
+    "--responsive-tablet-line-height": `${Math.min(resolvedLineHeight, 30)}px`,
+    "--responsive-mobile-font-size": "20px",
+    "--responsive-mobile-line-height": `${Math.min(resolvedLineHeight, 28)}px`,
     color: "var(--text-primary, #fafafa)",
   } as CSSProperties & {
     "--responsive-font-size": string;
     "--responsive-line-height": string;
-    "--responsive-mobile-max-font-size": string;
-    "--responsive-mobile-max-line-height": string;
+    "--responsive-tablet-font-size": string;
+    "--responsive-tablet-line-height": string;
+    "--responsive-mobile-font-size": string;
+    "--responsive-mobile-line-height": string;
   };
 }
 
@@ -380,7 +391,7 @@ export function BlockRenderer({
               <blockquote
                 key={i}
                 className="border-l-2 pl-4 py-2 my-8"
-                style={{ borderColor: "var(--accent-green, #00ff3c)" }}
+                style={{ borderColor: sanitizeHexColor(block.accentColor) || "var(--accent-green, #00ff3c)" }}
               >
                 <p
                   className="font-['Inter',sans-serif] italic"
