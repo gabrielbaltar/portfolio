@@ -444,6 +444,12 @@ export function useTranslatedCMS() {
   const currentHash = dataHash(data);
 
   useEffect(() => {
+    if (lang === "pt") {
+      setTranslatedData(data);
+      setIsTranslating(false);
+      return;
+    }
+
     const translationId = ++translationRef.current;
     const cacheKey = getCacheKey(currentHash, lang);
     hydrateTranslatedCache();
@@ -464,7 +470,6 @@ export function useTranslatedCMS() {
   }, [lang, data, currentHash]);
 
   useEffect(() => {
-    void startPrefetch(data, currentHash, "pt");
     void startPrefetch(data, currentHash, "en");
   }, [data, currentHash]);
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 
 export type Language = "pt" | "en";
 
@@ -335,6 +335,16 @@ export function LanguageProvider({
   const t = (key: keyof typeof translations.pt) => {
     return translations[lang][key] || key;
   };
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    document.documentElement.lang = locale;
+    document.documentElement.setAttribute("translate", "no");
+    document.documentElement.classList.add("notranslate");
+    document.body?.setAttribute("translate", "no");
+    document.body?.classList.add("notranslate");
+  }, [locale]);
 
   return (
     <LanguageContext.Provider value={{ lang, locale, setLang, t }}>
