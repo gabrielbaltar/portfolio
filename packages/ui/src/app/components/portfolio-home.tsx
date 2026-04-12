@@ -8,6 +8,7 @@ import {
   DEFAULT_EXPERIENCE_TASK_LINE_HEIGHT,
   DEFAULT_STACK_LOGO_RADIUS,
   getProfileAboutParagraphs,
+  isPublicProjectStatus,
   normalizePortfolioSectionOrder,
   type PortfolioSectionId,
 } from "@portfolio/core";
@@ -102,7 +103,7 @@ export function PortfolioHome() {
   };
 
   const publishedProjects = filterVisibleContent(
-    projects.filter((project) => !project.status || project.status === "published"),
+    projects.filter((project) => isPublicProjectStatus(project.status)),
     siteSettings,
     "projects",
   );

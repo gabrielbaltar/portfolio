@@ -1,4 +1,5 @@
 import type {
+  ContentStatus,
   PortfolioSectionId,
   PublicContentVisibilityCollection,
   SiteSettings,
@@ -17,6 +18,8 @@ export const PORTFOLIO_SECTION_IDS: PortfolioSectionId[] = [
   "blog",
   "contact",
 ];
+
+export const PUBLIC_PROJECT_STATUSES: ContentStatus[] = ["published", "under_construction"];
 
 export function normalizePortfolioSectionOrder(order: unknown): PortfolioSectionId[] {
   const normalized: PortfolioSectionId[] = [];
@@ -64,4 +67,8 @@ export function isPublicContentVisible(
   id: string,
 ) {
   return settings?.contentVisibility?.[getPublicContentVisibilityKey(collection, id)] !== false;
+}
+
+export function isPublicProjectStatus(status: ContentStatus | null | undefined) {
+  return !status || PUBLIC_PROJECT_STATUSES.includes(status);
 }

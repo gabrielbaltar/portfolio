@@ -26,6 +26,7 @@ import { ensureUniqueSlug, getPublicContentVisibilityKey, legacySeedData, slugif
 import { toast } from "sonner";
 import { useCMS, type BlogPost, type ContentStatus, type Page, type Project } from "./cms-data";
 import { CMSConfirmDialog } from "./cms-confirm-dialog";
+import { getAvailableContentStatuses, getContentStatusMeta } from "./content-status";
 import { richTextToPlainText } from "./rich-text";
 
 type ContentType = "projects" | "articles" | "pages";
@@ -60,20 +61,14 @@ function getItemDisplayTitle(value?: string | null) {
 }
 
 function StatusBadge({ status }: { status: ContentStatus }) {
-  const config: Record<ContentStatus, { bg: string; text: string; label: string }> = {
-    published: { bg: "#00ff3c14", text: "#00ff3c", label: "Publicado" },
-    draft: { bg: "#ffa50014", text: "#ffa500", label: "Rascunho" },
-    review: { bg: "#3b82f614", text: "#3b82f6", label: "Em revisao" },
-    archived: { bg: "#55555514", text: "#888", label: "Arquivado" },
-  };
-  const badge = config[status];
+  const badge = getContentStatusMeta(status);
 
   return (
     <span
       className="inline-flex h-[20.5px] shrink-0 items-center gap-1.5 rounded-full px-2"
-      style={{ backgroundColor: badge.bg, color: badge.text, fontSize: "11px", lineHeight: "16.5px" }}
+      style={{ backgroundColor: badge.bg, color: badge.color, fontSize: "11px", lineHeight: "16.5px" }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: badge.text }} />
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: badge.color }} />
       {badge.label}
     </span>
   );
@@ -82,16 +77,18 @@ function StatusBadge({ status }: { status: ContentStatus }) {
 function StatusFilter({
   active,
   onChange,
+  contentType,
 }: {
   active: ContentStatus | "all";
   onChange: (status: ContentStatus | "all") => void;
+  contentType: ContentType;
 }) {
   const statuses: { key: ContentStatus | "all"; label: string }[] = [
     { key: "all", label: "Todos" },
-    { key: "published", label: "Publicados" },
-    { key: "draft", label: "Rascunhos" },
-    { key: "review", label: "Em revisao" },
-    { key: "archived", label: "Arquivados" },
+    ...getAvailableContentStatuses(contentType).map((status) => ({
+      key: status,
+      label: getContentStatusMeta(status).label,
+    })),
   ];
 
   return (
@@ -728,7 +725,7 @@ export function CMSContentList() {
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <StatusFilter active={statusFilter} onChange={setStatusFilter} />
+        <StatusFilter active={statusFilter} onChange={setStatusFilter} contentType={contentType} />
 
         <div className="flex min-w-[261.5px] items-center gap-2 max-[1180px]:w-full max-[1180px]:justify-end">
           <div

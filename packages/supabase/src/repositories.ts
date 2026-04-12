@@ -1,9 +1,11 @@
 import {
   PRIVATE_BUCKET,
+  PUBLIC_PROJECT_STATUSES,
   PUBLIC_BUCKET,
   createEmptyCMSData,
   defaultProfile,
   defaultSiteSettings,
+  isPublicProjectStatus,
   normalizeCMSData,
   type Award,
   type BlogPost,
@@ -131,7 +133,7 @@ function shouldFallbackToLegacyPublicLoader(error: { code?: string; message?: st
 }
 
 function buildSerializablePublicSnapshot(data: CMSData): PublicSnapshotData {
-  const publishedProjects = data.projects.filter((project) => !project.status || project.status === "published");
+  const publishedProjects = data.projects.filter((project) => isPublicProjectStatus(project.status));
   const publishedBlogPosts = data.blogPosts.filter((post) => !post.status || post.status === "published");
   const publishedPages = data.pages.filter((page) => !page.status || page.status === "published");
 
@@ -304,7 +306,7 @@ export async function loadPublicCMSData(client: SupabaseClient): Promise<CMSData
   ] = await Promise.all([
     client.from(TABLES.siteSettings).select("*").eq("id", "main").maybeSingle(),
     client.from(TABLES.profile).select("*").eq("id", "main").maybeSingle(),
-    client.from(TABLES.projects).select("*").eq("status", "published").order("created_at", { ascending: false }),
+    client.from(TABLES.projects).select("*").in("status", PUBLIC_PROJECT_STATUSES).order("created_at", { ascending: false }),
     client.from(TABLES.blogPosts).select("*").eq("status", "published").order("created_at", { ascending: false }),
     client.from(TABLES.pages).select("*").eq("status", "published").order("created_at", { ascending: false }),
     client.from(TABLES.experiences).select("*").order("sort_order", { ascending: true }),

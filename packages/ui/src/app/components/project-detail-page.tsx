@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import { useParams, Link, useLocation } from "react-router";
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import type { ProjectAccessRequestStatus } from "@portfolio/core";
+import { isPublicProjectStatus, type ProjectAccessRequestStatus } from "@portfolio/core";
 import { ArrowLeft, ExternalLink, Copy, Phone, Lock, Mail, ShieldCheck } from "lucide-react";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
@@ -75,7 +75,7 @@ export function ProjectDetailPage() {
   const { locale, t } = useLanguage();
   const { profile, siteSettings } = data;
   const projects = filterVisibleContent(
-    data.projects.filter((project) => !project.status || project.status === "published"),
+    data.projects.filter((project) => isPublicProjectStatus(project.status)),
     siteSettings,
     "projects",
   );
@@ -83,6 +83,7 @@ export function ProjectDetailPage() {
 
   const project = projects.find((p) => p.slug === slug);
   const otherProjects = projects.filter((p) => p.slug !== slug).slice(0, 4);
+  const isUnderConstruction = project?.status === "under_construction";
 
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -148,7 +149,7 @@ export function ProjectDetailPage() {
   // Check if project requires password
   const needsPassword = Boolean(project?.password && project.password.trim() !== "");
   const sessionUnlocked = project ? isProjectUnlocked(project.id) : false;
-  const shouldCheckApprovedAccess = Boolean(project && needsPassword && !isUnlocked && !sessionUnlocked);
+  const shouldCheckApprovedAccess = Boolean(project && needsPassword && !isUnderConstruction && !isUnlocked && !sessionUnlocked);
   const approvedAccessGranted = approvedAccessState === "granted";
   const isResolvingApprovedAccess =
     shouldCheckApprovedAccess &&
@@ -267,6 +268,60 @@ export function ProjectDetailPage() {
             {t("back")}
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (isUnderConstruction) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-['Inter',sans-serif] px-5" style={{ backgroundColor: "var(--bg-primary, #0B0B0D)" }}>
+        <motion.div
+          className="w-full max-w-[560px] rounded-[28px] px-7 py-8 text-center"
+          style={{ backgroundColor: "var(--bg-secondary, #121212)", border: "1px solid var(--border-primary, #2A2A2A)" }}
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div
+            className="mx-auto mb-5 inline-flex items-center rounded-full px-3 py-1"
+            style={{
+              backgroundColor: "rgba(249, 115, 22, 0.12)",
+              border: "1px solid rgba(249, 115, 22, 0.24)",
+              color: "#f97316",
+              fontSize: "11px",
+              lineHeight: "16px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            {t("projectUnderConstructionBadge")}
+          </div>
+          <h1 className="mx-auto max-w-[440px] text-[24px] leading-[30px] min-[640px]:text-[28px] min-[640px]:leading-[36px]" style={{ color: "var(--text-primary, #fafafa)" }}>
+            {t("projectUnderConstructionTitle")}
+          </h1>
+          <p className="mx-auto mt-4 max-w-[440px]" style={{ fontSize: "15px", lineHeight: "24px", color: "var(--text-secondary, #A1A1A1)" }}>
+            {t("projectUnderConstructionDescription")}
+          </p>
+          <p className="mx-auto mt-3 max-w-[440px]" style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #7D7D7D)" }}>
+            {t("projectUnderConstructionFollowUp")}
+          </p>
+          <div className="mt-7 flex flex-col items-center justify-center gap-3 min-[420px]:flex-row">
+            <Link
+              to={backTo}
+              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 transition-opacity hover:opacity-85"
+              style={{ backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #121212)", fontSize: "14px" }}
+            >
+              {t("back")}
+            </Link>
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center justify-center rounded-full px-5 transition-opacity hover:opacity-85"
+              style={{ border: "1px solid var(--border-primary, #2A2A2A)", color: "var(--text-primary, #fafafa)", fontSize: "14px" }}
+            >
+              {t("backToHome")}
+            </Link>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -520,8 +575,8 @@ export function ProjectDetailPage() {
     { label: t("yearLabel"), value: project.year || "Não informado" },
   ];
   const titleStyle = resolveResponsiveTextAppearanceStyle(project.titleAppearance, PROJECT_TITLE_APPEARANCE_DEFAULTS, {
-    maxFontSize: 24,
-    maxLineHeight: 30,
+    maxFontSize: 22,
+    maxLineHeight: 28,
   });
   const subtitleStyle = resolveTextAppearanceStyle(project.subtitleAppearance, PROJECT_SUBTITLE_APPEARANCE_DEFAULTS);
   const contentSummaryItems = buildContentSummaryItems(project.contentBlocks, `project-${project.id}`);

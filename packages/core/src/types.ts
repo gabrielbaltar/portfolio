@@ -1,6 +1,6 @@
 export type Language = "pt" | "en";
 export type ThemeMode = "dark" | "light";
-export type ContentStatus = "draft" | "review" | "published" | "archived";
+export type ContentStatus = "draft" | "review" | "under_construction" | "published" | "archived";
 export type PortfolioSectionId =
   | "about"
   | "projects"

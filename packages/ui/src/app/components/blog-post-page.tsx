@@ -312,8 +312,8 @@ export function BlogPostPage() {
     post.services ? { label: t("topicsLabel"), value: post.services, icon: Tag } : null,
   ].filter(Boolean) as { label: string; value: string; icon: typeof User }[];
   const titleStyle = resolveResponsiveTextAppearanceStyle(post.titleAppearance, ARTICLE_TITLE_APPEARANCE_DEFAULTS, {
-    maxFontSize: 24,
-    maxLineHeight: 30,
+    maxFontSize: 22,
+    maxLineHeight: 28,
   });
   const subtitleStyle = resolveTextAppearanceStyle(post.subtitleAppearance, ARTICLE_SUBTITLE_APPEARANCE_DEFAULTS);
   const contentSummaryItems = buildContentSummaryItems(post.contentBlocks, `article-${post.id}`);

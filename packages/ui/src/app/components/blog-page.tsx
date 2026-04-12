@@ -56,8 +56,8 @@ export function BlogPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="tracking-[-0.02em]"
-          style={{ fontSize: "26px", lineHeight: "31.2px", color: "var(--text-primary)" }}
+          className="tracking-[-0.02em] text-[22px] leading-[28px] min-[640px]:text-[26px] min-[640px]:leading-[31.2px]"
+          style={{ color: "var(--text-primary)" }}
         >
           {t("articlesTitle")}
         </motion.h1>

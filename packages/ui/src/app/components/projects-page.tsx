@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Copy, Phone, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { isPublicProjectStatus } from "@portfolio/core";
 import { useLanguage } from "./language-context";
 import { useTranslatedCMS } from "./use-translated-cms";
 import { ScrollReveal } from "./scroll-reveal";
@@ -21,7 +22,7 @@ export function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { profile, projects: allProjects, siteSettings } = data;
   const projects = filterVisibleContent(
-    allProjects.filter((project) => !project.status || project.status === "published"),
+    allProjects.filter((project) => isPublicProjectStatus(project.status)),
     siteSettings,
     "projects",
   );
@@ -103,7 +104,8 @@ export function ProjectsPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          style={{ fontSize: "26px", lineHeight: "31.2px", color: "var(--text-primary)" }}
+          className="text-[22px] leading-[28px] min-[640px]:text-[26px] min-[640px]:leading-[31.2px]"
+          style={{ color: "var(--text-primary)" }}
         >
           {t("projectsTitle")}
         </motion.h1>

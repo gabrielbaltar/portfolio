@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
-import { useCMS } from "./cms-data";
+import { useCMS, type ContentStatus } from "./cms-data";
+import { getContentStatusMeta } from "./content-status";
 
 function StatCard({
   icon: Icon,
@@ -52,20 +53,14 @@ function StatCard({
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string; label: string }> = {
-    published: { bg: "#00ff3c14", text: "#00ff3c", label: "Publicado" },
-    draft: { bg: "#ffa50014", text: "#ffa500", label: "Rascunho" },
-    review: { bg: "#3b82f614", text: "#3b82f6", label: "Em revisão" },
-    archived: { bg: "#55555514", text: "#888", label: "Arquivado" },
-  };
-  const badge = colors[status] || colors.draft;
+  const badge = getContentStatusMeta((status || "draft") as ContentStatus);
 
   return (
     <span
       className="inline-flex h-[20.5px] items-center gap-1.5 rounded-full px-2"
-      style={{ backgroundColor: badge.bg, color: badge.text, fontSize: "11px", lineHeight: "16.5px" }}
+      style={{ backgroundColor: badge.bg, color: badge.color, fontSize: "11px", lineHeight: "16.5px" }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: badge.text }} />
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: badge.color }} />
       {badge.label}
     </span>
   );

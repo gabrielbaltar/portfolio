@@ -6,7 +6,8 @@ import {
   FileText,
 } from "lucide-react";
 import type { ContentEntityType } from "@portfolio/core";
-import { type ContentBlock } from "./cms-data";
+import { type ContentBlock, type ContentStatus } from "./cms-data";
+import { getContentStatusMeta } from "./content-status";
 import { dataProvider } from "./data-provider";
 import { richTextToPlainText } from "./rich-text";
 import { getShowcaseBlockSummary, isShowcaseBlock } from "./showcase-blocks";
@@ -131,15 +132,6 @@ function getFieldLabel(field: string): string {
   return FIELD_LABELS[field] || field;
 }
 
-// --- Status badge colors ---
-const STATUS_COLORS: Record<string, string> = {
-  draft: "#ffa500", review: "#3b82f6", published: "#00ff3c", archived: "#888",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Rascunho", review: "Em revisao", published: "Publicado", archived: "Arquivado",
-};
-
 // --- Block diff icons ---
 function BlockIcon({ type }: { type: string }) {
   const size = 12;
@@ -171,10 +163,11 @@ function renderValue(value: any, field: string): React.ReactNode {
     return <span className="text-[#555] italic" style={{ fontSize: "12px" }}>vazio</span>;
   }
   if (field === "status") {
+    const statusMeta = getContentStatusMeta((value || "draft") as ContentStatus);
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[value] || "#888" }} />
-        <span style={{ fontSize: "12px" }}>{STATUS_LABELS[value] || value}</span>
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statusMeta.color }} />
+        <span style={{ fontSize: "12px" }}>{statusMeta.label}</span>
       </span>
     );
   }

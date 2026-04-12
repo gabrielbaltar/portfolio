@@ -50,6 +50,7 @@ import {
   removeListItem,
   updateListItemText,
 } from "./list-block-utils";
+import { getAvailableContentStatuses, getContentStatusMeta } from "./content-status";
 
 // Editor types
 type EditorMode = "form" | "visual" | "split";
@@ -592,17 +593,20 @@ function TagsInput({ tags, onChange }: { tags: string[]; onChange: (tags: string
   );
 }
 
-function StatusSelector({ status, onChange }: { status: ContentStatus; onChange: (s: ContentStatus) => void }) {
+function StatusSelector({
+  status,
+  onChange,
+  contentType,
+}: {
+  status: ContentStatus;
+  onChange: (s: ContentStatus) => void;
+  contentType: "projects" | "articles" | "pages";
+}) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, right: 0 });
-  const config: Record<ContentStatus, { color: string; label: string }> = {
-    draft: { color: "#ffa500", label: "Rascunho" },
-    review: { color: "#3b82f6", label: "Em revisao" },
-    published: { color: "#00ff3c", label: "Publicado" },
-    archived: { color: "#888", label: "Arquivado" },
-  };
-  const current = config[status];
+  const availableStatuses = getAvailableContentStatuses(contentType);
+  const current = getContentStatusMeta(status);
 
   useEffect(() => {
     if (open && btnRef.current) {
@@ -630,19 +634,22 @@ function StatusSelector({ status, onChange }: { status: ContentStatus; onChange:
             className="fixed z-50 rounded-lg shadow-xl py-1 min-w-[150px]"
             style={{ backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", top: pos.top, right: pos.right }}
           >
-            {(Object.keys(config) as ContentStatus[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => { onChange(s); setOpen(false); }}
-                className={`flex items-center gap-2 px-3 py-2 w-full text-left cursor-pointer transition-colors ${
-                  s === status ? "bg-[#242424]" : "hover:bg-[#1e1e1e]"
-                }`}
-                style={{ fontSize: "12px", color: "#ccc" }}
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: config[s].color }} />
-                {config[s].label}
-              </button>
-            ))}
+            {availableStatuses.map((s) => {
+              const meta = getContentStatusMeta(s);
+              return (
+                <button
+                  key={s}
+                  onClick={() => { onChange(s); setOpen(false); }}
+                  className={`flex items-center gap-2 px-3 py-2 w-full text-left cursor-pointer transition-colors ${
+                    s === status ? "bg-[#242424]" : "hover:bg-[#1e1e1e]"
+                  }`}
+                  style={{ fontSize: "12px", color: "#ccc" }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
+                  {meta.label}
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -1012,19 +1019,22 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
               Clique no texto para editar inline
             </span>
           )}
-          {item.status && (
-            <span
-              className="inline-flex h-[20.5px] items-center rounded-full px-2"
-              style={{
-                fontSize: "10px",
-                lineHeight: "15px",
-                backgroundColor: item.status === "published" ? "#00ff3c15" : item.status === "draft" ? "#ffa50015" : item.status === "review" ? "#3b82f615" : "#55555515",
-                color: item.status === "published" ? "#00ff3c" : item.status === "draft" ? "#ffa500" : item.status === "review" ? "#3b82f6" : "#888",
-              }}
-            >
-              {item.status === "published" ? "Publicado" : item.status === "draft" ? "Rascunho" : item.status === "review" ? "Revisao" : "Arquivado"}
-            </span>
-          )}
+          {item.status && (() => {
+            const statusMeta = getContentStatusMeta(item.status);
+            return (
+              <span
+                className="inline-flex h-[20.5px] items-center rounded-full px-2"
+                style={{
+                  fontSize: "10px",
+                  lineHeight: "15px",
+                  backgroundColor: statusMeta.bg,
+                  color: statusMeta.color,
+                }}
+              >
+                {statusMeta.label}
+              </span>
+            );
+          })()}
         </div>
       </div>
 
@@ -2949,7 +2959,7 @@ export function CMSEditor() {
           <div className="w-px h-5" style={{ backgroundColor: "#1e1e1e" }} />
 
           {/* Status */}
-          <StatusSelector status={item.status || "draft"} onChange={(s) => updateField("status", s)} />
+          <StatusSelector status={item.status || "draft"} onChange={(s) => updateField("status", s)} contentType={contentType} />
 
           {/* Save draft */}
           <button
