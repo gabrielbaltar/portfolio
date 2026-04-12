@@ -221,16 +221,9 @@ as $$
           jsonb_build_object(
             'id', s.id,
             'name', s.name,
-            'category', s.category,
-            'icon_type', s.icon_type,
-            'icon_svg', s.icon_svg,
-            'logo_url', s.logo_url,
-            'logo_image', s.logo_image,
-            'logo_background', s.logo_background,
-            'logo_foreground', s.logo_foreground,
-            'logo_fit', s.logo_fit,
-            'logo_padding', s.logo_padding,
-            'logo_radius', s.logo_radius,
+            'description', s.description,
+            'color', s.color,
+            'link', s.link,
             'sort_order', s.sort_order
           )
           order by s.sort_order asc
@@ -247,8 +240,7 @@ as $$
             'id', a.id,
             'title', a.title,
             'issuer', a.issuer,
-            'description', a.description,
-            'year', a.year,
+            'link', a.link,
             'sort_order', a.sort_order
           )
           order by a.sort_order asc
@@ -276,3 +268,18 @@ as $$
     )
   );
 $$;
+
+revoke all on function public.get_public_portfolio_snapshot() from public;
+grant execute on function public.get_public_portfolio_snapshot() to anon, authenticated, service_role;
+
+analyze public.projects;
+analyze public.blog_posts;
+analyze public.pages;
+analyze public.experiences;
+analyze public.education;
+analyze public.certifications;
+analyze public.stack;
+analyze public.awards;
+analyze public.recommendations;
+
+notify pgrst, 'reload schema';
