@@ -1,9 +1,13 @@
 // Translation service with cached browser-side translation for dynamic CMS content.
 
 export type TranslationLanguage = "pt" | "en";
+export type TranslationOptions = {
+  preservePhrases?: string[];
+};
 
-const CACHE_KEY = "portfolio_translations_cache_v8";
+const CACHE_KEY = "portfolio_translations_cache_v9";
 const LEGACY_CACHE_KEYS = [
+  "portfolio_translations_cache_v8",
   "portfolio_translations_cache_v7",
   "portfolio_translations_cache_v6",
   "portfolio_translations_cache_v5",
@@ -110,9 +114,67 @@ type ProtectedTerm = {
 const LEGACY_PLACEHOLDER_INDEX_REGEX = /__\s*portf[oó]lio(?:\s|_|-)*keep(?:\s|_|-)*(\d+)(?:\s*__)?/i;
 const SAFE_PLACEHOLDER_INDEX_REGEX = /__\s*pfk(?:\s|_|-)*(\d+)(?:\s*__)?/i;
 const PLACEHOLDER_ARTIFACT_REGEX = /__\s*(?:pfk|portf[oó]lio(?:\s|_|-)*keep)(?:\s|_|-)*(\d+)?(?:\s*__)?/gi;
+const URL_REGEX = /\b(?:https?:\/\/|www\.)[^\s<>"')]+/gi;
+const EMAIL_REGEX = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const HANDLE_REGEX = /(^|[\s(])(@[A-Za-z0-9_]{2,})/g;
+const HASHTAG_REGEX = /(^|[\s(])(#[A-Za-z0-9_]{2,})/g;
+const STRUCTURED_TOKEN_REGEX = /\b(?=[A-Za-z0-9.+/#:_-]*[A-Za-z])(?=[A-Za-z0-9.+/#:_-]*[.+/#:_-])[A-Za-z0-9][A-Za-z0-9.+/#:_-]*\b/g;
+const ACRONYM_REGEX = /\b[A-Z]{2,}(?:\.[A-Z]{2,})*\b/g;
+const MIXED_ALNUM_REGEX = /\b(?!PFK\d+\b)(?=[A-Za-z0-9]*[A-Za-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]+\b/g;
+const MIXED_CASE_TOKEN_REGEX = /\b(?:[A-Z]+[a-z0-9]+[A-Z][A-Za-z0-9]*|[a-z]+[A-Z][A-Za-z0-9]*)\b/g;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function hashString(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function getNormalizedPreservePhrases(options?: TranslationOptions) {
+  const phrases = options?.preservePhrases ?? [];
+  const unique = new Map<string, string>();
+
+  phrases.forEach((phrase) => {
+    const normalized = normalizeWhitespace(phrase);
+    if (!normalized || normalized.length < 2) return;
+
+    const key = normalized.toLocaleLowerCase();
+    const existing = unique.get(key);
+    if (!existing || normalized.length > existing.length) {
+      unique.set(key, normalized);
+    }
+  });
+
+  return Array.from(unique.values()).sort((left, right) => right.length - left.length);
+}
+
+function getPreservePhrasesCacheKey(options?: TranslationOptions) {
+  const phrases = getNormalizedPreservePhrases(options);
+  if (phrases.length === 0) return "";
+  return `:${hashString(phrases.join("|"))}`;
+}
+
+function protectMatchedTerm(
+  value: string,
+  makePlaceholder: (value: string) => string,
+) {
+  const normalized = normalizeWhitespace(value);
+  return normalized ? makePlaceholder(normalized) : value;
+}
+
+function buildPreservePhrasePattern(phrase: string) {
+  const escaped = escapeRegExp(phrase).replace(/\s+/g, "\\s+");
+  return new RegExp(`(^|[^\\p{L}\\p{N}_])(${escaped})(?=$|[^\\p{L}\\p{N}_])`, "giu");
 }
 
 function getPlaceholderIndex(placeholder: string) {
@@ -165,7 +227,7 @@ function restoreProtectedTerms(text: string, protectedTerms: ProtectedTerm[]) {
   return cleanupPlaceholderArtifacts(restored, protectedTerms);
 }
 
-function prepareProtectedTerms(text: string) {
+function prepareProtectedTerms(text: string, options?: TranslationOptions) {
   const protectedTerms: ProtectedTerm[] = [];
   let counter = 0;
 
@@ -186,6 +248,25 @@ function prepareProtectedTerms(text: string) {
     return normalized ? makePlaceholder(normalized) : phrase;
   });
 
+  for (const phrase of getNormalizedPreservePhrases(options)) {
+    preparedText = preparedText.replace(
+      buildPreservePhrasePattern(phrase),
+      (_match, prefix: string, value: string) => `${prefix}${protectMatchedTerm(value, makePlaceholder)}`,
+    );
+  }
+
+  preparedText = preparedText.replace(URL_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
+  preparedText = preparedText.replace(EMAIL_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
+  preparedText = preparedText.replace(HANDLE_REGEX, (_match, prefix: string, value: string) => {
+    return `${prefix}${protectMatchedTerm(value, makePlaceholder)}`;
+  });
+  preparedText = preparedText.replace(HASHTAG_REGEX, (_match, prefix: string, value: string) => {
+    return `${prefix}${protectMatchedTerm(value, makePlaceholder)}`;
+  });
+  preparedText = preparedText.replace(STRUCTURED_TOKEN_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
+  preparedText = preparedText.replace(ACRONYM_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
+  preparedText = preparedText.replace(MIXED_ALNUM_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
+  preparedText = preparedText.replace(MIXED_CASE_TOKEN_REGEX, (value: string) => protectMatchedTerm(value, makePlaceholder));
   preparedText = preparedText.replace(/(^|[\s(])\-([A-Za-z0-9][A-Za-z0-9.+/#:_-]*)/g, (match, prefix: string, token: string) => {
     const normalized = token.trim();
     if (!normalized) return match;
@@ -234,15 +315,17 @@ function clearLegacyCache() {
   }
 }
 
-function makeCacheKey(text: string, from: string, to: string): string {
-  return `${from}>${to}:${text}`;
+function makeCacheKey(text: string, from: string, to: string, options?: TranslationOptions): string {
+  return `${from}>${to}${getPreservePhrasesCacheKey(options)}:${text}`;
 }
 
 export function detectTextLanguage(
   text: string,
   fallback: TranslationLanguage = "pt",
+  options?: TranslationOptions,
 ): TranslationLanguage {
-  const normalized = prepareProtectedTerms(text).displayText
+  const normalized = prepareProtectedTerms(text, options).preparedText
+    .replace(PLACEHOLDER_ARTIFACT_REGEX, " ")
     .trim()
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ");
@@ -392,16 +475,17 @@ function splitTextIntoChunks(text: string, maxChars: number = MAX_REQUEST_CHARS)
 async function translateSingle(
   text: string,
   from: string,
-  to: string
+  to: string,
+  options?: TranslationOptions,
 ): Promise<string> {
   if (!text || text.trim().length === 0) return text;
 
-  const protectedText = prepareProtectedTerms(text);
+  const protectedText = prepareProtectedTerms(text, options);
   const sourceText = protectedText.preparedText;
   const displayText = protectedText.displayText;
 
   const cache = getCache();
-  const key = makeCacheKey(text, from, to);
+  const key = makeCacheKey(text, from, to, options);
   if (cache[key]) return cache[key];
 
   const override = getTranslationOverride(text, from, to);
@@ -418,6 +502,7 @@ async function translateSingle(
           restoreProtectedTerms(chunk, protectedText.protectedTerms),
           from,
           to,
+          options,
         ),
       ),
     );
@@ -458,9 +543,10 @@ async function translateSingle(
 export async function translateBatch(
   texts: string[],
   from: string = "pt",
-  to: string = "en"
+  to: string = "en",
+  options?: TranslationOptions,
 ): Promise<string[]> {
-  if (from === to) return texts.map((text) => prepareProtectedTerms(text).displayText);
+  if (from === to) return texts.map((text) => prepareProtectedTerms(text, options).displayText);
 
   const cache = getCache();
   const results: string[] = new Array(texts.length);
@@ -478,11 +564,11 @@ export async function translateBatch(
     const override = getTranslationOverride(text, from, to);
     if (override) {
       results[i] = override;
-      cache[makeCacheKey(text, from, to)] = override;
+      cache[makeCacheKey(text, from, to, options)] = override;
       continue;
     }
 
-    const key = makeCacheKey(text, from, to);
+    const key = makeCacheKey(text, from, to, options);
     if (cache[key]) {
       results[i] = cache[key];
     } else {
@@ -497,7 +583,7 @@ export async function translateBatch(
     const chunkTexts = uncachedTexts.slice(start, start + TRANSLATE_CONCURRENCY);
     const chunkIndices = uncachedIndices.slice(start, start + TRANSLATE_CONCURRENCY);
     const translatedChunk = await Promise.all(
-      chunkTexts.map((text) => translateSingle(text, from, to)),
+      chunkTexts.map((text) => translateSingle(text, from, to, options)),
     );
 
     translatedChunk.forEach((translated, offset) => {
@@ -515,6 +601,7 @@ export async function translateBatch(
 export async function translateBatchToLanguage(
   texts: string[],
   targetLang: TranslationLanguage,
+  options?: TranslationOptions,
 ): Promise<string[]> {
   if (texts.length === 0) return texts;
 
@@ -532,9 +619,9 @@ export async function translateBatchToLanguage(
       return;
     }
 
-    const sourceLang = detectTextLanguage(normalized, fallbackSource);
+    const sourceLang = detectTextLanguage(normalized, fallbackSource, options);
     if (sourceLang === targetLang) {
-      results[index] = prepareProtectedTerms(text).displayText;
+      results[index] = prepareProtectedTerms(text, options).displayText;
       return;
     }
 
@@ -546,7 +633,7 @@ export async function translateBatchToLanguage(
     (Object.entries(groups) as Array<[TranslationLanguage, { indices: number[]; texts: string[] }]>)
       .filter(([, group]) => group.texts.length > 0)
       .map(async ([sourceLang, group]) => {
-        const translated = await translateBatch(group.texts, sourceLang, targetLang);
+        const translated = await translateBatch(group.texts, sourceLang, targetLang, options);
         return { indices: group.indices, translated };
       }),
   );
@@ -564,9 +651,10 @@ export async function translateBatchToLanguage(
 export async function translateText(
   text: string,
   from: string = "pt",
-  to: string = "en"
+  to: string = "en",
+  options?: TranslationOptions,
 ): Promise<string> {
-  const [result] = await translateBatch([text], from, to);
+  const [result] = await translateBatch([text], from, to, options);
   return result;
 }
 

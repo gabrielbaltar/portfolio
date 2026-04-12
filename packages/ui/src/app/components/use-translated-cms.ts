@@ -12,8 +12,9 @@ import { richTextToPlainText } from "./rich-text";
 
 const translatedDataCache = new Map<string, CMSData>();
 const prefetchPromises = new Map<string, Promise<CMSData>>();
-const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v10";
+const TRANSLATED_DATA_CACHE_KEY = "portfolio_translated_cms_cache_v11";
 const LEGACY_TRANSLATED_DATA_CACHE_KEYS = [
+  "portfolio_translated_cms_cache_v10",
   "portfolio_translated_cms_cache_v9",
   "portfolio_translated_cms_cache_v8",
   "portfolio_translated_cms_cache_v7",
@@ -57,6 +58,80 @@ type RichTranslationEntry = {
   path: string;
   entry: RichTextTranslationEntry;
 };
+
+function normalizeGlossaryPhrase(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function collectBlockGlossaryPhrases(blocks: ContentBlock[] | undefined, phrases: Set<string>) {
+  blocks?.forEach((block) => {
+    if ("author" in block && typeof block.author === "string") {
+      const normalized = normalizeGlossaryPhrase(block.author);
+      if (normalized) {
+        phrases.add(normalized);
+      }
+    }
+  });
+}
+
+function collectCMSGlossaryPhrases(data: CMSData) {
+  const phrases = new Set<string>();
+  const add = (value: string | undefined | null) => {
+    if (typeof value !== "string") return;
+    const normalized = normalizeGlossaryPhrase(value);
+    if (!normalized || normalized.length < 2) return;
+    phrases.add(normalized);
+  };
+
+  add(data.siteSettings.siteTitle);
+  add(data.profile.name);
+  add(data.profile.location);
+  add(data.profile.currentCompany);
+
+  data.projects.forEach((project) => {
+    add(project.title);
+    add(project.client);
+    collectBlockGlossaryPhrases(project.contentBlocks, phrases);
+  });
+
+  data.blogPosts.forEach((post) => {
+    add(post.publisher);
+    add(post.author);
+    collectBlockGlossaryPhrases(post.contentBlocks, phrases);
+  });
+
+  data.pages.forEach((page) => {
+    collectBlockGlossaryPhrases(page.contentBlocks, phrases);
+  });
+
+  data.experiences.forEach((experience) => {
+    add(experience.company);
+    add(experience.location);
+  });
+
+  data.education.forEach((education) => {
+    add(education.university);
+    add(education.location);
+  });
+
+  data.certifications.forEach((certification) => {
+    add(certification.issuer);
+  });
+
+  data.stack.forEach((item) => {
+    add(item.name);
+  });
+
+  data.awards.forEach((award) => {
+    add(award.issuer);
+  });
+
+  data.recommendations.forEach((recommendation) => {
+    add(recommendation.name);
+  });
+
+  return Array.from(phrases).sort((left, right) => right.length - left.length);
+}
 
 function hydrateTranslatedCache() {
   if (translatedCacheHydrated || typeof window === "undefined") return;
@@ -229,6 +304,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   const map: TranslationEntry[] = [];
   const richEntries: RichTranslationEntry[] = [];
   const textIndex = new Map<string, number>();
+  const preservePhrases = collectCMSGlossaryPhrases(data);
 
   const addText = (path: string, text: string) => {
     const normalized = text.trim();
@@ -387,7 +463,7 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
   stripProtectedMarkersInPlace(translatedData);
   if (texts.length === 0) return translatedData;
 
-  const translatedTexts = await translateBatchToLanguage(texts, targetLang);
+  const translatedTexts = await translateBatchToLanguage(texts, targetLang, { preservePhrases });
 
   map.forEach(({ path, index }) => {
     const translatedValue = translatedTexts[index];
