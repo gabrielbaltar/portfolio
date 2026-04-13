@@ -336,6 +336,29 @@ function sanitizeAppearanceColor(value: string) {
   return undefined;
 }
 
+const LINE_HEIGHT_PERCENT_LIMITS = {
+  min: 50,
+  max: 200,
+  step: 1,
+} as const;
+
+function clampLineHeightPercent(value: number) {
+  return Math.max(LINE_HEIGHT_PERCENT_LIMITS.min, Math.min(LINE_HEIGHT_PERCENT_LIMITS.max, Math.round(value)));
+}
+
+function lineHeightToPercent(lineHeight: number, fontSize: number) {
+  if (!Number.isFinite(lineHeight) || !Number.isFinite(fontSize) || fontSize <= 0) {
+    return 100;
+  }
+
+  return clampLineHeightPercent((lineHeight / fontSize) * 100);
+}
+
+function percentToLineHeight(percent: number, fontSize: number) {
+  const safeFontSize = Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 1;
+  return Number(((clampLineHeightPercent(percent) * safeFontSize) / 100).toFixed(1));
+}
+
 function buildAppearanceValue(
   nextValue: TextAppearance,
   defaults: { fontSize: number; lineHeight: number; fontWeight: number; color: string },
@@ -391,7 +414,6 @@ function TextAppearanceControl({
   defaultColorValue,
   sample,
   fontSizeRange,
-  lineHeightRange,
   responsiveLimits,
 }: {
   label: string;
@@ -401,11 +423,11 @@ function TextAppearanceControl({
   defaultColorValue: string;
   sample: string;
   fontSizeRange: { min: number; max: number; step?: number };
-  lineHeightRange: { min: number; max: number; step?: number };
   responsiveLimits?: ResponsiveTextAppearanceLimits;
 }) {
   const currentFontSize = value?.fontSize ?? defaults.fontSize;
   const currentLineHeight = value?.lineHeight ?? defaults.lineHeight;
+  const currentLineHeightPercent = lineHeightToPercent(currentLineHeight, currentFontSize);
   const currentFontWeight = value?.fontWeight ?? defaults.fontWeight;
   const currentColor = value?.color || defaults.color;
   const responsiveValues = responsiveLimits ? getResponsiveTextAppearanceValues(value, defaults, responsiveLimits) : undefined;
@@ -443,6 +465,7 @@ function TextAppearanceControl({
           description: "500px a 768px",
           fontSize: responsiveValues.tablet.fontSize,
           lineHeight: responsiveValues.tablet.lineHeight,
+          lineHeightPercent: lineHeightToPercent(responsiveValues.tablet.lineHeight, responsiveValues.tablet.fontSize),
         },
         {
           key: "mobile" as const,
@@ -450,6 +473,7 @@ function TextAppearanceControl({
           description: "Abaixo de 500px",
           fontSize: responsiveValues.mobile.fontSize,
           lineHeight: responsiveValues.mobile.lineHeight,
+          lineHeightPercent: lineHeightToPercent(responsiveValues.mobile.lineHeight, responsiveValues.mobile.fontSize),
         },
       ]
     : [];
@@ -461,8 +485,8 @@ function TextAppearanceControl({
           <p className="text-[#ddd]" style={{ fontSize: "12px", lineHeight: "18px" }}>{label}</p>
           <p className="mt-1 text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
             {responsiveLimits
-              ? "Ajuste a base do texto e, se precisar, defina tamanhos especificos para tablet e mobile."
-              : "Ajuste tamanho, peso, entrelinhas e cor do texto desta seção."}
+              ? "Ajuste a base do texto e, se precisar, defina tamanhos especificos para tablet e mobile. A entrelinhas usa percentual, como no Figma."
+              : "Ajuste tamanho, peso, entrelinhas em percentual e cor do texto desta seção."}
           </p>
         </div>
         <button
@@ -505,15 +529,16 @@ function TextAppearanceControl({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Entrelinhas</span>
-            <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{currentLineHeight}px</span>
+            <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{currentLineHeightPercent}%</span>
           </div>
           <input
             type="range"
-            min={lineHeightRange.min}
-            max={lineHeightRange.max}
-            step={lineHeightRange.step || 1}
-            value={currentLineHeight}
-            onChange={(event) => updateAppearance({ lineHeight: Number(event.target.value) })}
+            min={LINE_HEIGHT_PERCENT_LIMITS.min}
+            max={LINE_HEIGHT_PERCENT_LIMITS.max}
+            step={LINE_HEIGHT_PERCENT_LIMITS.step}
+            value={currentLineHeightPercent}
+            onChange={(event) =>
+              updateAppearance({ lineHeight: percentToLineHeight(Number(event.target.value), currentFontSize) })}
             className="w-full accent-[#fafafa]"
           />
         </div>
@@ -614,15 +639,18 @@ function TextAppearanceControl({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Entrelinhas</span>
-                    <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{section.lineHeight}px</span>
+                    <span className="text-[#aaa]" style={{ fontSize: "11px" }}>{section.lineHeightPercent}%</span>
                   </div>
                   <input
                     type="range"
-                    min={lineHeightRange.min}
-                    max={lineHeightRange.max}
-                    step={lineHeightRange.step || 1}
-                    value={section.lineHeight}
-                    onChange={(event) => updateResponsiveAppearance(section.key, { lineHeight: Number(event.target.value) })}
+                    min={LINE_HEIGHT_PERCENT_LIMITS.min}
+                    max={LINE_HEIGHT_PERCENT_LIMITS.max}
+                    step={LINE_HEIGHT_PERCENT_LIMITS.step}
+                    value={section.lineHeightPercent}
+                    onChange={(event) =>
+                      updateResponsiveAppearance(section.key, {
+                        lineHeight: percentToLineHeight(Number(event.target.value), section.fontSize),
+                      })}
                     className="w-full accent-[#fafafa]"
                   />
                 </div>
@@ -2439,7 +2467,6 @@ export function CMSEditor() {
             defaultColorValue="#EDEDED"
             sample={richTextToPlainText(item.title) || "Titulo do case"}
             fontSizeRange={{ min: 20, max: 72 }}
-            lineHeightRange={{ min: 28, max: 88 }}
             responsiveLimits={DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS}
           />
           <TextAppearanceControl
@@ -2450,7 +2477,6 @@ export function CMSEditor() {
             defaultColorValue="#A6A6A6"
             sample={richTextToPlainText(item.subtitle) || "Subtitulo do case"}
             fontSizeRange={{ min: 14, max: 40 }}
-            lineHeightRange={{ min: 20, max: 56 }}
           />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
@@ -2755,7 +2781,6 @@ export function CMSEditor() {
             defaultColorValue="#FAFAFA"
             sample={richTextToPlainText(item.title) || "Titulo do artigo"}
             fontSizeRange={{ min: 20, max: 72 }}
-            lineHeightRange={{ min: 26, max: 88 }}
             responsiveLimits={DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS}
           />
           <TextAppearanceControl
@@ -2766,7 +2791,6 @@ export function CMSEditor() {
             defaultColorValue="#ABABAB"
             sample={richTextToPlainText(item.subtitle) || "Subtitulo do artigo"}
             fontSizeRange={{ min: 14, max: 40 }}
-            lineHeightRange={{ min: 20, max: 56 }}
           />
         </div>
         <div className="grid grid-cols-1 gap-3 min-[1180px]:grid-cols-2">
