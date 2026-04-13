@@ -59,7 +59,7 @@ const translations = {
 
     // Footer
     designedIn: "Projetado no",
-    by: "Por",
+    by: "por",
     copyright: "Todos os direitos reservados",
 
     // Blog
@@ -173,7 +173,7 @@ const translations = {
 
     // Footer
     designedIn: "Designed in",
-    by: "By",
+    by: "by",
     copyright: "All rights reserved",
 
     // Blog

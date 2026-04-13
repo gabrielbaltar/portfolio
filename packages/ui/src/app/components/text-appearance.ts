@@ -123,8 +123,6 @@ export function resolveResponsiveTextAppearanceStyle(
     "--responsive-tablet-line-height": `${values.tablet.lineHeight}px`,
     "--responsive-mobile-font-size": `${values.mobile.fontSize}px`,
     "--responsive-mobile-line-height": `${values.mobile.lineHeight}px`,
-    fontSize: "var(--responsive-font-size)",
-    lineHeight: "var(--responsive-line-height)",
     fontWeight: appearance?.fontWeight ?? defaults.fontWeight,
     color: appearance?.color || defaults.color,
   };
