@@ -8,6 +8,7 @@ import { PasswordProvider } from "./components/password-context";
 import { NavMenu } from "./components/nav-menu";
 import { initEmailService } from "./components/email-service";
 import { LoadingScreen } from "./components/loading-screen";
+import { PostHogRouteTracker } from "./components/posthog-route-tracker";
 
 function PublicRootContent() {
   const { loading, error } = useCMS();
@@ -29,6 +30,7 @@ function PublicRootContent() {
 
   return (
     <>
+      <PostHogRouteTracker appName="portfolio-web" />
       <NavMenu />
       <Outlet />
       <Toaster theme="dark" position="bottom-right" />

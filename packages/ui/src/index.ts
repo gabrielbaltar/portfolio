@@ -11,6 +11,7 @@ export * from "./app/components/cms-layout";
 export * from "./app/components/cms-login";
 export * from "./app/components/cms-media";
 export * from "./app/components/cms-settings";
+export * from "./app/components/posthog-route-tracker";
 export * from "./app/components/page-view";
 export * from "./app/components/portfolio-home";
 export * from "./app/components/project-detail-page";

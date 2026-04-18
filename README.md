@@ -61,7 +61,7 @@ Arquivo: [`apps/web/.env.example`](./apps/web/.env.example)
 | `VITE_SUPABASE_URL` | Sim | URL publica do projeto Supabase |
 | `VITE_SUPABASE_ANON_KEY` | Sim | Chave anon usada no front-end |
 | `VITE_PUBLIC_POSTHOG_KEY` | Nao | Chave publica do PostHog |
-| `VITE_PUBLIC_POSTHOG_HOST` | Nao | Host da instancia PostHog |
+| `VITE_PUBLIC_POSTHOG_HOST` | Nao | Host da instancia PostHog; se ausente, o app usa `https://us.i.posthog.com` |
 | `VITE_EMAILJS_SERVICE_ID` | Nao | Service ID do EmailJS para formulario de contato |
 | `VITE_EMAILJS_TEMPLATE_ID` | Nao | Template ID do EmailJS para formulario de contato |
 | `VITE_EMAILJS_PUBLIC_KEY` | Nao | Public key do EmailJS |
@@ -76,7 +76,7 @@ Arquivo: [`apps/cms/.env.example`](./apps/cms/.env.example)
 | `VITE_SUPABASE_ANON_KEY` | Sim | Chave anon usada no front-end |
 | `VITE_PUBLIC_SITE_URL` | Sim | URL do portfolio para o link "Ver portfolio" |
 | `VITE_PUBLIC_POSTHOG_KEY` | Nao | Chave publica do PostHog |
-| `VITE_PUBLIC_POSTHOG_HOST` | Nao | Host da instancia PostHog |
+| `VITE_PUBLIC_POSTHOG_HOST` | Nao | Host da instancia PostHog; se ausente, o app usa `https://us.i.posthog.com` |
 
 ## Rodando localmente
 
@@ -244,7 +244,7 @@ No `portfolio-web`:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_PUBLIC_POSTHOG_KEY` se usar PostHog
-- `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog
+- `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog; se omitir, o app usa `https://us.i.posthog.com`
 - `VITE_EMAILJS_SERVICE_ID` se usar formulario
 - `VITE_EMAILJS_TEMPLATE_ID` se usar formulario
 - `VITE_EMAILJS_PUBLIC_KEY` se usar formulario
@@ -255,7 +255,7 @@ No `portfolio-cms`:
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_PUBLIC_SITE_URL=https://example.com`
 - `VITE_PUBLIC_POSTHOG_KEY` se usar PostHog
-- `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog
+- `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog; se omitir, o app usa `https://us.i.posthog.com`
 
 Nunca configure `SUPABASE_SERVICE_ROLE_KEY` no Render para esses dois static sites.
 

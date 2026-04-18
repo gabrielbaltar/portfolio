@@ -12,11 +12,13 @@ import {
   CMSSettings,
   RedirectIfAuthenticated,
   RequireCMSAuth,
+  PostHogRouteTracker,
 } from "@portfolio/ui";
 
 function CMSAuthLayout() {
   return (
     <CMSAuthProvider>
+      <PostHogRouteTracker appName="portfolio-cms" />
       <Outlet />
     </CMSAuthProvider>
   );
