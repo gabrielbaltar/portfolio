@@ -573,6 +573,35 @@ function insertPlainTextAtSelection(text: string) {
   insertHtmlAtSelection(html);
 }
 
+function createRichTextLineBreak(doc: Document) {
+  const lineBreak = doc.createElement("br");
+  lineBreak.setAttribute("data-rich-text-break", "true");
+  return lineBreak;
+}
+
+function insertLineBreakAtSelection(root: HTMLElement) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.commonAncestorContainer)) return;
+
+  range.deleteContents();
+
+  const lineBreak = createRichTextLineBreak(document);
+  range.insertNode(lineBreak);
+
+  if (!lineBreak.nextSibling) {
+    lineBreak.parentNode?.insertBefore(createRichTextLineBreak(document), lineBreak.nextSibling);
+  }
+
+  const nextRange = document.createRange();
+  nextRange.setStartAfter(lineBreak);
+  nextRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(nextRange);
+}
+
 function normalizeLinkInput(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -1090,7 +1119,9 @@ export function RichTextEditor({
           return;
         }
         event.preventDefault();
-        insertHtmlAtSelection(RICH_TEXT_BREAK_HTML);
+        if (editorRef.current) {
+          insertLineBreakAtSelection(editorRef.current);
+        }
         commitValue();
       }
     }
