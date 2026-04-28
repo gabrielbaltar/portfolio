@@ -41,6 +41,8 @@ const translations = {
     letsTalk: "Vamos conversar",
     view: "Ver",
     visit: "Visitar",
+    showMoreCertifications: "Ver mais",
+    showLessCertifications: "Ver menos",
 
     // Contact form
     timeForMe: "Meu horário:",
@@ -155,6 +157,8 @@ const translations = {
     letsTalk: "Let's talk",
     view: "View",
     visit: "Visit",
+    showMoreCertifications: "View more",
+    showLessCertifications: "View less",
 
     // Contact form
     timeForMe: "Time for me:",

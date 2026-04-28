@@ -24,6 +24,8 @@ import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy, getProjectCardCopy, isSectionVisible } from "./site-visibility";
 import { isRichTextEmpty, RichTextContent } from "./rich-text";
 
+const CERTIFICATIONS_PREVIEW_LIMIT = 6;
+
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <h2
@@ -69,6 +71,7 @@ export function PortfolioHome() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [submitting, setSubmitting] = useState(false);
+  const [showAllCertifications, setShowAllCertifications] = useState(false);
 
   const copyEmail = () => {
     copyToClipboard(profile.email);
@@ -120,6 +123,10 @@ export function PortfolioHome() {
   const visibleRecommendations = filterVisibleContent(recommendations, siteSettings, "recommendations");
   const displayedProjects = publishedProjects.slice(0, 4);
   const displayedBlogPosts = publishedBlogPosts.slice(0, 4);
+  const hasHiddenCertifications = visibleCertifications.length > CERTIFICATIONS_PREVIEW_LIMIT;
+  const displayedCertifications = showAllCertifications
+    ? visibleCertifications
+    : visibleCertifications.slice(0, CERTIFICATIONS_PREVIEW_LIMIT);
   const aboutParagraphs = getProfileAboutParagraphs(profile).filter((paragraph) => !isRichTextEmpty(paragraph));
   const hasAboutTitle = !isRichTextEmpty(profile.aboutTitle);
   const stackSectionTitle = (
@@ -485,7 +492,7 @@ export function PortfolioHome() {
         >
         <SectionTitle>{t("certificationsTitle")}</SectionTitle>
         <div className="mt-8 w-full space-y-4">
-          {visibleCertifications.map((cert) => (
+          {displayedCertifications.map((cert) => (
             <div
               key={cert.id}
               className="flex w-full items-start justify-between gap-3 py-2 sm:items-center"
@@ -508,6 +515,23 @@ export function PortfolioHome() {
               )}
             </div>
           ))}
+          {hasHiddenCertifications && (
+            <button
+              type="button"
+              onClick={() => setShowAllCertifications((current) => !current)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-[6px] px-0 py-2 text-left font-medium transition-opacity hover:opacity-75"
+              style={{ fontSize: "14px", color: "var(--text-primary)" }}
+              aria-expanded={showAllCertifications}
+              aria-controls="certifications"
+            >
+              {showAllCertifications ? t("showLessCertifications") : t("showMoreCertifications")}
+              <ChevronRight
+                size={15}
+                className={`transition-transform ${showAllCertifications ? "-rotate-90" : "rotate-90"}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
         </div>
         </ScrollReveal>
       )}
