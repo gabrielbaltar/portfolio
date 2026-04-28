@@ -166,6 +166,92 @@ function CodeBlockView({ block }: { block: Extract<ContentBlock, { type: "code" 
   );
 }
 
+function CardsBlockView({ block }: { block: Extract<ContentBlock, { type: "cards" }> }) {
+  const visibleCards = (block.cards || []).filter((card) =>
+    Boolean(
+      card.image?.trim() ||
+      card.title?.trim() ||
+      card.description?.trim() ||
+      card.ctaText?.trim() ||
+      card.ctaUrl?.trim(),
+    ),
+  );
+
+  if (visibleCards.length === 0) return null;
+
+  return (
+    <div className="my-8 grid grid-cols-1 gap-4 min-[720px]:grid-cols-2 min-[1060px]:grid-cols-3">
+      {visibleCards.map((card, cardIndex) => {
+        const backgroundColor = sanitizeHexColor(card.backgroundColor) || "var(--bg-secondary, #0F1012)";
+        const borderColor = sanitizeHexColor(card.borderColor) || "var(--border-primary, #2A2A2A)";
+        const hasCta = Boolean(card.ctaText?.trim() || card.ctaUrl?.trim());
+        const ctaLabel = card.ctaText?.trim() || "Saiba mais";
+        const ctaContent = <RichTextContent value={ctaLabel} />;
+
+        return (
+          <article
+            key={cardIndex}
+            className="flex min-w-0 flex-col overflow-hidden rounded-lg"
+            style={{ backgroundColor, border: `1px solid ${borderColor}` }}
+          >
+            {card.image?.trim() ? (
+              <ContentImage
+                src={card.image}
+                alt={richTextToPlainText(card.title || "")}
+                className="w-full object-cover"
+                position={card.imagePosition || "50% 50%"}
+                style={{ aspectRatio: "16 / 10" }}
+              />
+            ) : null}
+            {(card.title?.trim() || card.description?.trim() || hasCta) ? (
+              <div className="flex flex-1 flex-col gap-3 p-5">
+                {card.title?.trim() ? (
+                  <h3
+                    className="font-['Inter',sans-serif]"
+                    style={{ fontSize: "17px", lineHeight: "24px", color: "var(--text-primary, #fafafa)" }}
+                  >
+                    <RichTextContent value={card.title} />
+                  </h3>
+                ) : null}
+                {card.description?.trim() ? (
+                  <p
+                    className="font-['Inter',sans-serif]"
+                    style={{ fontSize: "14px", lineHeight: "22px", color: "var(--text-secondary, #a6a6a6)" }}
+                  >
+                    <RichTextContent value={card.description} />
+                  </p>
+                ) : null}
+                {hasCta ? (
+                  <div className="mt-auto pt-1">
+                    {card.ctaUrl?.trim() ? (
+                      <a
+                        href={card.ctaUrl}
+                        target={card.openInNewTab !== false ? "_blank" : "_self"}
+                        rel={card.openInNewTab !== false ? "noopener noreferrer" : undefined}
+                        className="inline-flex min-h-9 items-center rounded-md px-3 py-2 font-['Inter',sans-serif] transition-opacity hover:opacity-85"
+                        style={{ fontSize: "13px", lineHeight: "17px", backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #111)" }}
+                      >
+                        {ctaContent}
+                      </a>
+                    ) : (
+                      <span
+                        className="inline-flex min-h-9 items-center rounded-md px-3 py-2 font-['Inter',sans-serif]"
+                        style={{ fontSize: "13px", lineHeight: "17px", backgroundColor: "var(--btn-primary-bg, #fafafa)", color: "var(--btn-primary-text, #111)" }}
+                      >
+                        {ctaContent}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 function ImageBlockSlider({
   block,
   alt,
@@ -454,6 +540,8 @@ export function BlockRenderer({
                 )}
               </div>
             );
+          case "cards":
+            return <CardsBlockView key={i} block={block} />;
           case "embed":
             return <ContentEmbed key={i} block={block} />;
           default:

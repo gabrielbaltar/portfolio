@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useCMS, type ContentBlock } from "./cms-data";
-import type { ContentListItem } from "@portfolio/core";
+import type { ContentCardItem, ContentListItem } from "@portfolio/core";
 import {
   Plus, Trash2, GripVertical, Type, Heading1, Heading2, Heading3,
   List, ListOrdered, ImageIcon, Minus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
-  Upload, X, Quote, MousePointerClick, Code, Video, Palette,
+  Upload, X, Quote, MousePointerClick, Code, Video, Palette, LayoutGrid,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -58,6 +58,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "video", label: "Video / Mux", icon: <Video size={14} /> },
   { type: "quote", label: "Citacao", icon: <Quote size={14} /> },
   { type: "cta", label: "CTA / Botao", icon: <MousePointerClick size={14} /> },
+  { type: "cards", label: "Cards", icon: <LayoutGrid size={14} /> },
   { type: "embed", label: "Embed / Prototipo", icon: <Code size={14} /> },
   { type: "divider", label: "Divisor", icon: <Minus size={14} /> },
 ];
@@ -67,7 +68,7 @@ const LABEL_MAP: Record<string, string> = {
   "unordered-list": "Lista", "ordered-list": "Lista numerada",
   "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
   "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
-  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed / Prototipo",
+  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed / Prototipo",
 };
 
 const DND_ITEM_TYPE = "CONTENT_BLOCK";
@@ -145,6 +146,23 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
     case "video": return { type: "video", url: "", caption: "", poster: "", autoplay: false, loop: false, muted: false, previewStart: 0, previewDuration: 4, fit: "contain", zoom: 1 };
     case "quote": return { type: "quote", text: "", author: "" };
     case "cta": return { type: "cta", text: "", buttonText: "", buttonUrl: "", openInNewTab: true };
+    case "cards":
+      return {
+        type: "cards",
+        cards: [
+          {
+            title: "",
+            description: "",
+            image: "",
+            imagePosition: "50% 50%",
+            ctaText: "",
+            ctaUrl: "",
+            openInNewTab: true,
+            backgroundColor: "#0F1012",
+            borderColor: "#2A2A2A",
+          },
+        ],
+      };
     case "embed": return { type: "embed", url: "", caption: "" };
     case "divider": return { type: "divider", spacing: 72 };
   }
@@ -393,6 +411,37 @@ function MiniTextarea({
   );
 }
 
+function ColorInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const resolvedColor = sanitizeHexColor(value) || placeholder;
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={resolvedColor}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 w-10 shrink-0 cursor-pointer rounded border-none p-0"
+        style={{ backgroundColor: "transparent" }}
+      />
+      <SelectionProtectedInput
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-[36px] w-full rounded border px-2.5 text-[#fafafa] focus:outline-none"
+        style={{ backgroundColor: "#1a1a1a", borderColor: "#2a2a2a", fontSize: "12px" }}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
 // Draggable block wrapper
 function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveBlock }: {
   block: ContentBlock; index: number; total: number;
@@ -444,11 +493,13 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const iconFileInputRef = useRef<HTMLInputElement>(null);
+  const cardFileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [activeIconUploadIndex, setActiveIconUploadIndex] = useState<number | null>(null);
   const [iconUploadingIndex, setIconUploadingIndex] = useState<number | null>(null);
   const [dragOverIconIndex, setDragOverIconIndex] = useState<number | null>(null);
+  const [activeCardUploadIndex, setActiveCardUploadIndex] = useState<number | null>(null);
   const blockLineHeight = isAdjustableLineHeightBlock(block) ? getBlockLineHeight(block) : null;
   const imageBlock = block.type === "image" ? block : null;
   const [imageLightbox, setImageLightbox] = useState<LightboxOpenPayload | null>(null);
@@ -672,6 +723,34 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
       setIconUploadingIndex(null);
       setDragOverIconIndex(null);
       setActiveIconUploadIndex(null);
+    }
+  };
+
+  const updateCardItem = (cardIndex: number, updates: Partial<ContentCardItem>) => {
+    if (block.type !== "cards") return;
+    const nextCards = [...block.cards];
+    nextCards[cardIndex] = { ...nextCards[cardIndex], ...updates };
+    onChange({ ...block, cards: nextCards } as ContentBlock);
+  };
+
+  const handleCardImageUpload = async (file: File, cardIndex: number) => {
+    if (!isSupportedVisualUpload(file)) {
+      toast.error("Use um arquivo de imagem valido.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploadedUrl = await uploadImageAsset(file);
+      if (uploadedUrl) {
+        updateCardItem(cardIndex, { image: uploadedUrl, imagePosition: "50% 50%" });
+        toast.success("Imagem do card enviada.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel carregar a imagem do card.");
+    } finally {
+      setUploading(false);
+      setActiveCardUploadIndex(null);
     }
   };
 
@@ -1932,6 +2011,244 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
             </label>
           </div>
         )}
+
+        {block.type === "cards" && (() => {
+          const cardsBlock = block as Extract<ContentBlock, { type: "cards" }>;
+          const cards = cardsBlock.cards || [];
+
+          const moveCard = (cardIndex: number, direction: -1 | 1) => {
+            const nextIndex = cardIndex + direction;
+            if (nextIndex < 0 || nextIndex >= cards.length) return;
+            const nextCards = [...cards];
+            const [movedCard] = nextCards.splice(cardIndex, 1);
+            nextCards.splice(nextIndex, 0, movedCard);
+            onChange({ ...cardsBlock, cards: nextCards } as ContentBlock);
+          };
+
+          return (
+            <div className="space-y-3">
+              <input
+                ref={cardFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file && activeCardUploadIndex !== null) {
+                    void handleCardImageUpload(file, activeCardUploadIndex);
+                  }
+                  event.currentTarget.value = "";
+                }}
+              />
+
+              <div className="grid grid-cols-1 gap-3 min-[980px]:grid-cols-2">
+                {cards.map((card, cardIndex) => (
+                  <div
+                    key={cardIndex}
+                    className="space-y-3 rounded-lg border p-3"
+                    style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        Card {cardIndex + 1}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveCard(cardIndex, -1)}
+                          disabled={cardIndex === 0}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white disabled:opacity-25"
+                          title="Mover para cima"
+                        >
+                          <ChevronUp size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveCard(cardIndex, 1)}
+                          disabled={cardIndex === cards.length - 1}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white disabled:opacity-25"
+                          title="Mover para baixo"
+                        >
+                          <ChevronDown size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onChange({ ...cardsBlock, cards: cards.filter((_, index) => index !== cardIndex) } as ContentBlock)}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-red-400"
+                          title="Remover card"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <FieldLabel>Imagem</FieldLabel>
+                      {card.image ? (
+                        <div className="overflow-hidden rounded-md border" style={{ borderColor: "#2a2a2a", backgroundColor: "#0f0f0f" }}>
+                          <ContentImage
+                            src={card.image}
+                            alt=""
+                            className="w-full object-cover"
+                            position={card.imagePosition || "50% 50%"}
+                            style={{ aspectRatio: "16 / 10" }}
+                          />
+                        </div>
+                      ) : null}
+                      <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-[1fr_auto_auto]">
+                        <MiniInput
+                          value={card.image || ""}
+                          onChange={(image) => updateCardItem(cardIndex, { image })}
+                          placeholder="URL da imagem (opcional)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCardUploadIndex(cardIndex);
+                            cardFileInputRef.current?.click();
+                          }}
+                          disabled={uploading}
+                          className="inline-flex h-[36px] items-center justify-center gap-1.5 rounded border border-[#2a2a2a] px-3 text-[#aaa] transition-colors hover:border-[#555] hover:text-white disabled:opacity-50"
+                          style={{ fontSize: "12px" }}
+                        >
+                          <Upload size={12} /> Enviar
+                        </button>
+                        {card.image ? (
+                          <button
+                            type="button"
+                            onClick={() => updateCardItem(cardIndex, { image: "", imagePosition: "50% 50%" })}
+                            className="inline-flex h-[36px] items-center justify-center rounded border border-[#2a2a2a] px-3 text-[#777] transition-colors hover:text-red-400"
+                            style={{ fontSize: "12px" }}
+                          >
+                            Remover
+                          </button>
+                        ) : null}
+                      </div>
+                      {card.image && supportsPositionEditor(card.image) ? (
+                        <ImagePositionEditorCompact
+                          src={card.image}
+                          position={card.imagePosition || "50% 50%"}
+                          onChange={(imagePosition) => updateCardItem(cardIndex, { imagePosition })}
+                          onRemove={() => updateCardItem(cardIndex, { image: "", imagePosition: "50% 50%" })}
+                          height={150}
+                        />
+                      ) : null}
+                    </div>
+
+                    <label className="block space-y-1">
+                      <FieldLabel>Titulo</FieldLabel>
+                      <RichTextEditor
+                        value={card.title || ""}
+                        onChange={(title) => updateCardItem(cardIndex, { title })}
+                        multiline={false}
+                        compact
+                        placeholder="Titulo do card (opcional)"
+                        editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
+                        editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+                        placeholderClassName="px-2.5 py-1.5"
+                      />
+                    </label>
+
+                    <label className="block space-y-1">
+                      <FieldLabel>Descricao</FieldLabel>
+                      <RichTextEditor
+                        value={card.description || ""}
+                        onChange={(description) => updateCardItem(cardIndex, { description })}
+                        multiline
+                        compact
+                        placeholder="Descricao do card (opcional)"
+                        editorClassName="rounded px-2.5 py-2 text-[#fafafa]"
+                        editorStyle={{ fontSize: "12px", lineHeight: "18px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "72px" }}
+                        placeholderClassName="px-2.5 py-2"
+                      />
+                    </label>
+
+                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-2">
+                      <label className="block space-y-1">
+                        <FieldLabel>Texto do CTA</FieldLabel>
+                        <RichTextEditor
+                          value={card.ctaText || ""}
+                          onChange={(ctaText) => updateCardItem(cardIndex, { ctaText })}
+                          multiline={false}
+                          compact
+                          allowLinks={false}
+                          placeholder="CTA (opcional)"
+                          editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
+                          editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
+                          placeholderClassName="px-2.5 py-1.5"
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <FieldLabel>URL do CTA</FieldLabel>
+                        <MiniInput
+                          value={card.ctaUrl || ""}
+                          onChange={(ctaUrl) => updateCardItem(cardIndex, { ctaUrl })}
+                          placeholder="https://..."
+                        />
+                      </label>
+                    </div>
+
+                    <label className="flex items-center gap-1.5 cursor-pointer px-1">
+                      <input
+                        type="checkbox"
+                        checked={card.openInNewTab !== false}
+                        onChange={(event) => updateCardItem(cardIndex, { openInNewTab: event.target.checked })}
+                        className="h-3.5 w-3.5 accent-[#00ff3c]"
+                      />
+                      <span className="text-[#888]" style={{ fontSize: "11px" }}>Abrir CTA em nova aba</span>
+                    </label>
+
+                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-2">
+                      <label className="block space-y-1">
+                        <FieldLabel>Background</FieldLabel>
+                        <ColorInput
+                          value={card.backgroundColor || ""}
+                          onChange={(backgroundColor) => updateCardItem(cardIndex, { backgroundColor })}
+                          placeholder="#0F1012"
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <FieldLabel>Borda</FieldLabel>
+                        <ColorInput
+                          value={card.borderColor || ""}
+                          onChange={(borderColor) => updateCardItem(cardIndex, { borderColor })}
+                          placeholder="#2A2A2A"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...cardsBlock,
+                    cards: [
+                      ...cards,
+                      {
+                        title: "",
+                        description: "",
+                        image: "",
+                        imagePosition: "50% 50%",
+                        ctaText: "",
+                        ctaUrl: "",
+                        openInNewTab: true,
+                        backgroundColor: "#0F1012",
+                        borderColor: "#2A2A2A",
+                      },
+                    ],
+                  } as ContentBlock)
+                }
+                className="flex items-center gap-1 text-[#666] transition-colors hover:text-[#aaa]"
+                style={{ fontSize: "12px" }}
+              >
+                <Plus size={12} /> Adicionar card
+              </button>
+            </div>
+          );
+        })()}
 
         {block.type === "embed" && (
           (() => {

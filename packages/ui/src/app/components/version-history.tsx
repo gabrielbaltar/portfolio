@@ -3,7 +3,7 @@ import {
   History, X, Clock, ChevronRight, RotateCcw, Eye,
   ArrowLeft, Type, Heading1, Heading2, Heading3,
   List, ListOrdered, ImageIcon, Quote, MousePointerClick, Code, Palette,
-  FileText,
+  FileText, LayoutGrid,
 } from "lucide-react";
 import type { ContentEntityType } from "@portfolio/core";
 import { type ContentBlock, type ContentStatus } from "./cms-data";
@@ -71,7 +71,7 @@ function getBlockSummary(block: ContentBlock): string {
     "unordered-list": "Lista", "ordered-list": "Lista numerada",
     "style-guide": "Style guide", "color-palette": "Paleta de cores", typography: "Tipografia",
     "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
-    code: "Codigo", image: "Imagem", divider: "Divisor", quote: "Citacao", cta: "CTA", embed: "Embed",
+    code: "Codigo", image: "Imagem", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed",
   };
   const label = labels[block.type] || block.type;
   if (isShowcaseBlock(block)) {
@@ -83,6 +83,9 @@ function getBlockSummary(block: ContentBlock): string {
   }
   if ("items" in block) {
     return `${label}: ${countListItems((block as any).items)} itens`;
+  }
+  if (block.type === "cards") {
+    return `${label}: ${block.cards.length} card${block.cards.length === 1 ? "" : "s"}`;
   }
   if ("code" in block && block.type === "code") {
     const preview = block.code.substring(0, 60);
@@ -152,6 +155,7 @@ function BlockIcon({ type }: { type: string }) {
     case "image": return <ImageIcon size={size} />;
     case "quote": return <Quote size={size} />;
     case "cta": return <MousePointerClick size={size} />;
+    case "cards": return <LayoutGrid size={size} />;
     case "embed": return <Code size={size} />;
     default: return <FileText size={size} />;
   }

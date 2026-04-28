@@ -79,6 +79,18 @@ export interface SitemapSection {
   children: string[];
 }
 
+export interface ContentCardItem {
+  image?: string;
+  imagePosition?: string;
+  title?: string;
+  description?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  openInNewTab?: boolean;
+  backgroundColor?: string;
+  borderColor?: string;
+}
+
 export interface ContentListItem {
   text: string;
   children?: ContentListItem[];
@@ -103,6 +115,7 @@ export type ContentBlock =
   | { type: "divider"; spacing?: number }
   | { type: "quote"; text: string; author: string; lineHeight?: number; accentColor?: string }
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
+  | { type: "cards"; cards: ContentCardItem[] }
   | { type: "embed"; url: string; caption: string; height?: number };
 
 export interface TimestampedEntity {

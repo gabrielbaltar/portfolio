@@ -270,6 +270,21 @@ function collectBlockTexts(
       return;
     }
 
+    if (block.type === "cards") {
+      block.cards.forEach((card, cardIndex) => {
+        if (typeof card.title === "string") {
+          addRichText(`${blockPath}.cards.${cardIndex}.title`, card.title);
+        }
+        if (typeof card.description === "string") {
+          addRichText(`${blockPath}.cards.${cardIndex}.description`, card.description);
+        }
+        if (typeof card.ctaText === "string") {
+          addRichText(`${blockPath}.cards.${cardIndex}.ctaText`, card.ctaText);
+        }
+      });
+      return;
+    }
+
     if (block.type === "code") {
       if (typeof block.caption === "string") {
         addRichText(`${blockPath}.caption`, block.caption);

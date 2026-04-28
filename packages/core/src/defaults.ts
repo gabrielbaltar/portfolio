@@ -225,6 +225,13 @@ function normalizeHomeGalleryItems(items: unknown): HomeGalleryItem[] {
 
 function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
   return (blocks ?? []).map((block) => {
+    if (block.type === "cards") {
+      return {
+        ...block,
+        cards: Array.isArray(block.cards) ? block.cards : [],
+      };
+    }
+
     if (block.type !== "unordered-list" && block.type !== "ordered-list") {
       return block;
     }

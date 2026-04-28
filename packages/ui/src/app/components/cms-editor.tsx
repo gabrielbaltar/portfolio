@@ -1568,6 +1568,48 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                     </div>
                   </div>
                 );
+              case "cards":
+                return (
+                  <div key={i} className="my-6 grid grid-cols-1 gap-3 min-[700px]:grid-cols-2 min-[1024px]:grid-cols-3">
+                    {(block.cards || []).map((card, cardIndex) => (
+                      <article
+                        key={cardIndex}
+                        className="flex min-w-0 flex-col overflow-hidden rounded-lg"
+                        style={{
+                          backgroundColor: sanitizeAppearanceColor(card.backgroundColor || "") || "#141414",
+                          border: `1px solid ${sanitizeAppearanceColor(card.borderColor || "") || "#1e1e1e"}`,
+                        }}
+                      >
+                        {card.image ? (
+                          <ContentImage
+                            src={card.image}
+                            alt={richTextToPlainText(card.title || "")}
+                            className="w-full object-cover"
+                            position={card.imagePosition || "50% 50%"}
+                            style={{ aspectRatio: "16 / 10" }}
+                          />
+                        ) : null}
+                        <div className="flex flex-1 flex-col gap-2 p-4">
+                          {card.title ? (
+                            <p style={{ fontSize: "15px", lineHeight: "21px", color: "#fafafa" }}>
+                              <RichTextContent value={card.title} />
+                            </p>
+                          ) : null}
+                          {card.description ? (
+                            <p style={{ fontSize: "13px", lineHeight: "19px", color: "#999" }}>
+                              <RichTextContent value={card.description} />
+                            </p>
+                          ) : null}
+                          {(card.ctaText || card.ctaUrl) ? (
+                            <span className="mt-auto inline-flex self-start rounded-md bg-[#fafafa] px-3 py-2 text-[#111]" style={{ fontSize: "12px" }}>
+                              <RichTextContent value={card.ctaText || "Saiba mais"} />
+                            </span>
+                          ) : null}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                );
               case "embed":
                 return <ContentEmbed key={i} block={block} preview />;
               default:
