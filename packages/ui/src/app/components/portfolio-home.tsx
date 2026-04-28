@@ -519,7 +519,7 @@ export function PortfolioHome() {
             <button
               type="button"
               onClick={() => setShowAllCertifications((current) => !current)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-[6px] px-0 py-2 text-left font-medium transition-opacity hover:opacity-75"
+              className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-[6px] px-0 py-2 text-left font-medium transition-opacity hover:opacity-75"
               style={{ fontSize: "14px", color: "var(--text-primary)" }}
               aria-expanded={showAllCertifications}
               aria-controls="certifications"
