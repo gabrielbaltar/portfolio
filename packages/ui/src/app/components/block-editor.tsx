@@ -2106,6 +2106,8 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     key={cardIndex}
                     className="space-y-3 rounded-lg border p-3"
                     style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -2194,57 +2196,42 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       ) : null}
                     </div>
 
-                    <label className="block space-y-1">
+                    <div className="space-y-1">
                       <FieldLabel>Titulo</FieldLabel>
-                      <RichTextEditor
+                      <MiniInput
                         value={card.title || ""}
                         onChange={(title) => updateCardItem(cardIndex, { title })}
-                        multiline={false}
-                        compact
                         placeholder="Titulo do card (opcional)"
-                        editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
-                        editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
-                        placeholderClassName="px-2.5 py-1.5"
                       />
-                    </label>
+                    </div>
 
-                    <label className="block space-y-1">
+                    <div className="space-y-1">
                       <FieldLabel>Descricao</FieldLabel>
-                      <RichTextEditor
+                      <MiniTextarea
                         value={card.description || ""}
                         onChange={(description) => updateCardItem(cardIndex, { description })}
-                        multiline
-                        compact
                         placeholder="Descricao do card (opcional)"
-                        editorClassName="rounded px-2.5 py-2 text-[#fafafa]"
-                        editorStyle={{ fontSize: "12px", lineHeight: "18px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "72px" }}
-                        placeholderClassName="px-2.5 py-2"
+                        rows={4}
                       />
-                    </label>
+                    </div>
 
                     <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-2">
-                      <label className="block space-y-1">
+                      <div className="space-y-1">
                         <FieldLabel>Texto do CTA</FieldLabel>
-                        <RichTextEditor
+                        <MiniInput
                           value={card.ctaText || ""}
                           onChange={(ctaText) => updateCardItem(cardIndex, { ctaText })}
-                          multiline={false}
-                          compact
-                          allowLinks={false}
                           placeholder="CTA (opcional)"
-                          editorClassName="rounded px-2.5 py-1.5 text-[#fafafa]"
-                          editorStyle={{ fontSize: "12px", backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a", minHeight: "34px" }}
-                          placeholderClassName="px-2.5 py-1.5"
                         />
-                      </label>
-                      <label className="block space-y-1">
+                      </div>
+                      <div className="space-y-1">
                         <FieldLabel>URL do CTA</FieldLabel>
                         <MiniInput
                           value={card.ctaUrl || ""}
                           onChange={(ctaUrl) => updateCardItem(cardIndex, { ctaUrl })}
                           placeholder="https://..."
                         />
-                      </label>
+                      </div>
                     </div>
 
                     <label className="flex items-center gap-1.5 cursor-pointer px-1">
@@ -2258,22 +2245,22 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     </label>
 
                     <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-2">
-                      <label className="block space-y-1">
+                      <div className="space-y-1">
                         <FieldLabel>Background</FieldLabel>
                         <ColorInput
                           value={card.backgroundColor || ""}
                           onChange={(backgroundColor) => updateCardItem(cardIndex, { backgroundColor })}
                           placeholder="#0F1012"
                         />
-                      </label>
-                      <label className="block space-y-1">
+                      </div>
+                      <div className="space-y-1">
                         <FieldLabel>Borda</FieldLabel>
                         <ColorInput
                           value={card.borderColor || ""}
                           onChange={(borderColor) => updateCardItem(cardIndex, { borderColor })}
                           placeholder="#2A2A2A"
                         />
-                      </label>
+                      </div>
                     </div>
                   </div>
                 ))}
