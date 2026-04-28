@@ -225,6 +225,23 @@ function normalizeHomeGalleryItems(items: unknown): HomeGalleryItem[] {
 
 function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
   return (blocks ?? []).map((block) => {
+    if (
+      block.type === "heading1" ||
+      block.type === "heading2" ||
+      block.type === "heading3" ||
+      block.type === "style-guide" ||
+      block.type === "color-palette" ||
+      block.type === "typography" ||
+      block.type === "icon-grid" ||
+      block.type === "user-flow" ||
+      block.type === "sitemap"
+    ) {
+      return {
+        ...block,
+        showInSummary: typeof block.showInSummary === "boolean" ? block.showInSummary : true,
+      };
+    }
+
     if (block.type === "cards") {
       return {
         ...block,

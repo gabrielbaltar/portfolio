@@ -34,6 +34,7 @@ function buildOutlineLabel(level: 1 | 2 | 3, counters: { level1: number; level2:
 
 function getSummaryEntry(block: ContentBlock): { title: string; level: 1 | 2 | 3 } | null {
   if (block.type === "heading1" || block.type === "heading2" || block.type === "heading3") {
+    if (block.showInSummary !== true) return null;
     const title = richTextToPlainText(block.text || "").trim();
     if (!title) return null;
 
@@ -44,6 +45,7 @@ function getSummaryEntry(block: ContentBlock): { title: string; level: 1 | 2 | 3
   }
 
   if (isShowcaseBlock(block)) {
+    if (block.showInSummary !== true) return null;
     const title = richTextToPlainText(block.title || "").trim();
     if (!title) return null;
 

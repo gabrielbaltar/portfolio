@@ -98,17 +98,17 @@ export interface ContentListItem {
 
 export type ContentBlock =
   | { type: "paragraph"; text: string; lineHeight?: number }
-  | { type: "heading1"; text: string; lineHeight?: number }
-  | { type: "heading2"; text: string; lineHeight?: number }
-  | { type: "heading3"; text: string; lineHeight?: number }
+  | { type: "heading1"; text: string; lineHeight?: number; showInSummary?: boolean }
+  | { type: "heading2"; text: string; lineHeight?: number; showInSummary?: boolean }
+  | { type: "heading3"; text: string; lineHeight?: number; showInSummary?: boolean }
   | { type: "unordered-list"; items: ContentListItem[]; lineHeight?: number }
   | { type: "ordered-list"; items: ContentListItem[]; lineHeight?: number }
-  | { type: "style-guide"; title: string; summary: string; principles: StyleGuidePrinciple[] }
-  | { type: "color-palette"; title: string; colors: ColorPaletteItem[] }
-  | { type: "typography"; title: string; fonts: TypographyItem[] }
-  | { type: "icon-grid"; title: string; icons: IconGridItem[] }
-  | { type: "user-flow"; title: string; steps: UserFlowStep[] }
-  | { type: "sitemap"; title: string; sections: SitemapSection[] }
+  | { type: "style-guide"; title: string; summary: string; principles: StyleGuidePrinciple[]; showInSummary?: boolean }
+  | { type: "color-palette"; title: string; colors: ColorPaletteItem[]; showInSummary?: boolean }
+  | { type: "typography"; title: string; fonts: TypographyItem[]; showInSummary?: boolean }
+  | { type: "icon-grid"; title: string; icons: IconGridItem[]; showInSummary?: boolean }
+  | { type: "user-flow"; title: string; steps: UserFlowStep[]; showInSummary?: boolean }
+  | { type: "sitemap"; title: string; sections: SitemapSection[]; showInSummary?: boolean }
   | { type: "code"; code: string; language: string; caption?: string }
   | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number; galleryImages?: string[]; galleryPositions?: string[] }
   | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; borderRadius?: number; fit?: "contain" | "cover"; zoom?: number }

@@ -81,9 +81,9 @@ interface DragItem {
 function createBlock(type: ContentBlock["type"]): ContentBlock {
   switch (type) {
     case "paragraph": return { type: "paragraph", text: "" };
-    case "heading1": return { type: "heading1", text: "" };
-    case "heading2": return { type: "heading2", text: "" };
-    case "heading3": return { type: "heading3", text: "" };
+    case "heading1": return { type: "heading1", text: "", showInSummary: false };
+    case "heading2": return { type: "heading2", text: "", showInSummary: false };
+    case "heading3": return { type: "heading3", text: "", showInSummary: false };
     case "unordered-list": return { type: "unordered-list", items: [createEmptyListItem()] };
     case "ordered-list": return { type: "ordered-list", items: [createEmptyListItem()] };
     case "style-guide":
@@ -91,6 +91,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
         type: "style-guide",
         title: "Style guide",
         summary: "",
+        showInSummary: false,
         principles: [
           { title: "Clareza", description: "Explique a direcao visual e a regra principal desta interface." },
           { title: "Consistencia", description: "Documente como a linguagem visual se repete ao longo do fluxo." },
@@ -100,6 +101,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       return {
         type: "color-palette",
         title: "Paleta de cores",
+        showInSummary: false,
         colors: [
           { name: "Primary", token: "color.primary", hex: "#111827", role: "Primaria", usage: "Titulos, botoes e destaques" },
           { name: "Accent", token: "color.accent", hex: "#38BDF8", role: "Acento", usage: "Estados ativos, links e sinais visuais" },
@@ -109,6 +111,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       return {
         type: "typography",
         title: "Tipografia",
+        showInSummary: false,
         fonts: [
           { label: "Heading", token: "font.heading.lg", family: "Inter", weight: "600", size: "40px", lineHeight: "1.1", sample: "Build faster with better product thinking" },
           { label: "Body", token: "font.body.md", family: "Inter", weight: "400", size: "16px", lineHeight: "1.6", sample: "Readable, calm and structured content for product storytelling." },
@@ -118,6 +121,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       return {
         type: "icon-grid",
         title: "Iconografia",
+        showInSummary: false,
         icons: [
           { name: "Navigation", token: "icon.navigation.default", url: "", notes: "Use SVG para manter nitidez em qualquer tamanho." },
           { name: "Feedback", token: "icon.feedback.success", url: "", notes: "Agrupe icones por contexto de uso." },
@@ -127,6 +131,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       return {
         type: "user-flow",
         title: "Fluxo do usuario",
+        showInSummary: false,
         steps: [
           { title: "Entrada", description: "Como o usuario chega na experiencia.", outcome: "Primeira impressao" },
           { title: "Acao principal", description: "A etapa central do fluxo e a decisao mais importante.", outcome: "Conversao" },
@@ -136,6 +141,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
       return {
         type: "sitemap",
         title: "Sitemap",
+        showInSummary: false,
         sections: [
           { title: "Landing", description: "Entrada principal do produto ou case.", children: ["Hero", "Proposta de valor", "CTA"] },
           { title: "Produto", description: "Navegacao das paginas internas.", children: ["Dashboard", "Detalhe", "Configuracoes"] },
@@ -362,6 +368,50 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
     <span className="block text-[#666]" style={{ fontSize: "11px", lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
       {children}
     </span>
+  );
+}
+
+function canShowInSummary(block: ContentBlock) {
+  return (
+    block.type === "heading1" ||
+    block.type === "heading2" ||
+    block.type === "heading3" ||
+    block.type === "style-guide" ||
+    block.type === "color-palette" ||
+    block.type === "typography" ||
+    block.type === "icon-grid" ||
+    block.type === "user-flow" ||
+    block.type === "sitemap"
+  );
+}
+
+function SummaryVisibilityControl({
+  block,
+  onChange,
+}: {
+  block: Extract<ContentBlock, { showInSummary?: boolean }>;
+  onChange: (block: ContentBlock) => void;
+}) {
+  return (
+    <label
+      className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+      style={{ borderColor: "#252525", backgroundColor: "#101010" }}
+    >
+      <span className="min-w-0">
+        <span className="block text-[#aaa]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+          Mostrar no sumario
+        </span>
+        <span className="block text-[#555]" style={{ fontSize: "11px", lineHeight: "16px" }}>
+          Quando marcado, este titulo aparece na navegacao lateral do portfolio.
+        </span>
+      </span>
+      <input
+        type="checkbox"
+        checked={block.showInSummary === true}
+        onChange={(event) => onChange({ ...block, showInSummary: event.target.checked } as ContentBlock)}
+        className="h-4 w-4 shrink-0 accent-[#00ff3c]"
+      />
+    </label>
   );
 }
 
@@ -829,6 +879,15 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
       {/* Block content */}
       <div className="p-3">
+        {canShowInSummary(block) && (
+          <div className="mb-3">
+            <SummaryVisibilityControl
+              block={block as Extract<ContentBlock, { showInSummary?: boolean }>}
+              onChange={onChange}
+            />
+          </div>
+        )}
+
         {block.type === "divider" && (
           <div className="space-y-3">
             <div className="px-1" style={{ paddingTop: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px`, paddingBottom: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px` }}>
