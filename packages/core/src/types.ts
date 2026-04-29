@@ -8,6 +8,7 @@ export type PortfolioSectionId =
   | "education"
   | "certifications"
   | "stack"
+  | "custom"
   | "gallery"
   | "awards"
   | "recommendations"
@@ -145,6 +146,22 @@ export interface HomeGalleryItem {
   imagePosition?: string;
 }
 
+export type HomeSectionTitleLevel = "h2" | "h3" | "h4";
+export type HomeSectionSubtitleLevel = "p" | "h3" | "h4";
+
+export interface HomeCustomSection {
+  titlePt: string;
+  titleEn: string;
+  titleLevel: HomeSectionTitleLevel;
+  subtitlePt: string;
+  subtitleEn: string;
+  subtitleLevel: HomeSectionSubtitleLevel;
+  quotePt: string;
+  quoteEn: string;
+  quoteAuthorPt: string;
+  quoteAuthorEn: string;
+}
+
 export interface SortableEntity {
   sortOrder: number;
 }
@@ -160,6 +177,7 @@ export interface SiteSettings extends TimestampedEntity {
   homeGalleryIntroPt: string;
   homeGalleryIntroEn: string;
   homeGalleryItems: HomeGalleryItem[];
+  homeCustomSection: HomeCustomSection;
   templateUrl: string;
   resumeUrl: string;
   defaultLanguage: Language;

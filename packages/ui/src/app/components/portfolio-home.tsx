@@ -27,6 +27,24 @@ import { getVisiblePublicTags } from "./public-tag-utils";
 
 const CERTIFICATIONS_PREVIEW_LIMIT = 6;
 
+function getLocalizedHomeText(lang: "pt" | "en", pt?: string, en?: string) {
+  const preferred = lang === "en" ? en : pt;
+  const fallback = lang === "en" ? pt : en;
+  return preferred?.trim() || fallback?.trim() || "";
+}
+
+function getCustomTitleStyle(level: "h2" | "h3" | "h4") {
+  if (level === "h4") return { fontSize: "18px", lineHeight: "26px" };
+  if (level === "h3") return { fontSize: "22px", lineHeight: "30px" };
+  return { fontSize: "28px", lineHeight: "36px" };
+}
+
+function getCustomSubtitleStyle(level: "p" | "h3" | "h4") {
+  if (level === "h3") return { fontSize: "22px", lineHeight: "30px" };
+  if (level === "h4") return { fontSize: "18px", lineHeight: "26px" };
+  return { fontSize: "16px", lineHeight: "24px" };
+}
+
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <h2
@@ -146,6 +164,16 @@ export function PortfolioHome() {
       : siteSettings.homeGalleryIntroPt?.trim()
   ) || "";
   const homeGalleryItems = (siteSettings.homeGalleryItems || []).filter((item) => item.image?.trim());
+  const homeCustomSection = siteSettings.homeCustomSection;
+  const homeCustomTitle = getLocalizedHomeText(lang, homeCustomSection?.titlePt, homeCustomSection?.titleEn);
+  const homeCustomSubtitle = getLocalizedHomeText(lang, homeCustomSection?.subtitlePt, homeCustomSection?.subtitleEn);
+  const homeCustomQuote = getLocalizedHomeText(lang, homeCustomSection?.quotePt, homeCustomSection?.quoteEn);
+  const homeCustomQuoteAuthor = getLocalizedHomeText(lang, homeCustomSection?.quoteAuthorPt, homeCustomSection?.quoteAuthorEn);
+  const hasHomeCustomSection = [homeCustomTitle, homeCustomSubtitle, homeCustomQuote, homeCustomQuoteAuthor].some((value) => !isRichTextEmpty(value));
+  const HomeCustomTitleTag = (homeCustomSection?.titleLevel || "h2") as "h2" | "h3" | "h4";
+  const HomeCustomSubtitleTag = (homeCustomSection?.subtitleLevel || "p") as "p" | "h3" | "h4";
+  const homeCustomTitleStyle = getCustomTitleStyle(HomeCustomTitleTag);
+  const homeCustomSubtitleStyle = getCustomSubtitleStyle(HomeCustomSubtitleTag);
   const orderedHomeSections = normalizePortfolioSectionOrder(siteSettings.homeSectionOrder);
   const homeSectionOrderMap = new Map<PortfolioSectionId, number>(
     orderedHomeSections.map((sectionId, index) => [sectionId, index]),
@@ -586,6 +614,57 @@ export function PortfolioHome() {
             </StaggerItem>
           ))}
         </StaggerChildren>
+        </ScrollReveal>
+      )}
+
+      {isSectionVisible(siteSettings, "custom") && hasHomeCustomSection && (
+        <ScrollReveal
+          as="section"
+          id="custom"
+          className="max-w-[700px] mx-auto px-5 py-12"
+          style={{ order: getSectionOrderValue("custom") }}
+        >
+          <div className="space-y-5">
+            {!isRichTextEmpty(homeCustomTitle) ? (
+              <HomeCustomTitleTag
+                className="font-['Inter',sans-serif] break-words"
+                style={{ ...homeCustomTitleStyle, color: "var(--text-primary)" }}
+              >
+                <RichTextContent value={homeCustomTitle} />
+              </HomeCustomTitleTag>
+            ) : null}
+
+            {!isRichTextEmpty(homeCustomSubtitle) ? (
+              <HomeCustomSubtitleTag
+                className="font-['Inter',sans-serif] break-words"
+                style={{ ...homeCustomSubtitleStyle, color: "var(--text-secondary)" }}
+              >
+                <RichTextContent value={homeCustomSubtitle} />
+              </HomeCustomSubtitleTag>
+            ) : null}
+
+            {!isRichTextEmpty(homeCustomQuote) ? (
+              <blockquote
+                className="pl-5"
+                style={{ borderLeft: "1px solid var(--border-primary)" }}
+              >
+                <div
+                  className="break-words"
+                  style={{ fontSize: "20px", lineHeight: "30px", color: "var(--text-primary)" }}
+                >
+                  <RichTextContent value={homeCustomQuote} />
+                </div>
+                {!isRichTextEmpty(homeCustomQuoteAuthor) ? (
+                  <footer
+                    className="mt-3 break-words"
+                    style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary)" }}
+                  >
+                    <RichTextContent value={homeCustomQuoteAuthor} />
+                  </footer>
+                ) : null}
+              </blockquote>
+            ) : null}
+          </div>
         </ScrollReveal>
       )}
 

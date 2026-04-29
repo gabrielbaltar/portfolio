@@ -12,6 +12,7 @@ export const PORTFOLIO_SECTION_IDS: PortfolioSectionId[] = [
   "education",
   "certifications",
   "stack",
+  "custom",
   "gallery",
   "awards",
   "recommendations",

@@ -12,6 +12,9 @@ import {
   normalizePortfolioSectionOrder,
   getPublicContentVisibilityKey,
   syncProfileAboutFields,
+  type HomeCustomSection,
+  type HomeSectionSubtitleLevel,
+  type HomeSectionTitleLevel,
   type HomeGalleryItem,
   type PortfolioSectionId,
   type PublicContentVisibilityCollection,
@@ -22,7 +25,7 @@ import { dataProvider } from "./data-provider";
 import { LineHeightControl } from "./line-height-control";
 import { ImagePositionEditorCompact } from "./image-position-editor";
 import { ProfilePhotoCropDialog } from "./profile-photo-crop-dialog";
-import { RichTextEditor } from "./rich-text";
+import { RichTextContent, RichTextEditor } from "./rich-text";
 import { CMS_SAVE_SHORTCUT_EVENT } from "./cms-shortcuts";
 import {
   SelectionProtectedInput,
@@ -59,6 +62,36 @@ function TextArea({ label, value, onChange, rows = 3 }: {
         className="w-full rounded-lg px-3 py-2 text-[#fafafa] placeholder-[#444] focus:outline-none resize-none"
         style={{ fontSize: "13px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
       />
+    </div>
+  );
+}
+
+function SelectField<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string }>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[#777] block" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value as T)}
+        className="w-full rounded-lg px-3 py-2 text-[#fafafa] focus:outline-none"
+        style={{ fontSize: "13px", backgroundColor: "#141414", border: "1px solid #1e1e1e" }}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -186,6 +219,7 @@ const PORTFOLIO_SECTION_FIELDS: Array<{ id: PortfolioSectionId; label: string; d
   { id: "education", label: "Educação", description: "Controla a seção de formação acadêmica." },
   { id: "certifications", label: "Certificações", description: "Mostra ou oculta a lista de certificados." },
   { id: "stack", label: "Stack", description: "Controla a seção de ferramentas e tecnologias." },
+  { id: "custom", label: "Seção customizada", description: "Controla um bloco livre com título, subtítulo e citação na home." },
   { id: "gallery", label: "Galeria", description: "Mostra ou oculta a galeria de fotos da home." },
   { id: "awards", label: "Prêmios", description: "Mostra ou oculta a lista de prêmios." },
   { id: "recommendations", label: "Recomendações", description: "Controla os depoimentos e recomendações." },
@@ -206,6 +240,18 @@ type SortableItem = {
 type HomeSectionSortableItem = SortableItem & {
   id: PortfolioSectionId;
 };
+
+const HOME_TITLE_LEVEL_OPTIONS: Array<{ value: HomeSectionTitleLevel; label: string }> = [
+  { value: "h2", label: "H2 - seção principal" },
+  { value: "h3", label: "H3 - subseção" },
+  { value: "h4", label: "H4 - apoio" },
+];
+
+const HOME_SUBTITLE_LEVEL_OPTIONS: Array<{ value: HomeSectionSubtitleLevel; label: string }> = [
+  { value: "p", label: "Parágrafo" },
+  { value: "h3", label: "H3 - subtítulo forte" },
+  { value: "h4", label: "H4 - subtítulo compacto" },
+];
 
 function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number) {
   if (fromIndex === toIndex) return items;
@@ -383,7 +429,7 @@ function SortableSectionCard({
   );
 }
 
-type SettingsTab = "profile" | "gallery" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
+type SettingsTab = "profile" | "custom" | "gallery" | "experience" | "education" | "certifications" | "stack" | "awards" | "recommendations";
 
 export function CMSSettings() {
   const cms = useCMS();
@@ -514,6 +560,7 @@ export function CMSSettings() {
 
   const tabs: { key: SettingsTab; label: string }[] = [
     { key: "profile", label: "Perfil" },
+    { key: "custom", label: "Seção home" },
     { key: "gallery", label: "Galeria" },
     { key: "experience", label: "Experiencia" },
     { key: "education", label: "Educacao" },
@@ -564,6 +611,13 @@ export function CMSSettings() {
       ...current,
       homeGalleryItems: updater(current.homeGalleryItems || []),
     }), successMessage);
+  };
+
+  const updateHomeCustomSection = (updater: (current: HomeCustomSection) => HomeCustomSection) => {
+    updateSiteSettingsState((current) => ({
+      ...current,
+      homeCustomSection: updater(current.homeCustomSection),
+    }));
   };
 
   const persistHomeSectionOrder = () => {
@@ -642,6 +696,10 @@ export function CMSSettings() {
     cms.updateSiteSettings(siteSettingsRef.current);
     toast.success("Galeria salva!");
   };
+  const saveCustomHomeSection = () => {
+    cms.updateSiteSettings(siteSettingsRef.current);
+    toast.success("Seção da home salva!");
+  };
   const saveEducation = () => {
     const nextEducation = reindexSortableItems(education);
     setEducation(nextEducation);
@@ -684,6 +742,9 @@ export function CMSSettings() {
         return;
       case "gallery":
         saveGallery();
+        return;
+      case "custom":
+        saveCustomHomeSection();
         return;
       case "experience":
         saveExperiences();
@@ -1108,6 +1169,125 @@ export function CMSSettings() {
               <Save size={14} /> Salvar Perfil
             </button>
           </div>
+        </div>
+      )}
+
+      {tab === "custom" && (
+        <div className="space-y-4">
+          <Section title="Conteúdo da seção customizada">
+            <VisibilitySwitch
+              label="Mostrar na home"
+              description="Quando ativo, a seção aparece na home se houver título, subtítulo ou citação preenchidos."
+              checked={isSectionVisible("custom")}
+              onChange={(visible) => setSectionVisibility("custom", visible)}
+            />
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <RichTextField
+                label="Título em português"
+                value={siteSettings.homeCustomSection.titlePt}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, titlePt: value }))}
+                placeholder="Título da seção"
+                multiline={false}
+              />
+              <RichTextField
+                label="Título em inglês"
+                value={siteSettings.homeCustomSection.titleEn}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, titleEn: value }))}
+                placeholder="Section title"
+                multiline={false}
+              />
+              <SelectField
+                label="Hierarquia do título"
+                value={siteSettings.homeCustomSection.titleLevel || "h2"}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, titleLevel: value }))}
+                options={HOME_TITLE_LEVEL_OPTIONS}
+              />
+              <SelectField
+                label="Hierarquia do subtítulo"
+                value={siteSettings.homeCustomSection.subtitleLevel || "p"}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, subtitleLevel: value }))}
+                options={HOME_SUBTITLE_LEVEL_OPTIONS}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <RichTextField
+                label="Subtítulo em português"
+                value={siteSettings.homeCustomSection.subtitlePt}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, subtitlePt: value }))}
+                placeholder="Texto de apoio da seção"
+              />
+              <RichTextField
+                label="Subtítulo em inglês"
+                value={siteSettings.homeCustomSection.subtitleEn}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, subtitleEn: value }))}
+                placeholder="Supporting text"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <RichTextField
+                label="Citação em português"
+                value={siteSettings.homeCustomSection.quotePt}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, quotePt: value }))}
+                placeholder="Escreva uma citação ou frase de destaque"
+              />
+              <RichTextField
+                label="Citação em inglês"
+                value={siteSettings.homeCustomSection.quoteEn}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, quoteEn: value }))}
+                placeholder="Write a quote or highlight"
+              />
+              <RichTextField
+                label="Autor da citação em português"
+                value={siteSettings.homeCustomSection.quoteAuthorPt}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, quoteAuthorPt: value }))}
+                placeholder="Nome, cargo ou contexto"
+                multiline={false}
+              />
+              <RichTextField
+                label="Autor da citação em inglês"
+                value={siteSettings.homeCustomSection.quoteAuthorEn}
+                onChange={(value) => updateHomeCustomSection((current) => ({ ...current, quoteAuthorEn: value }))}
+                placeholder="Name, role or context"
+                multiline={false}
+              />
+            </div>
+          </Section>
+
+          <Section title="Prévia" defaultOpen={false}>
+            <div className="space-y-4 rounded-xl p-4" style={{ backgroundColor: "#0e0e0e", border: "1px solid #1a1a1a" }}>
+              {siteSettings.homeCustomSection.titlePt ? (
+                <p className="text-[#fafafa]" style={{ fontSize: "18px", lineHeight: "26px" }}>
+                  <RichTextContent value={siteSettings.homeCustomSection.titlePt} />
+                </p>
+              ) : null}
+              {siteSettings.homeCustomSection.subtitlePt ? (
+                <p className="text-[#888]" style={{ fontSize: "14px", lineHeight: "21px" }}>
+                  <RichTextContent value={siteSettings.homeCustomSection.subtitlePt} />
+                </p>
+              ) : null}
+              {siteSettings.homeCustomSection.quotePt ? (
+                <blockquote className="border-l border-[#2a2a2a] pl-4 text-[#ddd]" style={{ fontSize: "15px", lineHeight: "23px" }}>
+                  <RichTextContent value={siteSettings.homeCustomSection.quotePt} />
+                </blockquote>
+              ) : null}
+              {!siteSettings.homeCustomSection.titlePt && !siteSettings.homeCustomSection.subtitlePt && !siteSettings.homeCustomSection.quotePt ? (
+                <p className="text-[#666]" style={{ fontSize: "12px", lineHeight: "18px" }}>
+                  Preencha algum campo para visualizar a seção.
+                </p>
+              ) : null}
+            </div>
+          </Section>
+
+          <button
+            onClick={saveCustomHomeSection}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[#111] cursor-pointer hover:opacity-90"
+            style={{ fontSize: "13px", backgroundColor: "#fafafa" }}
+          >
+            <Save size={14} /> Salvar seção da home
+          </button>
         </div>
       )}
 

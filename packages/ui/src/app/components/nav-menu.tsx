@@ -8,6 +8,13 @@ import { useLocation } from "react-router";
 import { useCMS } from "./cms-data";
 import { isSectionVisible } from "./site-visibility";
 import { normalizePortfolioSectionOrder } from "@portfolio/core";
+import { richTextToPlainText } from "./rich-text";
+
+function getLocalizedHomeText(lang: "pt" | "en", pt?: string, en?: string) {
+  const preferred = lang === "en" ? en : pt;
+  const fallback = lang === "en" ? pt : en;
+  return preferred?.trim() || fallback?.trim() || "";
+}
 
 export function NavMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +79,19 @@ export function NavMenu() {
         return baseLink(t("certificationsTitle"), "certifications");
       case "stack":
         return baseLink(t("tools"), "tools");
+      case "custom": {
+        const customSection = data.siteSettings.homeCustomSection;
+        const label = richTextToPlainText(getLocalizedHomeText(lang, customSection?.titlePt, customSection?.titleEn)) || t("customSectionTitle");
+        const hasContent = [
+          customSection?.titlePt,
+          customSection?.titleEn,
+          customSection?.subtitlePt,
+          customSection?.subtitleEn,
+          customSection?.quotePt,
+          customSection?.quoteEn,
+        ].some((value) => richTextToPlainText(value || ""));
+        return hasContent ? baseLink(label, "custom") : [];
+      }
       case "gallery":
         return (data.siteSettings.homeGalleryItems || []).some((item) => item.image?.trim())
           ? baseLink(t("galleryTitle"), "gallery")

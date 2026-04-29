@@ -372,6 +372,14 @@ async function translateCMSData(data: CMSData, targetLang: Language): Promise<CM
     addRichText(`siteSettings.projectCardOverrides.${projectId}.title`, override.title || "");
     addRichText(`siteSettings.projectCardOverrides.${projectId}.subtitle`, override.subtitle || "");
   });
+  addRichText("siteSettings.homeCustomSection.titlePt", data.siteSettings.homeCustomSection?.titlePt || "");
+  addRichText("siteSettings.homeCustomSection.titleEn", data.siteSettings.homeCustomSection?.titleEn || "");
+  addRichText("siteSettings.homeCustomSection.subtitlePt", data.siteSettings.homeCustomSection?.subtitlePt || "");
+  addRichText("siteSettings.homeCustomSection.subtitleEn", data.siteSettings.homeCustomSection?.subtitleEn || "");
+  addRichText("siteSettings.homeCustomSection.quotePt", data.siteSettings.homeCustomSection?.quotePt || "");
+  addRichText("siteSettings.homeCustomSection.quoteEn", data.siteSettings.homeCustomSection?.quoteEn || "");
+  addRichText("siteSettings.homeCustomSection.quoteAuthorPt", data.siteSettings.homeCustomSection?.quoteAuthorPt || "");
+  addRichText("siteSettings.homeCustomSection.quoteAuthorEn", data.siteSettings.homeCustomSection?.quoteAuthorEn || "");
   (data.siteSettings.homeGalleryItems || []).forEach((item, itemIndex) => {
     addText(`siteSettings.homeGalleryItems.${itemIndex}.title`, item.title || "");
     addText(`siteSettings.homeGalleryItems.${itemIndex}.subtitle`, item.subtitle || "");

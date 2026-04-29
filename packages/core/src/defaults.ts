@@ -7,6 +7,7 @@ import type {
   ContentListItem,
   Education,
   Experience,
+  HomeCustomSection,
   HomeGalleryItem,
   MediaItem,
   Page,
@@ -24,6 +25,19 @@ import { normalizePortfolioSectionOrder } from "./visibility";
 
 const now = new Date().toISOString();
 
+export const defaultHomeCustomSection: HomeCustomSection = {
+  titlePt: "",
+  titleEn: "",
+  titleLevel: "h2",
+  subtitlePt: "",
+  subtitleEn: "",
+  subtitleLevel: "p",
+  quotePt: "",
+  quoteEn: "",
+  quoteAuthorPt: "",
+  quoteAuthorEn: "",
+};
+
 export const defaultSiteSettings: SiteSettings = {
   id: "main",
   siteTitle: "",
@@ -35,6 +49,7 @@ export const defaultSiteSettings: SiteSettings = {
   homeGalleryIntroPt: "",
   homeGalleryIntroEn: "",
   homeGalleryItems: [],
+  homeCustomSection: defaultHomeCustomSection,
   templateUrl: "",
   resumeUrl: "",
   defaultLanguage: "pt",
@@ -223,6 +238,26 @@ function normalizeHomeGalleryItems(items: unknown): HomeGalleryItem[] {
   });
 }
 
+function normalizeHomeCustomSection(section: unknown): HomeCustomSection {
+  const record = section && typeof section === "object" ? section as Partial<HomeCustomSection> : {};
+  const titleLevel = record.titleLevel === "h3" || record.titleLevel === "h4" ? record.titleLevel : "h2";
+  const subtitleLevel =
+    record.subtitleLevel === "h3" || record.subtitleLevel === "h4" ? record.subtitleLevel : "p";
+
+  return {
+    titlePt: typeof record.titlePt === "string" ? record.titlePt : "",
+    titleEn: typeof record.titleEn === "string" ? record.titleEn : "",
+    titleLevel,
+    subtitlePt: typeof record.subtitlePt === "string" ? record.subtitlePt : "",
+    subtitleEn: typeof record.subtitleEn === "string" ? record.subtitleEn : "",
+    subtitleLevel,
+    quotePt: typeof record.quotePt === "string" ? record.quotePt : "",
+    quoteEn: typeof record.quoteEn === "string" ? record.quoteEn : "",
+    quoteAuthorPt: typeof record.quoteAuthorPt === "string" ? record.quoteAuthorPt : "",
+    quoteAuthorEn: typeof record.quoteAuthorEn === "string" ? record.quoteAuthorEn : "",
+  };
+}
+
 function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
   return (blocks ?? []).map((block) => {
     if (
@@ -267,6 +302,7 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     ...(data?.siteSettings ?? {}),
     homeSectionOrder: normalizePortfolioSectionOrder(data?.siteSettings?.homeSectionOrder),
     homeGalleryItems: normalizeHomeGalleryItems(data?.siteSettings?.homeGalleryItems),
+    homeCustomSection: normalizeHomeCustomSection(data?.siteSettings?.homeCustomSection),
   };
   const profile = syncProfileAboutFields({ ...empty.profile, ...(data?.profile ?? {}) });
   const projects = applyExplicitOrder(data?.projects ?? empty.projects, siteSettings.projectOrder).map((project) => ({
