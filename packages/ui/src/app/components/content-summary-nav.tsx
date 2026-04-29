@@ -129,7 +129,7 @@ export function ContentSummaryNav({
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const idsKey = items.map((item) => item.id).join("|");
-  const slotHeight = "min(500px, calc(100dvh - 160px))";
+  const summaryMaxHeight = "min(500px, calc(100dvh - 160px))";
 
   useEffect(() => {
     if (!items.length) {
@@ -212,7 +212,7 @@ export function ContentSummaryNav({
     >
       <div
         className="pointer-events-auto absolute right-6 top-1/2 w-[236px] -translate-y-1/2"
-        style={{ height: slotHeight }}
+        style={{ height: summaryMaxHeight }}
       >
         <div
           className="relative h-full w-full overflow-visible"
@@ -262,7 +262,7 @@ export function ContentSummaryNav({
             }}
           >
             <div
-              className="flex h-full w-[214px] flex-col rounded-[18px] border p-2.5"
+              className="flex w-[clamp(190px,18vw,214px)] max-h-full flex-col rounded-[18px] border p-2.5"
               style={{
                 backgroundColor: "var(--bg-secondary, #121212)",
                 borderColor: "var(--border-primary, #2A2A2A)",
@@ -287,7 +287,7 @@ export function ContentSummaryNav({
               <nav
                 className="summary-nav-scroll mt-2 overflow-y-auto pr-0.5"
                 style={{
-                  flex: "1 1 auto",
+                  flex: "0 1 auto",
                   minHeight: 0,
                   overscrollBehavior: "contain",
                   scrollbarWidth: "none",
