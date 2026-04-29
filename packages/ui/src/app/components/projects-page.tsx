@@ -13,6 +13,7 @@ import { copyToClipboard } from "./clipboard-utils";
 import { sendContactEmail } from "./email-service";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
+import { getVisiblePublicTags } from "./public-tag-utils";
 
 const PROJECTS_PER_PAGE = 6;
 
@@ -128,6 +129,7 @@ export function ProjectsPage() {
                     image={project.cardImage || project.image}
                     imagePosition={project.cardImagePosition || project.imagePosition || "50% 50%"}
                     locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                    tags={getVisiblePublicTags(project.tags)}
                   />
                 </motion.div>
               </ScrollReveal>

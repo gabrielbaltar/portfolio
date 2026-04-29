@@ -228,6 +228,8 @@ export interface Project extends TimestampedEntity {
   services: string;
   client: string;
   year: string;
+  cardTitle?: string;
+  cardSubtitle?: string;
   cardImage?: string;
   cardImagePosition?: string;
   image: string;

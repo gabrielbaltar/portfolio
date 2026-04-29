@@ -578,6 +578,8 @@ export function CMSContentList() {
         services: "",
         client: "",
         year: new Date().getFullYear().toString(),
+        cardTitle: "",
+        cardSubtitle: "",
         cardImage: "",
         cardImagePosition: "50% 50%",
         image: "",

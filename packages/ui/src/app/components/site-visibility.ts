@@ -28,14 +28,14 @@ function normalizeOptionalText(value?: string | null) {
 }
 
 export function getProjectCardCopy(
-  project: Pick<Project, "id" | "title">,
+  project: Pick<Project, "id" | "title" | "cardTitle" | "cardSubtitle">,
   siteSettings: SiteSettings,
 ) {
   const override = siteSettings.projectCardOverrides?.[project.id];
 
   return {
-    title: normalizeOptionalText(override?.title) || project.title,
-    subtitle: normalizeOptionalText(override?.subtitle),
+    title: normalizeOptionalText(override?.title) || normalizeOptionalText(project.cardTitle) || project.title,
+    subtitle: normalizeOptionalText(override?.subtitle) || normalizeOptionalText(project.cardSubtitle),
   };
 }
 

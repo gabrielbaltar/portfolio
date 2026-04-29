@@ -23,6 +23,7 @@ import { copyToClipboard } from "./clipboard-utils";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getArticleCardCopy, getProjectCardCopy, isSectionVisible } from "./site-visibility";
 import { isRichTextEmpty, RichTextContent } from "./rich-text";
+import { getVisiblePublicTags } from "./public-tag-utils";
 
 const CERTIFICATIONS_PREVIEW_LIMIT = 6;
 
@@ -367,6 +368,7 @@ export function PortfolioHome() {
                     image={project.cardImage || project.image}
                     imagePosition={project.cardImagePosition || project.imagePosition || "50% 50%"}
                     locked={Boolean((project as any).password && (project as any).password.trim() !== "")}
+                    tags={getVisiblePublicTags(project.tags)}
                   />
                 </motion.div>
               </StaggerItem>

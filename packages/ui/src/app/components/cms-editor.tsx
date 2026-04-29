@@ -1172,6 +1172,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
       : (!isRichTextEmpty(item.cardSubtitle || "") ? item.cardSubtitle : item.description || "");
   const cardPreviewImage = item.cardImage || item.image;
   const cardPreviewImagePosition = item.cardImagePosition || item.imagePosition || "50% 50%";
+  const cardPreviewTags = Array.isArray(item.tags) ? item.tags.slice(0, 3) : [];
   const detailPreviewImage = item.image || "";
   const detailPreviewImagePosition = item.imagePosition || "50% 50%";
   const detailTitleText = richTextToPlainText(item.title) || "Preview";
@@ -1266,6 +1267,26 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                   <p style={{ fontSize: "14px", lineHeight: "21px", color: "#8d8d8d" }}>
                     <RichTextContent value={cardPreviewSubtitle} />
                   </p>
+                )}
+                {cardPreviewTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {cardPreviewTags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-[8px] px-2"
+                        style={{
+                          height: "22.5px",
+                          fontSize: "11px",
+                          lineHeight: "16.5px",
+                          backgroundColor: "#0a0a0a",
+                          border: "1px solid #242424",
+                          color: "#ababab",
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 )}
                 {contentType === "projects" && item.category && (
                   <p style={{ fontSize: "12px", lineHeight: "18px", color: "#666" }}>

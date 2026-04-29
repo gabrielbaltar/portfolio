@@ -273,6 +273,8 @@ export function normalizeCMSData(data: Partial<CMSData> | null | undefined): CMS
     ...project,
     titleAppearance: siteSettings.projectCardOverrides?.[project.id]?.titleAppearance || project.titleAppearance,
     subtitleAppearance: siteSettings.projectCardOverrides?.[project.id]?.subtitleAppearance || project.subtitleAppearance,
+    cardTitle: siteSettings.projectCardOverrides?.[project.id]?.title || project.cardTitle || "",
+    cardSubtitle: siteSettings.projectCardOverrides?.[project.id]?.subtitle || project.cardSubtitle || "",
     cardImage: siteSettings.projectCardOverrides?.[project.id]?.image || project.cardImage || "",
     cardImagePosition:
       siteSettings.projectCardOverrides?.[project.id]?.imagePosition ||

@@ -13,6 +13,7 @@ type ProjectPreviewCardProps = {
   image?: string;
   imagePosition?: string;
   locked?: boolean;
+  tags?: string[];
   className?: string;
 };
 
@@ -269,11 +270,13 @@ export function ProjectPreviewCard({
   image,
   imagePosition = "50% 50%",
   locked = false,
+  tags = [],
   className = "",
 }: ProjectPreviewCardProps) {
   const location = useLocation();
   const plainTitle = richTextToPlainText(title) || "Projeto";
   const hasSubtitle = Boolean(richTextToPlainText(subtitle));
+  const visibleTags = tags.slice(0, 3);
 
   return (
     <article
@@ -317,7 +320,7 @@ export function ProjectPreviewCard({
       </div>
 
       <div
-        className="pointer-events-none relative z-20 flex min-h-[92px] flex-1 flex-col justify-center px-4 py-3"
+        className="pointer-events-none relative z-20 flex min-h-[124px] flex-1 flex-col justify-center px-4 py-4"
         style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -346,6 +349,26 @@ export function ProjectPreviewCard({
                 >
                   <RichTextContent value={subtitle} />
                 </p>
+              )}
+              {visibleTags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5 overflow-hidden">
+                  {visibleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center rounded-[8px] px-2"
+                      style={{
+                        height: "22.5px",
+                        lineHeight: "16.5px",
+                        fontSize: "11px",
+                        backgroundColor: "var(--bg-primary, #0B0B0D)",
+                        border: "1px solid var(--border-primary, #363636)",
+                        color: "var(--text-secondary, #ababab)",
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           </div>

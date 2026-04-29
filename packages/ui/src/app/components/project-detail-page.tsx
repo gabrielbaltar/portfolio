@@ -17,6 +17,7 @@ import { getBackTarget } from "./navigation-state";
 import { getProfileSocialLinks } from "./profile-social-links";
 import { filterVisibleContent, getProjectCardCopy } from "./site-visibility";
 import { RichTextContent, richTextToPlainText } from "./rich-text";
+import { getVisiblePublicTags } from "./public-tag-utils";
 import {
   DETAIL_PAGE_TITLE_RESPONSIVE_LIMITS,
   PROJECT_SUBTITLE_APPEARANCE_DEFAULTS,
@@ -749,6 +750,7 @@ export function ProjectDetailPage() {
                 image={p.cardImage || p.image || ""}
                 imagePosition={p.cardImagePosition || p.imagePosition || "50% 50%"}
                 locked={Boolean(p.password && p.password.trim() !== "")}
+                tags={getVisiblePublicTags(p.tags)}
               />
             );
           })}
