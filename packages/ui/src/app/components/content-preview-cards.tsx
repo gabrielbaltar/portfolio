@@ -320,7 +320,7 @@ export function ProjectPreviewCard({
       </div>
 
       <div
-        className="pointer-events-none relative z-20 flex min-h-[124px] flex-1 flex-col justify-center px-4 py-4"
+        className="pointer-events-none relative z-20 flex min-h-[190px] flex-1 flex-col justify-center px-4 py-4"
         style={{ borderTop: "1px solid var(--border-secondary, #242424)" }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -344,7 +344,7 @@ export function ProjectPreviewCard({
               </p>
               {hasSubtitle && (
                 <p
-                  className="line-clamp-1"
+                  className="line-clamp-3"
                   style={{ fontSize: "14px", lineHeight: "21px", color: "var(--text-secondary, #ababab)" }}
                 >
                   <RichTextContent value={subtitle} />
