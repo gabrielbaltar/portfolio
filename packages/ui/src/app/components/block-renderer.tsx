@@ -257,58 +257,23 @@ function CardsBlockView({ block }: { block: Extract<ContentBlock, { type: "cards
 }
 
 function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table" }> }) {
-  const [copied, setCopied] = useState(false);
   const columns = (block.columns || []).map((column) => column.trim()).filter(Boolean);
   const normalizedColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];
   const rows = (block.rows || [])
     .map((row) => normalizedColumns.map((_, columnIndex) => row[columnIndex] || ""))
     .filter((row) => row.some((cell) => cell.trim() !== ""));
 
-  useEffect(() => {
-    if (!copied) return;
-    const timeoutId = window.setTimeout(() => setCopied(false), 1800);
-    return () => window.clearTimeout(timeoutId);
-  }, [copied]);
-
   if (rows.length === 0) return null;
-
-  async function handleCopy() {
-    const text = [
-      normalizedColumns.join("\t"),
-      ...rows.map((row) => row.join("\t")),
-    ].join("\n");
-
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
     <figure className="my-8">
       <div
         className="relative overflow-hidden rounded-lg"
         style={{
-          backgroundColor: "var(--bg-secondary, #1f1f1f)",
+          backgroundColor: "transparent",
           border: "1px solid var(--border-primary, #3A3A3A)",
         }}
       >
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md transition-opacity hover:opacity-80"
-          style={{
-            backgroundColor: "color-mix(in srgb, var(--bg-secondary, #1f1f1f) 88%, transparent)",
-            color: "var(--text-primary, #fafafa)",
-            border: "1px solid var(--border-primary, #3A3A3A)",
-          }}
-          aria-label={copied ? "Tabela copiada" : "Copiar tabela"}
-        >
-          {copied ? <Check size={16} /> : <Copy size={16} />}
-        </button>
-
         <div className="hidden min-[560px]:block overflow-x-auto">
           <table className="w-full min-w-[520px] table-fixed border-collapse font-['Inter',sans-serif]">
             <thead>
@@ -316,7 +281,7 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
                 {normalizedColumns.map((column, columnIndex) => (
                   <th
                     key={columnIndex}
-                    className="border-b px-4 py-4 text-left font-semibold last:pr-14"
+                    className="border-b px-4 py-4 text-left font-semibold"
                     style={{
                       borderColor: "var(--border-primary, #3A3A3A)",
                       color: "var(--text-primary, #fafafa)",
@@ -358,7 +323,7 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
           {rows.map((row, rowIndex) => (
             <div
               key={rowIndex}
-              className="space-y-4 p-4 first:pr-14"
+              className="space-y-4 p-4"
               style={{ borderTop: rowIndex === 0 ? undefined : "1px solid var(--border-primary, #3A3A3A)" }}
             >
               {normalizedColumns.map((column, columnIndex) => (
