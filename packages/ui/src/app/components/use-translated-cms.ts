@@ -270,6 +270,17 @@ function collectBlockTexts(
       return;
     }
 
+    if (block.type === "table") {
+      if (typeof block.caption === "string") {
+        addText(`${blockPath}.caption`, block.caption);
+      }
+      block.columns.forEach((column, columnIndex) => addText(`${blockPath}.columns.${columnIndex}`, column));
+      block.rows.forEach((row, rowIndex) => {
+        row.forEach((cell, columnIndex) => addText(`${blockPath}.rows.${rowIndex}.${columnIndex}`, cell));
+      });
+      return;
+    }
+
     if (block.type === "cards") {
       block.cards.forEach((card, cardIndex) => {
         if (typeof card.title === "string") {

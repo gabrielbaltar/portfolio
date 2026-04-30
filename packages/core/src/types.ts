@@ -97,6 +97,13 @@ export interface ContentListItem {
   children?: ContentListItem[];
 }
 
+export interface ContentTableBlock {
+  type: "table";
+  columns: string[];
+  rows: string[][];
+  caption?: string;
+}
+
 export type ContentBlock =
   | { type: "paragraph"; text: string; lineHeight?: number }
   | { type: "heading1"; text: string; lineHeight?: number; showInSummary?: boolean }
@@ -116,6 +123,7 @@ export type ContentBlock =
   | { type: "divider"; spacing?: number; variant?: "default" | "hidden" }
   | { type: "quote"; text: string; author: string; lineHeight?: number; accentColor?: string }
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
+  | ContentTableBlock
   | { type: "cards"; cards: ContentCardItem[] }
   | { type: "embed"; url: string; caption: string; height?: number };
 

@@ -284,6 +284,22 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
       };
     }
 
+    if (block.type === "table") {
+      const columns = Array.isArray(block.columns) ? block.columns.map((column) => String(column ?? "")) : [];
+      const fallbackColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];
+
+      return {
+        ...block,
+        columns: fallbackColumns,
+        rows: Array.isArray(block.rows)
+          ? block.rows.map((row) =>
+              fallbackColumns.map((_, columnIndex) => String((Array.isArray(row) ? row[columnIndex] : "") ?? "")),
+            )
+          : [],
+        caption: typeof block.caption === "string" ? block.caption : "",
+      };
+    }
+
     if (block.type !== "unordered-list" && block.type !== "ordered-list") {
       return block;
     }

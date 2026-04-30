@@ -5,6 +5,7 @@ import {
   Plus, Trash2, GripVertical, Type, Heading1, Heading2, Heading3,
   List, ListOrdered, ImageIcon, Minus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Upload, X, Quote, MousePointerClick, Code, Video, Palette, LayoutGrid,
+  Table2,
 } from "lucide-react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -47,6 +48,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "heading3", label: "Titulo H3", icon: <Heading3 size={14} /> },
   { type: "unordered-list", label: "Lista", icon: <List size={14} /> },
   { type: "ordered-list", label: "Lista numerada", icon: <ListOrdered size={14} /> },
+  { type: "table", label: "Tabela simples", icon: <Table2 size={14} /> },
   { type: "style-guide", label: "Style guide", icon: <Palette size={14} /> },
   { type: "color-palette", label: "Paleta de cores", icon: <Palette size={14} /> },
   { type: "typography", label: "Tipografia", icon: <Type size={14} /> },
@@ -65,7 +67,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
 
 const LABEL_MAP: Record<string, string> = {
   paragraph: "Paragrafo", heading1: "H1", heading2: "H2", heading3: "H3",
-  "unordered-list": "Lista", "ordered-list": "Lista numerada",
+  "unordered-list": "Lista", "ordered-list": "Lista numerada", table: "Tabela",
   "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
   "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
   code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed / Prototipo",
@@ -86,6 +88,17 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
     case "heading3": return { type: "heading3", text: "", showInSummary: false };
     case "unordered-list": return { type: "unordered-list", items: [createEmptyListItem()] };
     case "ordered-list": return { type: "ordered-list", items: [createEmptyListItem()] };
+    case "table":
+      return {
+        type: "table",
+        columns: ["Antes", "Depois"],
+        rows: [
+          ["", ""],
+          ["", ""],
+          ["", ""],
+        ],
+        caption: "",
+      };
     case "style-guide":
       return {
         type: "style-guide",
@@ -359,6 +372,161 @@ function ListBlockEditor({
       >
         <Plus size={12} /> Adicionar item
       </button>
+    </div>
+  );
+}
+
+function TableBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<ContentBlock, { type: "table" }>;
+  onChange: (block: ContentBlock) => void;
+}) {
+  const columns = block.columns.length > 0 ? block.columns : ["Coluna 1", "Coluna 2"];
+  const rows = block.rows.length > 0
+    ? block.rows.map((row) => columns.map((_, columnIndex) => row[columnIndex] || ""))
+    : [columns.map(() => "")];
+
+  const emit = (nextColumns: string[], nextRows: string[][], caption = block.caption || "") => {
+    onChange({
+      ...block,
+      columns: nextColumns,
+      rows: nextRows.map((row) => nextColumns.map((_, columnIndex) => row[columnIndex] || "")),
+      caption,
+    } as ContentBlock);
+  };
+
+  const updateColumn = (columnIndex: number, value: string) => {
+    const nextColumns = [...columns];
+    nextColumns[columnIndex] = value;
+    emit(nextColumns, rows);
+  };
+
+  const addColumn = () => {
+    const nextColumns = [...columns, `Coluna ${columns.length + 1}`];
+    emit(nextColumns, rows.map((row) => [...row, ""]));
+  };
+
+  const removeColumn = (columnIndex: number) => {
+    if (columns.length <= 1) return;
+    emit(
+      columns.filter((_, index) => index !== columnIndex),
+      rows.map((row) => row.filter((_, index) => index !== columnIndex)),
+    );
+  };
+
+  const updateCell = (rowIndex: number, columnIndex: number, value: string) => {
+    const nextRows = rows.map((row, currentRowIndex) =>
+      currentRowIndex === rowIndex
+        ? row.map((cell, currentColumnIndex) => currentColumnIndex === columnIndex ? value : cell)
+        : row,
+    );
+    emit(columns, nextRows);
+  };
+
+  const addRow = () => {
+    emit(columns, [...rows, columns.map(() => "")]);
+  };
+
+  const removeRow = (rowIndex: number) => {
+    emit(columns, rows.filter((_, index) => index !== rowIndex));
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="space-y-1">
+        <FieldLabel>Legenda opcional</FieldLabel>
+        <MiniInput
+          value={block.caption || ""}
+          onChange={(caption) => emit(columns, rows, caption)}
+          placeholder="Ex.: Comparativo antes e depois"
+        />
+      </label>
+
+      <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "#2a2a2a", backgroundColor: "#101010" }}>
+        <div className="min-w-[520px]">
+          <div
+            className="grid border-b"
+            style={{
+              gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))`,
+              borderColor: "#2a2a2a",
+            }}
+          >
+            {columns.map((column, columnIndex) => (
+              <div key={columnIndex} className="space-y-2 p-2" style={{ borderLeft: columnIndex === 0 ? undefined : "1px solid #242424" }}>
+                <MiniInput
+                  value={column}
+                  onChange={(value) => updateColumn(columnIndex, value)}
+                  placeholder={`Coluna ${columnIndex + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeColumn(columnIndex)}
+                  disabled={columns.length <= 1}
+                  className="inline-flex items-center gap-1 text-[#555] transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
+                  style={{ fontSize: "11px" }}
+                >
+                  <Trash2 size={11} /> Remover coluna
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            {rows.map((row, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="grid border-b last:border-b-0"
+                style={{
+                  gridTemplateColumns: `repeat(${columns.length}, minmax(180px, 1fr))`,
+                  borderColor: "#222",
+                }}
+              >
+                {columns.map((_, columnIndex) => (
+                  <div key={columnIndex} className="p-2" style={{ borderLeft: columnIndex === 0 ? undefined : "1px solid #222" }}>
+                    <MiniTextarea
+                      value={row[columnIndex] || ""}
+                      onChange={(value) => updateCell(rowIndex, columnIndex, value)}
+                      rows={2}
+                      placeholder={`Linha ${rowIndex + 1}`}
+                    />
+                  </div>
+                ))}
+                <div className="col-span-full flex justify-end px-2 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(rowIndex)}
+                    className="inline-flex items-center gap-1 text-[#555] transition-colors hover:text-red-400"
+                    style={{ fontSize: "11px" }}
+                  >
+                    <Trash2 size={11} /> Remover linha
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={addRow}
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[#aaa] transition-colors hover:border-[#555] hover:text-white"
+          style={{ borderColor: "#2a2a2a", fontSize: "12px" }}
+        >
+          <Plus size={12} /> Adicionar linha
+        </button>
+        <button
+          type="button"
+          onClick={addColumn}
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[#aaa] transition-colors hover:border-[#555] hover:text-white"
+          style={{ borderColor: "#2a2a2a", fontSize: "12px" }}
+        >
+          <Plus size={12} /> Adicionar coluna
+        </button>
+      </div>
     </div>
   );
 }
@@ -973,6 +1141,13 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
               />
             )}
           </div>
+        )}
+
+        {block.type === "table" && (
+          <TableBlockEditor
+            block={block}
+            onChange={onChange}
+          />
         )}
 
         {block.type === "style-guide" && (

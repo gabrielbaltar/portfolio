@@ -3,7 +3,7 @@ import {
   History, X, Clock, ChevronRight, RotateCcw, Eye,
   ArrowLeft, Type, Heading1, Heading2, Heading3,
   List, ListOrdered, ImageIcon, Quote, MousePointerClick, Code, Palette,
-  FileText, LayoutGrid,
+  FileText, LayoutGrid, Table2,
 } from "lucide-react";
 import type { ContentEntityType } from "@portfolio/core";
 import { type ContentBlock, type ContentStatus } from "./cms-data";
@@ -69,6 +69,7 @@ function getBlockSummary(block: ContentBlock): string {
   const labels: Record<string, string> = {
     paragraph: "Paragrafo", heading1: "H1", heading2: "H2", heading3: "H3",
     "unordered-list": "Lista", "ordered-list": "Lista numerada",
+    table: "Tabela",
     "style-guide": "Style guide", "color-palette": "Paleta de cores", typography: "Tipografia",
     "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
     code: "Codigo", image: "Imagem", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed",
@@ -86,6 +87,9 @@ function getBlockSummary(block: ContentBlock): string {
   }
   if (block.type === "cards") {
     return `${label}: ${block.cards.length} card${block.cards.length === 1 ? "" : "s"}`;
+  }
+  if (block.type === "table") {
+    return `${label}: ${block.rows.length} linha${block.rows.length === 1 ? "" : "s"} x ${block.columns.length} coluna${block.columns.length === 1 ? "" : "s"}`;
   }
   if ("code" in block && block.type === "code") {
     const preview = block.code.substring(0, 60);
@@ -145,6 +149,7 @@ function BlockIcon({ type }: { type: string }) {
     case "heading3": return <Heading3 size={size} />;
     case "unordered-list": return <List size={size} />;
     case "ordered-list": return <ListOrdered size={size} />;
+    case "table": return <Table2 size={size} />;
     case "style-guide": return <Palette size={size} />;
     case "color-palette": return <Palette size={size} />;
     case "typography": return <Type size={size} />;

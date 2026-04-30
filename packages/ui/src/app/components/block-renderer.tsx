@@ -256,6 +256,143 @@ function CardsBlockView({ block }: { block: Extract<ContentBlock, { type: "cards
   );
 }
 
+function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table" }> }) {
+  const [copied, setCopied] = useState(false);
+  const columns = (block.columns || []).map((column) => column.trim()).filter(Boolean);
+  const normalizedColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];
+  const rows = (block.rows || [])
+    .map((row) => normalizedColumns.map((_, columnIndex) => row[columnIndex] || ""))
+    .filter((row) => row.some((cell) => cell.trim() !== ""));
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeoutId = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [copied]);
+
+  if (rows.length === 0) return null;
+
+  async function handleCopy() {
+    const text = [
+      normalizedColumns.join("\t"),
+      ...rows.map((row) => row.join("\t")),
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <figure className="my-8">
+      <div
+        className="relative overflow-hidden rounded-lg"
+        style={{
+          backgroundColor: "var(--bg-secondary, #1f1f1f)",
+          border: "1px solid var(--border-primary, #3A3A3A)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--bg-secondary, #1f1f1f) 88%, transparent)",
+            color: "var(--text-primary, #fafafa)",
+            border: "1px solid var(--border-primary, #3A3A3A)",
+          }}
+          aria-label={copied ? "Tabela copiada" : "Copiar tabela"}
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+        </button>
+
+        <div className="hidden min-[560px]:block overflow-x-auto">
+          <table className="w-full min-w-[520px] table-fixed border-collapse font-['Inter',sans-serif]">
+            <thead>
+              <tr>
+                {normalizedColumns.map((column, columnIndex) => (
+                  <th
+                    key={columnIndex}
+                    className="border-b px-4 py-4 text-left font-semibold last:pr-14"
+                    style={{
+                      borderColor: "var(--border-primary, #3A3A3A)",
+                      color: "var(--text-primary, #fafafa)",
+                      fontSize: "17px",
+                      lineHeight: "23px",
+                    }}
+                  >
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {normalizedColumns.map((_, columnIndex) => (
+                    <td
+                      key={columnIndex}
+                      className="border-b px-4 py-5 align-top last:border-b"
+                      style={{
+                        borderColor: "color-mix(in srgb, var(--border-primary, #3A3A3A) 62%, transparent)",
+                        color: "var(--text-primary, #f3f3f3)",
+                        fontSize: "16px",
+                        lineHeight: "24px",
+                        fontWeight: 400,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {row[columnIndex]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="min-[560px]:hidden">
+          {rows.map((row, rowIndex) => (
+            <div
+              key={rowIndex}
+              className="space-y-4 p-4 first:pr-14"
+              style={{ borderTop: rowIndex === 0 ? undefined : "1px solid var(--border-primary, #3A3A3A)" }}
+            >
+              {normalizedColumns.map((column, columnIndex) => (
+                <div key={columnIndex} className="min-w-0">
+                  <div
+                    className="mb-1 font-['Inter',sans-serif] font-semibold"
+                    style={{ fontSize: "12px", lineHeight: "16px", color: "var(--text-secondary, #a6a6a6)" }}
+                  >
+                    {column}
+                  </div>
+                  <div
+                    className="break-words font-['Inter',sans-serif]"
+                    style={{ fontSize: "15px", lineHeight: "22px", color: "var(--text-primary, #fafafa)", fontWeight: 400, whiteSpace: "pre-wrap" }}
+                  >
+                    {row[columnIndex]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      {block.caption?.trim() ? (
+        <figcaption
+          className="mt-2 text-center font-['Inter',sans-serif]"
+          style={{ fontSize: "13px", lineHeight: "18px", color: "var(--text-secondary, #6f6f6f)" }}
+        >
+          {block.caption}
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
 function ImageBlockSlider({
   block,
   alt,
@@ -379,6 +516,8 @@ export function BlockRenderer({
             return <ListBlockView key={i} items={block.items} ordered={false} lineHeight={blockLineHeight || 24} />;
           case "ordered-list":
             return <ListBlockView key={i} items={block.items} ordered lineHeight={blockLineHeight || 24} />;
+          case "table":
+            return <TableBlockView key={i} block={block} />;
           case "code":
             return <CodeBlockView key={i} block={block} />;
           case "image": {
