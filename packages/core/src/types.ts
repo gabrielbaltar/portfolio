@@ -113,7 +113,7 @@ export type ContentBlock =
   | { type: "code"; code: string; language: string; caption?: string }
   | { type: "image"; url: string; caption: string; position?: string; borderRadius?: number; galleryImages?: string[]; galleryPositions?: string[] }
   | { type: "video"; url: string; caption: string; poster?: string; autoplay?: boolean; loop?: boolean; muted?: boolean; previewStart?: number; previewDuration?: number; borderRadius?: number; fit?: "contain" | "cover"; zoom?: number }
-  | { type: "divider"; spacing?: number }
+  | { type: "divider"; spacing?: number; variant?: "default" | "hidden" }
   | { type: "quote"; text: string; author: string; lineHeight?: number; accentColor?: string }
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
   | { type: "cards"; cards: ContentCardItem[] }

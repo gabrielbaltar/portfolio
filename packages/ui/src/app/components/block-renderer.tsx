@@ -16,6 +16,10 @@ function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
 }
 
+function isDividerHidden(block: Extract<ContentBlock, { type: "divider" }>) {
+  return block.variant === "hidden";
+}
+
 const UNORDERED_LIST_STYLE_TYPES = ["disc", "circle", "square"] as const;
 const ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as const;
 
@@ -466,7 +470,7 @@ export function BlockRenderer({
               <hr
                 key={i}
                 style={{
-                  borderColor: "var(--border-primary, #2A2A2A)",
+                  borderColor: isDividerHidden(block) ? "transparent" : "var(--border-primary, #2A2A2A)",
                   marginTop: `${getDividerSpacing(block)}px`,
                   marginBottom: `${getDividerSpacing(block)}px`,
                 }}

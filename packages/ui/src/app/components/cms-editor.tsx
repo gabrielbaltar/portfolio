@@ -109,6 +109,10 @@ function getDividerSpacing(block: Extract<ContentBlock, { type: "divider" }>) {
   return Math.max(24, Math.min(160, block.spacing ?? 72));
 }
 
+function isDividerHidden(block: Extract<ContentBlock, { type: "divider" }>) {
+  return block.variant === "hidden";
+}
+
 const CMS_UNORDERED_LIST_STYLE_TYPES = ["disc", "circle", "square"] as const;
 const CMS_ORDERED_LIST_STYLE_TYPES = ["decimal", "lower-alpha", "lower-roman"] as const;
 const CMS_AUTOSAVE_DELAY_MS = 800;
@@ -1558,7 +1562,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                   <hr
                     key={i}
                     style={{
-                      borderColor: "#1e1e1e",
+                      borderColor: isDividerHidden(block) ? "transparent" : "#1e1e1e",
                       marginTop: `${getDividerSpacing(block)}px`,
                       marginBottom: `${getDividerSpacing(block)}px`,
                     }}

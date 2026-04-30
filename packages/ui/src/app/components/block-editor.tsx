@@ -170,7 +170,7 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
         ],
       };
     case "embed": return { type: "embed", url: "", caption: "" };
-    case "divider": return { type: "divider", spacing: 72 };
+    case "divider": return { type: "divider", spacing: 72, variant: "default" };
   }
 }
 
@@ -891,7 +891,31 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
         {block.type === "divider" && (
           <div className="space-y-3">
             <div className="px-1" style={{ paddingTop: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px`, paddingBottom: `${Math.max(16, ((block as Extract<ContentBlock, { type: "divider" }>).spacing ?? 72) / 3)}px` }}>
-              <hr className="border-[#363636]" />
+              <hr className={(block as Extract<ContentBlock, { type: "divider" }>).variant === "hidden" ? "border-transparent" : "border-[#363636]"} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 px-1">
+              {[
+                { value: "default", label: "Padrao" },
+                { value: "hidden", label: "Invisivel" },
+              ].map((option) => {
+                const selected = ((block as Extract<ContentBlock, { type: "divider" }>).variant ?? "default") === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onChange({ ...block, variant: option.value as "default" | "hidden" } as ContentBlock)}
+                    className="rounded-md px-3 py-2 text-left transition-colors"
+                    style={{
+                      border: `1px solid ${selected ? "#555" : "#252525"}`,
+                      backgroundColor: selected ? "#181818" : "#101010",
+                      color: selected ? "#fafafa" : "#777",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
             <div className="flex items-center gap-2 px-1">
               <span className="text-[#666] shrink-0" style={{ fontSize: "11px" }}>Espacamento</span>
