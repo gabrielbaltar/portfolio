@@ -28,6 +28,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { type Theme, useTheme } from "./theme-context";
 import { Button } from "./ui/button";
 import {
@@ -87,6 +88,7 @@ const INLINE_FONT_SIZE_OPTIONS = [
   { label: "18px", value: "18px" },
   { label: "20px", value: "20px" },
   { label: "22px", value: "22px" },
+  { label: "24px", value: "24px" },
   { label: "28px", value: "28px" },
   { label: "32px", value: "32px" },
   { label: "36px", value: "36px" },
@@ -854,6 +856,78 @@ function ToolbarButton({
   );
 }
 
+function ToolbarPopover({
+  anchorRef,
+  open,
+  width,
+  className,
+  style,
+  children,
+}: {
+  anchorRef: React.RefObject<HTMLElement>;
+  open: boolean;
+  width: number;
+  className?: string;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  const [position, setPosition] = useState({ left: 12, top: 12, maxHeight: 320 });
+
+  useEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+
+      const rect = anchor.getBoundingClientRect();
+      const margin = 12;
+      const gap = 6;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const belowSpace = viewportHeight - rect.bottom - margin - gap;
+      const aboveSpace = rect.top - margin - gap;
+      const maxHeight = Math.max(140, Math.min(320, Math.max(belowSpace, aboveSpace)));
+      const openAbove = belowSpace < 180 && aboveSpace > belowSpace;
+      const left = Math.min(Math.max(margin, rect.left), Math.max(margin, viewportWidth - width - margin));
+      const top = openAbove
+        ? Math.max(margin, rect.top - maxHeight - gap)
+        : Math.min(rect.bottom + gap, viewportHeight - margin);
+
+      setPosition({ left, top, maxHeight });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorRef, open, width]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className={className}
+      style={{
+        ...style,
+        position: "fixed",
+        left: position.left,
+        top: position.top,
+        width,
+        maxHeight: position.maxHeight,
+        overflowY: "auto",
+        zIndex: 1000,
+      }}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 export function RichTextEditor({
   value,
   onChange,
@@ -878,6 +952,10 @@ export function RichTextEditor({
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [savedLinkRange, setSavedLinkRange] = useState<Range | null>(null);
   const [savedStyleRange, setSavedStyleRange] = useState<Range | null>(null);
+  const colorMenuRef = useRef<HTMLDivElement>(null);
+  const fontSizeMenuRef = useRef<HTMLDivElement>(null);
+  const lineHeightMenuRef = useRef<HTMLDivElement>(null);
+  const iconMenuRef = useRef<HTMLDivElement>(null);
   const [linkDraft, setLinkDraft] = useState("https://");
   const [linkError, setLinkError] = useState("");
   const normalizedValue = useMemo(() => normalizeRichTextHtml(value), [value]);
@@ -1301,7 +1379,7 @@ export function RichTextEditor({
           >
             <span className="text-[10px] font-semibold leading-none">EN×</span>
           </ToolbarButton>
-          <div className="relative">
+          <div ref={colorMenuRef}>
             <ToolbarButton
               label="Alterar cor do texto"
               onMouseDown={(event) => {
@@ -1318,8 +1396,11 @@ export function RichTextEditor({
               <Palette size={14} />
             </ToolbarButton>
             {showColors && (
-              <div
-                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[220px] rounded-[12px] border p-2 shadow-xl"
+              <ToolbarPopover
+                anchorRef={colorMenuRef}
+                open={showColors}
+                width={220}
+                className="rounded-[12px] border p-2 shadow-xl"
                 style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
               >
                 <div className="grid grid-cols-5 gap-1.5">
@@ -1356,10 +1437,10 @@ export function RichTextEditor({
                     </Tooltip>
                   ))}
                 </div>
-              </div>
+              </ToolbarPopover>
             )}
           </div>
-          <div className="relative">
+          <div ref={fontSizeMenuRef}>
             <ToolbarButton
               label="Alterar tamanho do texto"
               onMouseDown={(event) => {
@@ -1376,8 +1457,11 @@ export function RichTextEditor({
               <span className="text-[10px] font-semibold leading-none">A+</span>
             </ToolbarButton>
             {showFontSizes && (
-              <div
-                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-[12px] border p-2 shadow-xl"
+              <ToolbarPopover
+                anchorRef={fontSizeMenuRef}
+                open={showFontSizes}
+                width={170}
+                className="rounded-[12px] border p-2 shadow-xl"
                 style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
               >
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1397,10 +1481,10 @@ export function RichTextEditor({
                     </button>
                   ))}
                 </div>
-              </div>
+              </ToolbarPopover>
             )}
           </div>
-          <div className="relative">
+          <div ref={lineHeightMenuRef}>
             <ToolbarButton
               label="Alterar entrelinha"
               onMouseDown={(event) => {
@@ -1417,8 +1501,11 @@ export function RichTextEditor({
               <span className="text-[10px] font-semibold leading-none">LH</span>
             </ToolbarButton>
             {showLineHeights && (
-              <div
-                className="absolute left-0 top-[calc(100%+6px)] z-20 w-[170px] rounded-[12px] border p-2 shadow-xl"
+              <ToolbarPopover
+                anchorRef={lineHeightMenuRef}
+                open={showLineHeights}
+                width={170}
+                className="rounded-[12px] border p-2 shadow-xl"
                 style={{ backgroundColor: "#111111", borderColor: "#1e1e1e" }}
               >
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1438,10 +1525,10 @@ export function RichTextEditor({
                     </button>
                   ))}
                 </div>
-              </div>
+              </ToolbarPopover>
             )}
           </div>
-          <div className="relative">
+          <div ref={iconMenuRef}>
             <ToolbarButton
               label="Adicionar ícone"
               onMouseDown={(event) => {
@@ -1455,8 +1542,11 @@ export function RichTextEditor({
               <Sparkles size={14} />
             </ToolbarButton>
             {showIcons && (
-              <div
-                className="absolute left-0 top-[calc(100%+6px)] z-20 flex items-center gap-1 rounded-[10px] border px-2 py-1.5 shadow-xl"
+              <ToolbarPopover
+                anchorRef={iconMenuRef}
+                open={showIcons}
+                width={178}
+                className="flex items-center gap-1 rounded-[10px] border px-2 py-1.5 shadow-xl"
                 style={{ backgroundColor: "#111", borderColor: "#1e1e1e" }}
               >
                 {(Object.keys(INLINE_ICON_COMPONENTS) as InlineIconName[]).map((iconName) => {
@@ -1486,7 +1576,7 @@ export function RichTextEditor({
                     </Tooltip>
                   );
                 })}
-              </div>
+              </ToolbarPopover>
             )}
           </div>
         </div>
