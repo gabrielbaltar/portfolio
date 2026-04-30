@@ -1,21 +1,37 @@
 import {
   ArrowRight,
+  Award,
+  BookOpen,
   Bold,
+  Calendar,
   Check,
+  Code2,
+  ExternalLink,
+  Globe2,
   Heading1,
   Heading2,
   Heading3,
+  Heart,
   Italic,
   Languages,
+  Lightbulb,
   Link2,
   List,
   ListOrdered,
+  Mail,
+  MapPin,
   Palette,
+  Phone,
+  Rocket,
+  ShieldCheck,
   Sparkles,
   Star,
   Tags,
+  Target,
+  TrendingUp,
   Underline,
   Unlink,
+  Users,
   Zap,
 } from "lucide-react";
 import {
@@ -48,6 +64,22 @@ export const INLINE_ICON_COMPONENTS = {
   check: Check,
   "arrow-right": ArrowRight,
   zap: Zap,
+  heart: Heart,
+  rocket: Rocket,
+  lightbulb: Lightbulb,
+  target: Target,
+  "trending-up": TrendingUp,
+  award: Award,
+  "shield-check": ShieldCheck,
+  users: Users,
+  code: Code2,
+  "external-link": ExternalLink,
+  globe: Globe2,
+  "book-open": BookOpen,
+  calendar: Calendar,
+  mail: Mail,
+  phone: Phone,
+  "map-pin": MapPin,
 } as const;
 
 export type InlineIconName = keyof typeof INLINE_ICON_COMPONENTS;
@@ -58,6 +90,22 @@ const INLINE_ICON_TEXT: Record<InlineIconName, string> = {
   check: "✓",
   "arrow-right": "→",
   zap: "⚡",
+  heart: "♥",
+  rocket: "↗",
+  lightbulb: "!",
+  target: "◎",
+  "trending-up": "↗",
+  award: "★",
+  "shield-check": "✓",
+  users: "••",
+  code: "{}",
+  "external-link": "↗",
+  globe: "○",
+  "book-open": "▯",
+  calendar: "□",
+  mail: "@",
+  phone: "☎",
+  "map-pin": "⌖",
 };
 
 const INLINE_ICON_LABELS: Record<InlineIconName, string> = {
@@ -66,6 +114,22 @@ const INLINE_ICON_LABELS: Record<InlineIconName, string> = {
   check: "Check",
   "arrow-right": "Seta",
   zap: "Raio",
+  heart: "Coracao",
+  rocket: "Foguete",
+  lightbulb: "Ideia",
+  target: "Meta",
+  "trending-up": "Crescimento",
+  award: "Premio",
+  "shield-check": "Validado",
+  users: "Pessoas",
+  code: "Codigo",
+  "external-link": "Link externo",
+  globe: "Global",
+  "book-open": "Leitura",
+  calendar: "Calendario",
+  mail: "Email",
+  phone: "Telefone",
+  "map-pin": "Localizacao",
 };
 
 const INLINE_TEXT_COLORS = [
@@ -1545,8 +1609,8 @@ export function RichTextEditor({
               <ToolbarPopover
                 anchorRef={iconMenuRef}
                 open={showIcons}
-                width={178}
-                className="flex items-center gap-1 rounded-[10px] border px-2 py-1.5 shadow-xl"
+                width={244}
+                className="grid grid-cols-6 gap-1 rounded-[10px] border p-2 shadow-xl"
                 style={{ backgroundColor: "#111", borderColor: "#1e1e1e" }}
               >
                 {(Object.keys(INLINE_ICON_COMPONENTS) as InlineIconName[]).map((iconName) => {
