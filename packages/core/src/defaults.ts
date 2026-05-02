@@ -287,6 +287,10 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
     if (block.type === "table") {
       const columns = Array.isArray(block.columns) ? block.columns.map((column) => String(column ?? "")) : [];
       const fallbackColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];
+      const rawTitleFontSize = (block as { titleFontSize?: unknown }).titleFontSize;
+      const rawItemFontSize = (block as { itemFontSize?: unknown }).itemFontSize;
+      const titleFontSize = rawTitleFontSize === "" ? Number.NaN : Number(rawTitleFontSize);
+      const itemFontSize = rawItemFontSize === "" ? Number.NaN : Number(rawItemFontSize);
 
       return {
         ...block,
@@ -297,6 +301,10 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
             )
           : [],
         caption: typeof block.caption === "string" ? block.caption : "",
+        titleTextColor: typeof block.titleTextColor === "string" ? block.titleTextColor : undefined,
+        titleFontSize: Number.isFinite(titleFontSize) ? titleFontSize : undefined,
+        itemTextColor: typeof block.itemTextColor === "string" ? block.itemTextColor : undefined,
+        itemFontSize: Number.isFinite(itemFontSize) ? itemFontSize : undefined,
       };
     }
 

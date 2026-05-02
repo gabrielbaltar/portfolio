@@ -262,6 +262,12 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
   const rows = (block.rows || [])
     .map((row) => normalizedColumns.map((_, columnIndex) => row[columnIndex] || ""))
     .filter((row) => row.some((cell) => cell.trim() !== ""));
+  const titleTextColor = sanitizeTableColor(block.titleTextColor) || "var(--text-primary, #fafafa)";
+  const itemTextColor = sanitizeTableColor(block.itemTextColor) || "var(--text-primary, #f3f3f3)";
+  const titleFontSize = clampTableFontSize(block.titleFontSize, 17);
+  const itemFontSize = clampTableFontSize(block.itemFontSize, 16);
+  const mobileTitleFontSize = Math.max(12, Math.round(titleFontSize * 0.82));
+  const mobileItemFontSize = Math.max(13, itemFontSize - 1);
 
   if (rows.length === 0) return null;
 
@@ -284,9 +290,9 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
                     className="border-b px-4 py-4 text-left font-semibold"
                     style={{
                       borderColor: "var(--border-primary, #3A3A3A)",
-                      color: "var(--text-primary, #fafafa)",
-                      fontSize: "17px",
-                      lineHeight: "23px",
+                      color: titleTextColor,
+                      fontSize: `${titleFontSize}px`,
+                      lineHeight: `${Math.round(titleFontSize * 1.35)}px`,
                     }}
                   >
                     {column}
@@ -303,9 +309,9 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
                       className="border-b px-4 py-5 align-top last:border-b"
                       style={{
                         borderColor: "color-mix(in srgb, var(--border-primary, #3A3A3A) 62%, transparent)",
-                        color: "var(--text-primary, #f3f3f3)",
-                        fontSize: "16px",
-                        lineHeight: "24px",
+                        color: itemTextColor,
+                        fontSize: `${itemFontSize}px`,
+                        lineHeight: `${Math.round(itemFontSize * 1.5)}px`,
                         fontWeight: 400,
                         whiteSpace: "pre-wrap",
                       }}
@@ -330,13 +336,13 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
                 <div key={columnIndex} className="min-w-0">
                   <div
                     className="mb-1 font-['Inter',sans-serif] font-semibold"
-                    style={{ fontSize: "12px", lineHeight: "16px", color: "var(--text-secondary, #a6a6a6)" }}
+                    style={{ fontSize: `${mobileTitleFontSize}px`, lineHeight: `${Math.max(16, Math.round(mobileTitleFontSize * 1.35))}px`, color: titleTextColor }}
                   >
                     {column}
                   </div>
                   <div
                     className="break-words font-['Inter',sans-serif]"
-                    style={{ fontSize: "15px", lineHeight: "22px", color: "var(--text-primary, #fafafa)", fontWeight: 400, whiteSpace: "pre-wrap" }}
+                    style={{ fontSize: `${mobileItemFontSize}px`, lineHeight: `${Math.round(mobileItemFontSize * 1.47)}px`, color: itemTextColor, fontWeight: 400, whiteSpace: "pre-wrap" }}
                   >
                     {row[columnIndex]}
                   </div>
@@ -356,6 +362,16 @@ function TableBlockView({ block }: { block: Extract<ContentBlock, { type: "table
       ) : null}
     </figure>
   );
+}
+
+function sanitizeTableColor(value?: string) {
+  const trimmed = value?.trim() || "";
+  return /^#[\da-f]{3}$/i.test(trimmed) || /^#[\da-f]{6}$/i.test(trimmed) ? trimmed : "";
+}
+
+function clampTableFontSize(value: number | undefined, fallback: number) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.round(value as number), 10), 48);
 }
 
 function ImageBlockSlider({

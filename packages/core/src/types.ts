@@ -102,6 +102,10 @@ export interface ContentTableBlock {
   columns: string[];
   rows: string[][];
   caption?: string;
+  titleTextColor?: string;
+  titleFontSize?: number;
+  itemTextColor?: string;
+  itemFontSize?: number;
 }
 
 export type ContentBlock =

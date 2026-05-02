@@ -98,6 +98,10 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
           ["", ""],
         ],
         caption: "",
+        titleTextColor: "",
+        titleFontSize: undefined,
+        itemTextColor: "",
+        itemFontSize: undefined,
       };
     case "style-guide":
       return {
@@ -261,6 +265,12 @@ function sanitizeHexColor(value?: string | null) {
   return undefined;
 }
 
+function parseOptionalFontSize(value: string) {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed) : undefined;
+}
+
 function ListBlockEditor({
   items,
   onChange,
@@ -397,6 +407,10 @@ function TableBlockEditor({
     } as ContentBlock);
   };
 
+  const updateAppearance = (next: Partial<Extract<ContentBlock, { type: "table" }>>) => {
+    onChange({ ...block, ...next } as ContentBlock);
+  };
+
   const updateColumn = (columnIndex: number, value: string) => {
     const nextColumns = [...columns];
     nextColumns[columnIndex] = value;
@@ -443,6 +457,46 @@ function TableBlockEditor({
           placeholder="Ex.: Comparativo antes e depois"
         />
       </label>
+
+      <div className="rounded-lg border p-3" style={{ borderColor: "#2a2a2a", backgroundColor: "#101010" }}>
+        <FieldLabel>Aparencia da tabela</FieldLabel>
+        <div className="mt-2 grid grid-cols-1 gap-2 min-[720px]:grid-cols-4">
+          <label className="space-y-1">
+            <FieldLabel>Cor do titulo</FieldLabel>
+            <ColorInput
+              value={block.titleTextColor || ""}
+              onChange={(titleTextColor) => updateAppearance({ titleTextColor })}
+              placeholder="#fafafa"
+            />
+          </label>
+          <label className="space-y-1">
+            <FieldLabel>Tamanho titulo</FieldLabel>
+            <MiniInput
+              type="number"
+              value={block.titleFontSize ? String(block.titleFontSize) : ""}
+              onChange={(value) => updateAppearance({ titleFontSize: parseOptionalFontSize(value) })}
+              placeholder="17"
+            />
+          </label>
+          <label className="space-y-1">
+            <FieldLabel>Cor dos itens</FieldLabel>
+            <ColorInput
+              value={block.itemTextColor || ""}
+              onChange={(itemTextColor) => updateAppearance({ itemTextColor })}
+              placeholder="#f3f3f3"
+            />
+          </label>
+          <label className="space-y-1">
+            <FieldLabel>Tamanho itens</FieldLabel>
+            <MiniInput
+              type="number"
+              value={block.itemFontSize ? String(block.itemFontSize) : ""}
+              onChange={(value) => updateAppearance({ itemFontSize: parseOptionalFontSize(value) })}
+              placeholder="16"
+            />
+          </label>
+        </div>
+      </div>
 
       <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "#2a2a2a", backgroundColor: "#101010" }}>
         <div className="min-w-[520px]">
