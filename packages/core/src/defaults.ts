@@ -289,8 +289,8 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
       const fallbackColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];
       const rawTitleFontSize = (block as { titleFontSize?: unknown }).titleFontSize;
       const rawItemFontSize = (block as { itemFontSize?: unknown }).itemFontSize;
-      const titleFontSize = rawTitleFontSize === "" ? Number.NaN : Number(rawTitleFontSize);
-      const itemFontSize = rawItemFontSize === "" ? Number.NaN : Number(rawItemFontSize);
+      const titleFontSize = rawTitleFontSize == null || rawTitleFontSize === "" ? Number.NaN : Number(rawTitleFontSize);
+      const itemFontSize = rawItemFontSize == null || rawItemFontSize === "" ? Number.NaN : Number(rawItemFontSize);
 
       return {
         ...block,
