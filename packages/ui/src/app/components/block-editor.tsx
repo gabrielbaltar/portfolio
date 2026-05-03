@@ -73,6 +73,19 @@ const LABEL_MAP: Record<string, string> = {
   code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed / Prototipo",
 };
 
+const TABLE_TEXT_COLOR_OPTIONS = [
+  { label: "Padrao", value: "", swatch: "linear-gradient(135deg, #fafafa 0%, #7a7a7a 100%)" },
+  { label: "Neutro", value: "#f5f5f5", swatch: "#f5f5f5" },
+  { label: "Verde", value: "#8CF5AE", swatch: "#8CF5AE" },
+  { label: "Turquesa", value: "#7EE7E5", swatch: "#7EE7E5" },
+  { label: "Azul", value: "#72B9FF", swatch: "#72B9FF" },
+  { label: "Lilas", value: "#B8A1FF", swatch: "#B8A1FF" },
+  { label: "Rosa", value: "#F0A6FF", swatch: "#F0A6FF" },
+  { label: "Pessego", value: "#FFC38A", swatch: "#FFC38A" },
+  { label: "Amarelo", value: "#FFE480", swatch: "#FFE480" },
+  { label: "Vermelho", value: "#FF9E9E", swatch: "#FF9E9E" },
+] as const;
+
 const DND_ITEM_TYPE = "CONTENT_BLOCK";
 
 interface DragItem {
@@ -463,10 +476,9 @@ function TableBlockEditor({
         <div className="mt-2 grid grid-cols-1 gap-2 min-[720px]:grid-cols-4">
           <label className="space-y-1">
             <FieldLabel>Cor do titulo</FieldLabel>
-            <ColorInput
+            <TableTextColorInput
               value={block.titleTextColor || ""}
               onChange={(titleTextColor) => updateAppearance({ titleTextColor })}
-              placeholder="#fafafa"
             />
           </label>
           <label className="space-y-1">
@@ -480,10 +492,9 @@ function TableBlockEditor({
           </label>
           <label className="space-y-1">
             <FieldLabel>Cor dos itens</FieldLabel>
-            <ColorInput
+            <TableTextColorInput
               value={block.itemTextColor || ""}
               onChange={(itemTextColor) => updateAppearance({ itemTextColor })}
-              placeholder="#f3f3f3"
             />
           </label>
           <label className="space-y-1">
@@ -581,6 +592,48 @@ function TableBlockEditor({
           <Plus size={12} /> Adicionar coluna
         </button>
       </div>
+    </div>
+  );
+}
+
+function TableTextColorInput({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+}) {
+  const normalizedValue = sanitizeHexColor(value) || "";
+
+  return (
+    <div className="grid grid-cols-5 gap-1.5">
+      {TABLE_TEXT_COLOR_OPTIONS.map((colorOption) => {
+        const selected = normalizedValue.toLowerCase() === colorOption.value.toLowerCase();
+
+        return (
+          <button
+            key={colorOption.label}
+            type="button"
+            onClick={() => onChange(colorOption.value)}
+            className="flex h-9 w-full items-center justify-center rounded-md border transition-colors hover:border-[#565656]"
+            style={{
+              borderColor: selected ? "#fafafa" : "#2a2a2a",
+              backgroundColor: selected ? "#202020" : "#171717",
+            }}
+            aria-label={`Aplicar cor: ${colorOption.label}`}
+            aria-pressed={selected}
+            title={colorOption.label}
+          >
+            <span
+              className="h-5 w-5 rounded-full border"
+              style={{
+                background: colorOption.swatch,
+                borderColor: colorOption.value === "" ? "#6a6a6a" : "transparent",
+              }}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
