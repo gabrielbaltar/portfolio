@@ -1,5 +1,5 @@
 {
-  "cachedAt": 1778925771368,
+  "cachedAt": 1779084430743,
   "data": {
     "siteSettings": {
       "id": "main",
@@ -89,13 +89,13 @@
           }
         },
         "1777948428907": {
-          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png",
+          "image": "/cms-assets/d2deb7f539ccf5abd592a61e.png",
           "title": "Portal Segurado VG - Segurança sem fricção",
           "subtitle": "Desenho da jornada de primeiro acesso e autoatendimento para segurados corporativos em um produto de Vida em Grupo.",
           "imagePosition": "50% 50%"
         },
         "1777948721174": {
-          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png",
+          "image": "/cms-assets/649161820f613eec960636a6.png",
           "title": "TIM Pra Mim - Gamificação para retenção",
           "subtitle": "Design da experiência de uma plataforma de benefícios gamificada para clientes B2C e SMB da TIM. A solução traduziu regras complexas de telecom, autenticação, inadimplência e segmentação em uma jornada de missões, Bytes e recompensas para apoiar a estratégia de retenção.",
           "imagePosition": "50% 50%"
@@ -1740,13 +1740,13 @@
             "type": "paragraph"
           },
           {
-            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775941676225-mockup.png",
+            "url": "/cms-assets/b9f4d07ce8904f5b23547c78.png",
             "type": "image",
             "caption": "",
             "borderRadius": 12,
             "galleryImages": [
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775947721994-mockup2.png",
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775950080585-mockup3.png",
+              "/cms-assets/1c2fa3225e485dc91195b7bf.png",
+              "/cms-assets/54ca5fc2135b475e1224366e.png",
               "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775951406600-gac-mobile.png",
               "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775953927174-gac-mobile2.png"
             ],
@@ -2205,7 +2205,7 @@
         "publishedAt": null,
         "cardTitle": "Portal Segurado VG - Segurança sem fricção",
         "cardSubtitle": "Desenho da jornada de primeiro acesso e autoatendimento para segurados corporativos em um produto de Vida em Grupo.",
-        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png",
+        "cardImage": "/cms-assets/d2deb7f539ccf5abd592a61e.png",
         "cardImagePosition": "50% 50%"
       },
       {
@@ -2220,7 +2220,7 @@
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryImages": [
-          "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949215076-tim-pra-mim-capa.png"
+          "/cms-assets/ce2d14e0861564c4fbace4f0.png"
         ],
         "galleryPositions": [
           "50% 50%"
@@ -2244,7 +2244,7 @@
         "publishedAt": null,
         "cardTitle": "TIM Pra Mim - Gamificação para retenção",
         "cardSubtitle": "Design da experiência de uma plataforma de benefícios gamificada para clientes B2C e SMB da TIM. A solução traduziu regras complexas de telecom, autenticação, inadimplência e segmentação em uma jornada de missões, Bytes e recompensas para apoiar a estratégia de retenção.",
-        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png",
+        "cardImage": "/cms-assets/649161820f613eec960636a6.png",
         "cardImagePosition": "50% 50%"
       },
       {
@@ -2479,7 +2479,7 @@
         "name": "Framer",
         "description": "Ferramenta No-code",
         "color": "#111",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489900604-framer-icon-black.svg",
+        "logo": "/cms-assets/dfa2e3cdb36e760e2a38307c.svg",
         "link": "https://www.framer.com/",
         "sortOrder": 2,
         "logoRadius": 0
@@ -2649,13 +2649,13 @@
             "type": "paragraph"
           },
           {
-            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773297023253-land-o-lakes-inc-tqsvfz7nhuo-unsplash.jpg",
+            "url": "/cms-assets/a6f24c13b52bda3c0ef1282e.jpg",
             "type": "image",
             "caption": "",
             "position": "50% 50%",
             "borderRadius": 12,
             "galleryImages": [
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773296460273-uxday-2025-matriz-236.jpg"
+              "/cms-assets/c859ca18f4755025e615d627.jpg"
             ],
             "galleryPositions": [
               "50% 50%"

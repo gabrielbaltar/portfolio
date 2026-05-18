@@ -14,6 +14,10 @@ const publicAssetDir = process.env.CMS_MEDIA_PUBLIC_DIR?.trim() || path.join(roo
 const assetBasePath = process.env.CMS_MEDIA_ASSET_BASE_PATH?.trim() || "/cms-assets";
 const includeExternalMedia = process.env.CMS_MIRROR_EXTERNAL_MEDIA === "true";
 const downloadTimeoutMs = Number(process.env.CMS_MEDIA_DOWNLOAD_TIMEOUT_MS || 30000);
+const localSourceDirs = (process.env.CMS_MEDIA_LOCAL_SOURCE_DIRS || "")
+  .split(",")
+  .map((dir) => dir.trim())
+  .filter(Boolean);
 
 type SnapshotFile = {
   cachedAt?: number;
@@ -84,6 +88,107 @@ function buildAssetName(url: string, contentType: string) {
   return `${hash}${ext}`;
 }
 
+function normalizeMediaName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/^\d{8,}-/, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function isSkippableDirectory(dirPath: string) {
+  const name = path.basename(dirPath);
+  return name === "node_modules" || name === ".git" || name === "dist" || name === ".venv";
+}
+
+function inferContentType(filePath: string) {
+  switch (path.extname(filePath).toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".svg":
+      return "image/svg+xml";
+    case ".avif":
+      return "image/avif";
+    case ".mp4":
+      return "video/mp4";
+    case ".webm":
+      return "video/webm";
+    case ".json":
+      return "application/json";
+    default:
+      return "application/octet-stream";
+  }
+}
+
+async function collectLocalFiles(sourceDirs: string[]) {
+  const files: string[] = [];
+  const allowedExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".json", ".lottie", ".mp4", ".png", ".svg", ".webm"]);
+
+  async function walk(dirPath: string) {
+    let entries: fs.Dirent[];
+    try {
+      entries = await fsp.readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        if (!isSkippableDirectory(entryPath)) await walk(entryPath);
+        continue;
+      }
+
+      if (entry.isFile() && allowedExtensions.has(path.extname(entry.name).toLowerCase())) {
+        files.push(entryPath);
+      }
+    }
+  }
+
+  for (const sourceDir of sourceDirs) {
+    await walk(path.resolve(sourceDir));
+  }
+
+  return files;
+}
+
+function findLocalMatch(url: string, localFiles: string[]) {
+  const targetName = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
+  const normalizedTarget = normalizeMediaName(targetName);
+
+  return (
+    localFiles.find((file) => path.basename(file).toLowerCase() === targetName.toLowerCase()) ||
+    localFiles.find((file) => normalizeMediaName(path.basename(file)) === normalizedTarget)
+  );
+}
+
+async function mirrorLocalFile(url: string, sourcePath: string, manifest: MediaManifest) {
+  const contentType = inferContentType(sourcePath);
+  const bytes = await fsp.readFile(sourcePath);
+  const assetName = buildAssetName(url, contentType);
+  const assetPath = path.join(publicAssetDir, assetName);
+
+  await fsp.mkdir(publicAssetDir, { recursive: true });
+  await fsp.writeFile(assetPath, bytes);
+
+  const entry = {
+    originalUrl: url,
+    fallbackPath: assetName,
+    contentType,
+    size: bytes.byteLength,
+    mirroredAt: new Date().toISOString(),
+  };
+
+  manifest.entries[url] = entry;
+  return entry;
+}
+
 async function fetchWithTimeout(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), downloadTimeoutMs);
@@ -144,12 +249,22 @@ async function main() {
   manifest.generatedAt = new Date().toISOString();
 
   const urls = collectCMSMediaUrls(data, { includeExternalMedia }).filter((url) => includeExternalMedia || isSupabaseStorageUrl(url));
+  const localFiles = await collectLocalFiles(localSourceDirs);
   let downloaded = 0;
   let cached = 0;
+  let local = 0;
   let failed = 0;
 
   for (const url of urls) {
     try {
+      const localMatch = findLocalMatch(url, localFiles);
+      if (localMatch) {
+        await mirrorLocalFile(url, localMatch, manifest);
+        local += 1;
+        console.log(`[mirror-public-media] local: ${url} <- ${localMatch}`);
+        continue;
+      }
+
       const result = await mirrorOne(url, manifest);
       if (result.status === "downloaded") downloaded += 1;
       if (result.status === "cached") cached += 1;
@@ -171,7 +286,7 @@ async function main() {
   }
 
   console.log(
-    `[mirror-public-media] concluido: ${downloaded} baixadas, ${cached} em cache, ${failed} falhas, ${Object.keys(manifest.entries).length} no manifest.`,
+    `[mirror-public-media] concluido: ${downloaded} baixadas, ${local} locais, ${cached} em cache, ${failed} falhas, ${Object.keys(manifest.entries).length} no manifest.`,
   );
 }
 

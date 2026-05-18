@@ -1,5 +1,69 @@
 {
-  "generatedAt": "2026-05-18T05:38:07.646Z",
+  "generatedAt": "2026-05-18T06:07:09.893Z",
   "assetBasePath": "/cms-assets",
-  "entries": {}
+  "entries": {
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773296460273-uxday-2025-matriz-236.jpg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773296460273-uxday-2025-matriz-236.jpg",
+      "fallbackPath": "c859ca18f4755025e615d627.jpg",
+      "contentType": "image/jpeg",
+      "size": 5709062,
+      "mirroredAt": "2026-05-18T06:07:09.975Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773297023253-land-o-lakes-inc-tqsvfz7nhuo-unsplash.jpg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773297023253-land-o-lakes-inc-tqsvfz7nhuo-unsplash.jpg",
+      "fallbackPath": "a6f24c13b52bda3c0ef1282e.jpg",
+      "contentType": "image/jpeg",
+      "size": 14261922,
+      "mirroredAt": "2026-05-18T06:07:09.992Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489900604-framer-icon-black.svg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489900604-framer-icon-black.svg",
+      "fallbackPath": "dfa2e3cdb36e760e2a38307c.svg",
+      "contentType": "image/svg+xml",
+      "size": 223,
+      "mirroredAt": "2026-05-18T06:07:10.408Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775941676225-mockup.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775941676225-mockup.png",
+      "fallbackPath": "b9f4d07ce8904f5b23547c78.png",
+      "contentType": "image/png",
+      "size": 14999028,
+      "mirroredAt": "2026-05-18T06:07:10.593Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775947721994-mockup2.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775947721994-mockup2.png",
+      "fallbackPath": "1c2fa3225e485dc91195b7bf.png",
+      "contentType": "image/png",
+      "size": 15896361,
+      "mirroredAt": "2026-05-18T06:07:10.615Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775950080585-mockup3.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775950080585-mockup3.png",
+      "fallbackPath": "54ca5fc2135b475e1224366e.png",
+      "contentType": "image/png",
+      "size": 19929195,
+      "mirroredAt": "2026-05-18T06:07:10.642Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png",
+      "fallbackPath": "d2deb7f539ccf5abd592a61e.png",
+      "contentType": "image/png",
+      "size": 192208,
+      "mirroredAt": "2026-05-18T06:07:10.727Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949215076-tim-pra-mim-capa.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949215076-tim-pra-mim-capa.png",
+      "fallbackPath": "ce2d14e0861564c4fbace4f0.png",
+      "contentType": "image/png",
+      "size": 93379,
+      "mirroredAt": "2026-05-18T06:07:10.728Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png",
+      "fallbackPath": "649161820f613eec960636a6.png",
+      "contentType": "image/png",
+      "size": 93379,
+      "mirroredAt": "2026-05-18T06:07:10.728Z"
+    }
+  }
 }
