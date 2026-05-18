@@ -30,4 +30,4 @@ pnpm-debug.log*
 
 # misc
 coverage/
-recovered/
+/recovered/
