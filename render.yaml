@@ -5,10 +5,6 @@ services:
     buildCommand: npm ci && npm run build:web
     staticPublishPath: ./dist/web
     envVars:
-      - key: VITE_SUPABASE_URL
-        sync: false
-      - key: VITE_SUPABASE_ANON_KEY
-        sync: false
       - key: VITE_PUBLIC_SITE_URL
         sync: false
       - key: VITE_PUBLIC_POSTHOG_KEY
@@ -21,10 +17,17 @@ services:
         sync: false
       - key: VITE_EMAILJS_PUBLIC_KEY
         sync: false
+      - key: VITE_PUBLIC_DATA_SOURCE
+        value: repository
+      - key: VITE_CMS_REPOSITORY_URL
+        sync: false
+      - key: VITE_SUPABASE_MEDIA_MODE
+        value: placeholder
     buildFilter:
       paths:
         - apps/web/**
         - packages/**
+        - data/fallback/**
         - scripts/**
         - package.json
         - package-lock.json
@@ -84,3 +87,36 @@ services:
       - path: /*
         name: X-Robots-Tag
         value: noindex, nofollow
+
+  - type: web
+    runtime: node
+    name: portfolio-api
+    buildCommand: npm ci
+    startCommand: npm run start:api
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: CMS_API_ALLOW_ORIGIN
+        sync: false
+      - key: CMS_PROVIDER_TIMEOUT_MS
+        value: 3000
+      - key: CMS_MEDIA_MANIFEST_PATH
+        value: data/fallback/media-manifest.json
+      - key: CMS_PUBLIC_ASSET_BASE_URL
+        sync: false
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/**
+        - data/fallback/**
+        - package.json
+        - package-lock.json
+        - tsconfig.base.json

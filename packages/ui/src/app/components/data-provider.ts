@@ -43,6 +43,7 @@ import {
   uploadMedia,
   deleteMedia,
 } from "@portfolio/supabase";
+import recoveredPublicSnapshot from "@portfolio/core/recovered/public-cms-snapshot.json";
 
 const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v1";
 const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
@@ -52,6 +53,35 @@ type CachedSnapshot = {
   cachedAt: number;
   data: CMSData;
 };
+
+type PublicRepositoryResponse = {
+  provider?: string;
+  data?: CMSData;
+};
+
+const bundledPublicSnapshot = recoveredPublicSnapshot as CachedSnapshot;
+
+function getPublicDataSource() {
+  return (import.meta.env.VITE_PUBLIC_DATA_SOURCE || "").trim().toLowerCase();
+}
+
+function shouldUseRepositoryPublicSource() {
+  return ["repository", "api", "server", "backend"].includes(getPublicDataSource());
+}
+
+function shouldUseBundledPublicSnapshot() {
+  const source = getPublicDataSource();
+
+  if (["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
+    return false;
+  }
+
+  if (["static", "snapshot", "bundled", "local"].includes(source)) {
+    return true;
+  }
+
+  return Boolean(import.meta.env.PROD);
+}
 
 function normalizeLoadError(error: unknown): Error {
   if (
@@ -75,13 +105,31 @@ function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
   return value;
 }
 
+function getCmsRepositoryUrl() {
+  return (import.meta.env.VITE_CMS_REPOSITORY_URL || "/api/cms/public").trim();
+}
+
+async function fetchFromCmsRepository(): Promise<CMSData> {
+  const response = await fetch(getCmsRepositoryUrl(), {
+    headers: { accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`CMS Repository HTTP ${response.status}`);
+  }
+
+  const body = (await response.json()) as PublicRepositoryResponse;
+  if (!body.data) {
+    throw new Error("CMS Repository returned an empty payload.");
+  }
+
+  console.info(`[CMSDataProvider] Public data loaded from CMS Repository${body.provider ? ` (${body.provider})` : ""}.`);
+  return body.data;
+}
+
 class SupabaseDataProvider {
-  private client = createBrowserSupabaseClient(getEnv("VITE_SUPABASE_URL"), getEnv("VITE_SUPABASE_ANON_KEY"));
-  private readClient = createTimedBrowserSupabaseClient(
-    getEnv("VITE_SUPABASE_URL"),
-    getEnv("VITE_SUPABASE_ANON_KEY"),
-    SUPABASE_READ_TIMEOUT_MS,
-  );
+  private client: ReturnType<typeof createBrowserSupabaseClient> | null = null;
+  private readClient: ReturnType<typeof createTimedBrowserSupabaseClient> | null = null;
   private publicSnapshot: CachedSnapshot | null = null;
   private cmsSnapshot: CachedSnapshot | null = null;
   private publicLoadPromise: Promise<CMSData> | null = null;
@@ -142,7 +190,31 @@ class SupabaseDataProvider {
     return persisted;
   }
 
+  private getClient() {
+    if (!this.client) {
+      this.client = createBrowserSupabaseClient(getEnv("VITE_SUPABASE_URL"), getEnv("VITE_SUPABASE_ANON_KEY"));
+    }
+
+    return this.client;
+  }
+
+  private getReadClient() {
+    if (!this.readClient) {
+      this.readClient = createTimedBrowserSupabaseClient(
+        getEnv("VITE_SUPABASE_URL"),
+        getEnv("VITE_SUPABASE_ANON_KEY"),
+        SUPABASE_READ_TIMEOUT_MS,
+      );
+    }
+
+    return this.readClient;
+  }
+
   getCachedPublicData(): CMSData | null {
+    if (shouldUseBundledPublicSnapshot()) {
+      return bundledPublicSnapshot.data;
+    }
+
     return this.getSnapshot(PUBLIC_DATA_CACHE_KEY)?.data ?? null;
   }
 
@@ -161,11 +233,18 @@ class SupabaseDataProvider {
   loadPublicData(): Promise<CMSData> {
     const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
 
+    if (shouldUseBundledPublicSnapshot()) {
+      this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, bundledPublicSnapshot.data);
+      return Promise.resolve(bundledPublicSnapshot.data);
+    }
+
     if (this.publicLoadPromise) {
       return this.publicLoadPromise;
     }
 
-    this.publicLoadPromise = loadPublicCMSDataFromSupabase(this.readClient)
+    this.publicLoadPromise = (shouldUseRepositoryPublicSource()
+      ? fetchFromCmsRepository()
+      : loadPublicCMSDataFromSupabase(this.getReadClient()))
       .then((data) => {
         this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, data);
         return data;
@@ -176,7 +255,9 @@ class SupabaseDataProvider {
           console.warn("[SupabaseDataProvider] Using cached public snapshot after load failure.", error);
           return snapshot.data;
         }
-        throw error;
+        console.warn("[SupabaseDataProvider] Using bundled public snapshot after load failure.", error);
+        this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, bundledPublicSnapshot.data);
+        return bundledPublicSnapshot.data;
       })
       .finally(() => {
         this.publicLoadPromise = null;
@@ -192,7 +273,7 @@ class SupabaseDataProvider {
       return this.cmsLoadPromise;
     }
 
-    this.cmsLoadPromise = loadCmsDataFromSupabase(this.readClient)
+    this.cmsLoadPromise = loadCmsDataFromSupabase(this.getReadClient())
       .then((data) => {
         this.writeSnapshot(CMS_DATA_CACHE_KEY, data);
         return data;
@@ -213,37 +294,37 @@ class SupabaseDataProvider {
   }
 
   saveSiteSettings(siteSettings: SiteSettings) {
-    return saveSiteSettings(this.client, siteSettings);
+    return saveSiteSettings(this.getClient(), siteSettings);
   }
 
   savePublicSnapshot(data: CMSData) {
-    return savePublicCMSDataSnapshot(this.client, data);
+    return savePublicCMSDataSnapshot(this.getClient(), data);
   }
 
   saveProfile(profile: ProfileData) {
-    return saveProfile(this.client, profile);
+    return saveProfile(this.getClient(), profile);
   }
 
   saveCollection(collection: CMSCollectionName, previous: any[], next: any[]) {
     switch (collection) {
       case "projects":
-        return saveProjects(this.client, previous, next);
+        return saveProjects(this.getClient(), previous, next);
       case "blogPosts":
-        return saveBlogPosts(this.client, previous, next);
+        return saveBlogPosts(this.getClient(), previous, next);
       case "pages":
-        return savePages(this.client, previous, next);
+        return savePages(this.getClient(), previous, next);
       case "experiences":
-        return saveExperiences(this.client, previous, next);
+        return saveExperiences(this.getClient(), previous, next);
       case "education":
-        return saveEducation(this.client, previous, next);
+        return saveEducation(this.getClient(), previous, next);
       case "certifications":
-        return saveCertifications(this.client, previous, next);
+        return saveCertifications(this.getClient(), previous, next);
       case "stack":
-        return saveStack(this.client, previous, next);
+        return saveStack(this.getClient(), previous, next);
       case "awards":
-        return saveAwards(this.client, previous, next);
+        return saveAwards(this.getClient(), previous, next);
       case "recommendations":
-        return saveRecommendations(this.client, previous, next);
+        return saveRecommendations(this.getClient(), previous, next);
       case "media":
         return Promise.resolve();
       default:
@@ -252,43 +333,43 @@ class SupabaseDataProvider {
   }
 
   uploadMedia(file: File, visibility: MediaVisibility = "public"): Promise<MediaItem> {
-    return uploadMedia(this.client, file, visibility);
+    return uploadMedia(this.getClient(), file, visibility);
   }
 
   deleteMedia(item: MediaItem) {
-    return deleteMedia(this.client, item);
+    return deleteMedia(this.getClient(), item);
   }
 
   loadVersions(entityType: ContentEntityType, entityId: string): Promise<ContentVersion[]> {
-    return loadContentVersions(this.client, entityType, entityId);
+    return loadContentVersions(this.getClient(), entityType, entityId);
   }
 
   saveVersion(entityType: ContentEntityType, entityId: string, snapshot: Record<string, unknown>, label: string) {
-    return saveContentVersion(this.client, entityType, entityId, snapshot, label);
+    return saveContentVersion(this.getClient(), entityType, entityId, snapshot, label);
   }
 
   signIn(email: string, password: string) {
-    return signInWithPassword(this.client, email, password);
+    return signInWithPassword(this.getClient(), email, password);
   }
 
   signOut() {
-    return signOut(this.client);
+    return signOut(this.getClient());
   }
 
   getSession() {
-    return getSession(this.client);
+    return getSession(this.getClient());
   }
 
   onAuthStateChange(callback: Parameters<typeof onAuthStateChange>[1]) {
-    return onAuthStateChange(this.client, callback);
+    return onAuthStateChange(this.getClient(), callback);
   }
 
   isSlugAvailable(collection: Extract<CMSCollectionName, "projects" | "blogPosts" | "pages">, slug: string, excludeId?: string) {
-    return isSlugAvailable(this.client, collection, slug, excludeId);
+    return isSlugAvailable(this.getClient(), collection, slug, excludeId);
   }
 
   getProjectAccessStatus(projectId: string, visitorToken: string): Promise<ProjectAccessStatus> {
-    return getProjectAccessStatus(this.readClient, projectId, visitorToken);
+    return getProjectAccessStatus(this.getReadClient(), projectId, visitorToken);
   }
 
   submitProjectAccessRequest(input: {
@@ -298,15 +379,15 @@ class SupabaseDataProvider {
     requesterMessage: string;
     visitorToken: string;
   }): Promise<SubmitProjectAccessRequestResult> {
-    return submitProjectAccessRequest(this.client, input);
+    return submitProjectAccessRequest(this.getClient(), input);
   }
 
   loadProjectAccessRequests(): Promise<ProjectAccessRequest[]> {
-    return loadProjectAccessRequests(this.client);
+    return loadProjectAccessRequests(this.getClient());
   }
 
   updateProjectAccessRequestStatus(requestId: string, status: ProjectAccessRequestStatus): Promise<void> {
-    return updateProjectAccessRequestStatus(this.client, requestId, status);
+    return updateProjectAccessRequestStatus(this.getClient(), requestId, status);
   }
 }
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { shouldBlockSupabaseMedia } from '../media-egress'
 
 const ERROR_IMG_SRC =
   'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg=='
@@ -10,9 +11,10 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
     setDidError(true)
   }
 
-  const { src, alt, style, className, ...rest } = props
+  const { src, alt, style, className, loading, decoding, ...rest } = props
+  const blockedSrc = shouldBlockSupabaseMedia(src)
 
-  return didError ? (
+  return didError || blockedSrc ? (
     <div
       className={`block bg-gray-100 text-center align-middle ${className ?? ''}`}
       style={{ display: 'block', ...style }}
@@ -22,7 +24,10 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
           src={ERROR_IMG_SRC}
           alt="Error loading image"
           {...rest}
+          loading={loading ?? 'lazy'}
+          decoding={decoding ?? 'async'}
           data-original-url={src}
+          data-media-blocked={blockedSrc ? 'supabase-egress' : undefined}
           style={{ display: 'block' }}
         />
       </div>
@@ -34,6 +39,8 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
       className={className}
       style={{ display: 'block', ...style }}
       {...rest}
+      loading={loading ?? 'lazy'}
+      decoding={decoding ?? 'async'}
       onError={handleError}
     />
   )

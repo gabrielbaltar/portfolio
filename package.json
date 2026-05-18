@@ -14,11 +14,19 @@
   "scripts": {
     "dev:web": "vite --config apps/web/vite.config.ts",
     "dev:cms": "vite --config apps/cms/vite.config.ts",
+    "dev:api": "node --env-file=.env --import tsx apps/api/src/server.ts",
+    "start:api": "tsx apps/api/src/server.ts",
     "build:web": "vite build --config apps/web/vite.config.ts && tsx scripts/generate-blog-static-pages.ts",
     "build:cms": "vite build --config apps/cms/vite.config.ts",
     "build": "npm run build:web && npm run build:cms",
     "typecheck": "tsc --noEmit -p tsconfig.base.json",
-    "seed:supabase": "node --env-file=.env --import tsx scripts/seed-supabase.ts"
+    "seed:supabase": "node --env-file=.env --import tsx scripts/seed-supabase.ts",
+    "restore:recovered": "node --env-file=.env --import tsx scripts/restore-recovered-snapshot.ts",
+    "snapshot:recovered": "node --env-file=.env --import tsx scripts/update-recovered-snapshots.ts",
+    "cms:export-supabase": "node --env-file=.env --import tsx scripts/export-supabase-content.ts",
+    "cms:import-turso": "node --env-file=.env --import tsx scripts/import-turso-content.ts",
+    "cms:mirror-media": "node --env-file=.env --import tsx scripts/mirror-public-media.ts",
+    "supabase:quota-guard": "node --env-file=.env --import tsx scripts/supabase-quota-guard.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
@@ -31,6 +39,7 @@
     "vite": "6.3.5"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.3",
     "@lottiefiles/dotlottie-react": "^0.18.6"
   }
 }

@@ -2,6 +2,7 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { ImageIcon } from "lucide-react";
 import { type CSSProperties, type MouseEventHandler, useEffect, useRef, useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { shouldBlockSupabaseMedia } from "./media-egress";
 
 interface ContentImageProps {
   src?: string | null;
@@ -194,7 +195,9 @@ export function ContentImage({
   preload = "metadata",
   pauseWhenHidden = true,
 }: ContentImageProps) {
-  const assetKind = inferVisualAssetKind(src, mimeType);
+  const resolvedSrc = shouldBlockSupabaseMedia(src) ? "" : src;
+  const resolvedPoster = shouldBlockSupabaseMedia(poster) ? undefined : poster;
+  const assetKind = inferVisualAssetKind(resolvedSrc, mimeType);
   const reducedMotion = usePrefersReducedMotion();
   const [devicePixelRatio, setDevicePixelRatio] = useState(1);
 
@@ -206,7 +209,7 @@ export function ContentImage({
   if (assetKind === "video") {
     return (
       <VideoAsset
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         className={className}
         style={style}
@@ -216,14 +219,14 @@ export function ContentImage({
         loop={loop}
         muted={muted}
         controls={controls}
-        poster={poster}
+        poster={resolvedPoster}
         preload={preload}
         pauseWhenHidden={pauseWhenHidden}
       />
     );
   }
 
-  if (assetKind === "lottie" && src) {
+  if (assetKind === "lottie" && resolvedSrc) {
     return (
       <div
         role="img"
@@ -233,7 +236,7 @@ export function ContentImage({
         onClick={onClick}
       >
         <DotLottieReact
-          src={src}
+          src={resolvedSrc}
           autoplay={Boolean(autoPlay && !reducedMotion)}
           loop={Boolean(loop)}
           className="h-full w-full"
@@ -253,10 +256,10 @@ export function ContentImage({
     );
   }
 
-  if (assetKind === "image" && src && src.trim() !== "") {
+  if (assetKind === "image" && resolvedSrc && resolvedSrc.trim() !== "") {
     return (
       <ImageWithFallback
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         className={className}
         style={{ ...style, objectPosition: position }}

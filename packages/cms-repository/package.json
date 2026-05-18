@@ -1,0 +1,13 @@
+{
+  "name": "@portfolio/cms-repository",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@libsql/client": "^0.17.3",
+    "@portfolio/core": "1.0.0",
+    "@portfolio/supabase": "1.0.0"
+  }
+}

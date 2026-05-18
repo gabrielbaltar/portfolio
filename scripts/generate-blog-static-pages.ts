@@ -1,8 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildArticleSeoData, trimTrailingSlash } from "@portfolio/core";
-import { loadPublicCMSData } from "@portfolio/supabase";
-import { createClient } from "@supabase/supabase-js";
+import { createDefaultCMSRepository } from "@portfolio/cms-repository";
 
 function escapeHtml(value: string) {
   return value
@@ -28,24 +27,11 @@ function injectHead(template: string, headTags: string[]) {
 async function main() {
   const distDir = path.join(process.cwd(), "dist", "web");
   const templatePath = path.join(distDir, "index.html");
-  const supabaseUrl = process.env.VITE_SUPABASE_URL?.trim() || "";
-  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY?.trim() || "";
   const publicSiteUrl = trimTrailingSlash(process.env.VITE_PUBLIC_SITE_URL || "");
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("[generate-blog-static-pages] Skipping static article pages because Supabase public env vars are missing.");
-    return;
-  }
-
   const template = await readFile(templatePath, "utf8");
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-  const data = await loadPublicCMSData(client);
+  const { data, provider } = await createDefaultCMSRepository().loadPublicCMSData();
+  console.log(`[generate-blog-static-pages] Loaded CMS data from ${provider}.`);
   const siteLocale = data.siteSettings.defaultLanguage === "en" ? "en-US" : "pt-BR";
   const posts = data.blogPosts.filter((post) => {
     const hasPassword = Boolean(post.password && post.password.trim() !== "");

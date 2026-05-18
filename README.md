@@ -49,8 +49,15 @@ Usado apenas por scripts administrativos, principalmente seed/migracao.
 
 | Variavel | Obrigatoria | Uso |
 | --- | --- | --- |
-| `SUPABASE_URL` | Sim | URL do projeto Supabase para scripts root |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sim | Apenas para scripts root. Nunca usar no front-end |
+| `SUPABASE_URL` | Sim | URL do projeto Supabase para scripts root e API |
+| `SUPABASE_ANON_KEY` | Nao | Chave anon para leitura publica via API, quando nao usar service role |
+| `SUPABASE_SERVICE_ROLE_KEY` | Nao | Apenas para API/scripts administrativos. Nunca usar no front-end |
+| `TURSO_DATABASE_URL` | Nao | Banco secundario do CMS Repository |
+| `TURSO_AUTH_TOKEN` | Nao | Token Turso apenas para API/scripts. Nunca usar no front-end |
+| `CMS_PROVIDER_TIMEOUT_MS` | Nao | Timeout por provider do CMS Repository. Padrao: `3000` |
+| `CMS_API_ALLOW_ORIGIN` | Nao | Origem permitida no CORS da API |
+| `CMS_MEDIA_MANIFEST_PATH` | Nao | Manifest do espelho de midia local. Padrao: `data/fallback/media-manifest.json` |
+| `CMS_PUBLIC_ASSET_BASE_URL` | Nao | URL publica base para `/cms-assets` quando a API estiver em outro dominio |
 
 ### Web publico
 
@@ -58,10 +65,13 @@ Arquivo: [`apps/web/.env.example`](./apps/web/.env.example)
 
 | Variavel | Obrigatoria | Uso |
 | --- | --- | --- |
-| `VITE_SUPABASE_URL` | Sim | URL publica do projeto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | Sim | Chave anon usada no front-end |
+| `VITE_PUBLIC_DATA_SOURCE` | Nao | Use `repository` para o site publico chamar a API de fallback; use `static` para snapshot embutido; use `supabase` apenas para modo direto/legado |
+| `VITE_CMS_REPOSITORY_URL` | Nao | URL da API `GET /api/cms/public` quando o backend estiver em outro dominio. Se ausente, usa `/api/cms/public` |
+| `VITE_SUPABASE_URL` | Nao | Necessario apenas se `VITE_PUBLIC_DATA_SOURCE=supabase` |
+| `VITE_SUPABASE_ANON_KEY` | Nao | Necessario apenas se `VITE_PUBLIC_DATA_SOURCE=supabase` |
 | `VITE_PUBLIC_POSTHOG_KEY` | Nao | Chave publica do PostHog |
 | `VITE_PUBLIC_POSTHOG_HOST` | Nao | Host da instancia PostHog; se ausente, o app usa `https://us.i.posthog.com` |
+| `VITE_SUPABASE_MEDIA_MODE` | Nao | Use `placeholder` em producao para bloquear qualquer URL do Supabase Storage que nao tenha sido espelhada localmente |
 | `VITE_EMAILJS_SERVICE_ID` | Nao | Service ID do EmailJS para formulario de contato |
 | `VITE_EMAILJS_TEMPLATE_ID` | Nao | Template ID do EmailJS para formulario de contato |
 | `VITE_EMAILJS_PUBLIC_KEY` | Nao | Public key do EmailJS |
@@ -111,6 +121,24 @@ npm run dev:cms
 ```
 
 O CMS roda em `http://localhost:4174`.
+
+## Operacao com baixa cota de Supabase
+
+Para reduzir egress no plano gratuito, o web publico pode rodar com `VITE_PUBLIC_DATA_SOURCE=repository`. Nesse modo, o portfolio chama a API `GET /api/cms/public`, que tenta Supabase, Turso e JSON local com timeout por provider. Veja [docs/cms-fallback.md](./docs/cms-fallback.md).
+
+Para midia publica, rode `npm run cms:mirror-media` depois de exportar o conteudo. O script copia imagens/videos do Supabase Storage para `apps/web/public/cms-assets` e reescreve o snapshot local para usar esses arquivos. Em producao, mantenha `VITE_SUPABASE_MEDIA_MODE=placeholder` para impedir que URLs do Supabase Storage nao espelhadas gerem egress.
+
+Se voce quiser publicar sem API backend, use `VITE_PUBLIC_DATA_SOURCE=static`. Nesse modo, o portfolio usa `packages/core/src/recovered/public-cms-snapshot.json` e nao consulta o Supabase a cada visita.
+
+Para automatizar o limite de 80%, preencha as variaveis `SUPABASE_*_USED_GB` e `SUPABASE_*_QUOTA_GB` a partir da pagina Usage da Supabase e rode `npm run supabase:quota-guard`. O script grava um relatorio em `data/fallback/quota-guard.json` e pode falhar o CI com `SUPABASE_QUOTA_GUARD_STRICT=true`.
+
+Depois de editar conteudo no CMS e antes de publicar o web, atualize o snapshot:
+
+```bash
+npm run snapshot:recovered
+```
+
+Em emergencia, `VITE_SUPABASE_MEDIA_MODE=placeholder` bloqueia imagens/videos servidos pelo Supabase Storage no front publico. Use `lazy` para manter midia ativa com carregamento sob demanda.
 
 ## Supabase
 
@@ -241,8 +269,9 @@ O blueprint cria dois static sites:
 
 No `portfolio-web`:
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- `VITE_PUBLIC_DATA_SOURCE=repository`
+- `VITE_CMS_REPOSITORY_URL=https://seu-backend.example.com/api/cms/public` se a API estiver em outro dominio
+- `VITE_SUPABASE_MEDIA_MODE=lazy`
 - `VITE_PUBLIC_POSTHOG_KEY` se usar PostHog
 - `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog; se omitir, o app usa `https://us.i.posthog.com`
 - `VITE_EMAILJS_SERVICE_ID` se usar formulario
@@ -257,7 +286,18 @@ No `portfolio-cms`:
 - `VITE_PUBLIC_POSTHOG_KEY` se usar PostHog
 - `VITE_PUBLIC_POSTHOG_HOST` se usar PostHog; se omitir, o app usa `https://us.i.posthog.com`
 
-Nunca configure `SUPABASE_SERVICE_ROLE_KEY` no Render para esses dois static sites.
+No `portfolio-api`:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY` ou `SUPABASE_SERVICE_ROLE_KEY`
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+- `CMS_API_ALLOW_ORIGIN=https://seu-portfolio.example.com`
+- `CMS_PROVIDER_TIMEOUT_MS=3000`
+- `CMS_MEDIA_MANIFEST_PATH=data/fallback/media-manifest.json`
+- `CMS_PUBLIC_ASSET_BASE_URL=https://seu-portfolio.example.com/cms-assets`
+
+Nunca configure `SUPABASE_SERVICE_ROLE_KEY` ou `TURSO_AUTH_TOKEN` no Render dos static sites. Esses segredos ficam apenas no servico `portfolio-api`.
 
 ## Keepalive opcional do Supabase
 

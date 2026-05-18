@@ -20,9 +20,11 @@
       "@portfolio/ui/*": ["packages/ui/src/*"],
       "@portfolio/core/*": ["packages/core/src/*"],
       "@portfolio/supabase/*": ["packages/supabase/src/*"],
+      "@portfolio/cms-repository/*": ["packages/cms-repository/src/*"],
       "@portfolio/ui": ["packages/ui/src/index.ts"],
       "@portfolio/core": ["packages/core/src/index.ts"],
-      "@portfolio/supabase": ["packages/supabase/src/index.ts"]
+      "@portfolio/supabase": ["packages/supabase/src/index.ts"],
+      "@portfolio/cms-repository": ["packages/cms-repository/src/index.ts"]
     },
     "types": ["vite/client"]
   },
