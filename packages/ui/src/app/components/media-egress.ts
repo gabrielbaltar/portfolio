@@ -1,4 +1,5 @@
 const DISABLED_MEDIA_MODES = new Set(["off", "disabled", "placeholder", "none"]);
+const ENABLED_MEDIA_MODES = new Set(["on", "enabled", "lazy", "supabase"]);
 
 export function isSupabaseStorageUrl(value?: string | null) {
   if (!value) return false;
@@ -13,5 +14,6 @@ export function isSupabaseStorageUrl(value?: string | null) {
 
 export function shouldBlockSupabaseMedia(value?: string | null) {
   const mode = (import.meta.env.VITE_SUPABASE_MEDIA_MODE || "").trim().toLowerCase();
-  return DISABLED_MEDIA_MODES.has(mode) && isSupabaseStorageUrl(value);
+  const shouldBlock = DISABLED_MEDIA_MODES.has(mode) || (!ENABLED_MEDIA_MODES.has(mode) && import.meta.env.PROD);
+  return shouldBlock && isSupabaseStorageUrl(value);
 }
