@@ -65,14 +65,22 @@ function getPublicDataSource() {
   return (import.meta.env.VITE_PUBLIC_DATA_SOURCE || "").trim().toLowerCase();
 }
 
+function allowsRemotePublicData() {
+  return !import.meta.env.PROD || import.meta.env.VITE_ALLOW_REMOTE_PUBLIC_DATA === "true";
+}
+
 function shouldUseRepositoryPublicSource() {
-  return ["repository", "api", "server", "backend"].includes(getPublicDataSource());
+  return allowsRemotePublicData() && ["repository", "api", "server", "backend"].includes(getPublicDataSource());
 }
 
 function shouldUseBundledPublicSnapshot() {
   const source = getPublicDataSource();
 
-  if (["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
+  if (!allowsRemotePublicData() && ["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
+    return true;
+  }
+
+  if (allowsRemotePublicData() && ["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
     return false;
   }
 

@@ -19,6 +19,8 @@ services:
         sync: false
       - key: VITE_PUBLIC_DATA_SOURCE
         value: static
+      - key: VITE_ALLOW_REMOTE_PUBLIC_DATA
+        value: "false"
       - key: VITE_CMS_REPOSITORY_URL
         sync: false
       - key: VITE_SUPABASE_MEDIA_MODE

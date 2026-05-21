@@ -5,6 +5,7 @@ Este projeto deve tratar Supabase como origem de administracao, nao como CDN pub
 ## Padrao de producao
 
 - `portfolio-web` usa `VITE_PUBLIC_DATA_SOURCE=static`.
+- Mesmo se `VITE_PUBLIC_DATA_SOURCE` estiver antigo como `repository`, o frontend de producao so aceita fonte remota com `VITE_ALLOW_REMOTE_PUBLIC_DATA=true`.
 - Imagens publicas devem ser espelhadas em `apps/web/public/cms-assets` antes do deploy.
 - `portfolio-api` usa `CMS_REPOSITORY_PROVIDER_ORDER=static,turso,supabase`, para evitar chamadas ao Supabase quando o snapshot local esta disponivel.
 - `VITE_SUPABASE_MEDIA_MODE=placeholder` bloqueia URLs diretas do Supabase Storage no site publico quando alguma URL escapou do mirror.
