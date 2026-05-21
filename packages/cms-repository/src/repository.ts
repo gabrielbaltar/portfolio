@@ -20,6 +20,7 @@ export interface DefaultCMSRepositoryOptions {
   mediaAssetBaseUrl?: string;
   logger?: CMSRepositoryLogger;
   timeoutMs?: number;
+  providerOrder?: string[];
 }
 
 const defaultLogger: CMSRepositoryLogger = {
@@ -93,8 +94,15 @@ function readMediaManifest(manifestPath: string, logger: CMSRepositoryLogger) {
   }
 }
 
+function parseProviderOrder(value?: string) {
+  return (value || "")
+    .split(",")
+    .map((provider) => provider.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function createDefaultCMSRepository(options: DefaultCMSRepositoryOptions = {}) {
-  const providers: CMSProvider[] = [];
+  const configuredProviders: Record<string, CMSProvider> = {};
   const logger = options.logger ?? defaultLogger;
   const supabaseUrl = getOptionalEnv("SUPABASE_URL") || getOptionalEnv("VITE_SUPABASE_URL");
   const supabaseKey =
@@ -115,14 +123,26 @@ export function createDefaultCMSRepository(options: DefaultCMSRepositoryOptions 
   const mediaManifest = readMediaManifest(mediaManifestPath, logger);
 
   if (supabaseUrl && supabaseKey) {
-    providers.push(createSupabaseProvider({ url: supabaseUrl, key: supabaseKey, timeoutMs: options.timeoutMs ?? 3000 }));
+    configuredProviders.supabase = createSupabaseProvider({ url: supabaseUrl, key: supabaseKey, timeoutMs: options.timeoutMs ?? 3000 });
   }
 
   if (tursoUrl) {
-    providers.push(createTursoProvider({ url: tursoUrl, authToken: tursoAuthToken || undefined }));
+    configuredProviders.turso = createTursoProvider({ url: tursoUrl, authToken: tursoAuthToken || undefined });
   }
 
-  providers.push(createStaticProvider({ snapshotPath: fallbackJsonPath }));
+  configuredProviders.static = createStaticProvider({ snapshotPath: fallbackJsonPath });
+
+  const providerOrder = options.providerOrder?.length
+    ? options.providerOrder
+    : parseProviderOrder(getOptionalEnv("CMS_REPOSITORY_PROVIDER_ORDER"));
+  const orderedNames = providerOrder.length ? providerOrder : ["supabase", "turso", "static"];
+  const providers = orderedNames
+    .map((name) => configuredProviders[name])
+    .filter((provider): provider is CMSProvider => Boolean(provider));
+
+  if (!providers.some((provider) => provider.name === "static")) {
+    providers.push(configuredProviders.static);
+  }
 
   return createCMSRepository({
     providers,

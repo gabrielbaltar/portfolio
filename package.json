@@ -26,6 +26,8 @@
     "cms:export-supabase": "node --env-file=.env --import tsx scripts/export-supabase-content.ts",
     "cms:import-turso": "node --env-file=.env --import tsx scripts/import-turso-content.ts",
     "cms:mirror-media": "node --env-file=.env --import tsx scripts/mirror-public-media.ts",
+    "cms:storage-audit": "node --env-file=.env --import tsx scripts/supabase-storage-maintenance.ts",
+    "cms:storage-cleanup": "node --env-file=.env --import tsx scripts/supabase-storage-maintenance.ts --apply",
     "supabase:quota-guard": "node --env-file=.env --import tsx scripts/supabase-quota-guard.ts"
   },
   "devDependencies": {

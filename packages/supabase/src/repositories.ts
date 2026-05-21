@@ -115,6 +115,11 @@ const TABLES = {
   projectAccessRequests: "project_access_requests",
 } as const;
 
+const MAX_UPLOAD_IMAGE_DIMENSION = 1920;
+const IMAGE_UPLOAD_QUALITY = 0.82;
+const MIN_IMAGE_BYTES_TO_OPTIMIZE = 384 * 1024;
+const COMPRESSIBLE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 function ensureSuccess<T>(result: { data: T; error: { message: string } | null }, action: string): T {
   if (result.error) {
     throw new Error(`${action}: ${result.error.message}`);
@@ -138,7 +143,9 @@ function buildSerializablePublicSnapshot(data: CMSData): PublicSnapshotData {
   const publishedPages = data.pages.filter((page) => !page.status || page.status === "published");
 
   return normalizeCMSData({
-    siteSettings: mapSingletonFromRow(mapSiteSettingsToRow(data.siteSettings) as any, defaultSiteSettings),
+    siteSettings: stripEmbeddedPublicSnapshot(
+      mapSingletonFromRow(mapSiteSettingsToRow(data.siteSettings) as any, defaultSiteSettings),
+    ),
     profile: data.profile,
     projects: publishedProjects,
     blogPosts: publishedBlogPosts,
@@ -161,12 +168,85 @@ function extractEmbeddedPublicSnapshot(row: SingletonDatabaseRow): CMSData | nul
   return normalizeCMSData(snapshot as Partial<CMSData>);
 }
 
+function stripEmbeddedPublicSnapshot<T extends SiteSettings>(settings: T): T {
+  const { publicSnapshot: _publicSnapshot, ...cleanSettings } = settings as T & { publicSnapshot?: unknown };
+  return cleanSettings as T;
+}
+
+function mapSiteSettingsFromRow(row: SingletonDatabaseRow): SiteSettings {
+  return stripEmbeddedPublicSnapshot(mapSingletonFromRow(row as any, defaultSiteSettings));
+}
+
 function isVideo(mimeType: string): boolean {
   return mimeType.startsWith("video/");
 }
 
 function isImage(mimeType: string): boolean {
   return mimeType.startsWith("image/");
+}
+
+function canOptimizeImageUpload(file: File) {
+  return (
+    typeof document !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof File !== "undefined" &&
+    COMPRESSIBLE_IMAGE_TYPES.has(file.type.toLowerCase()) &&
+    file.size >= MIN_IMAGE_BYTES_TO_OPTIMIZE
+  );
+}
+
+function optimizedImageName(fileName: string) {
+  return fileName.replace(/\.(jpe?g|png|webp)$/i, ".webp") || `${fileName}.webp`;
+}
+
+function loadBrowserImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Nao foi possivel otimizar a imagem antes do upload."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function optimizeImageUpload(file: File): Promise<File> {
+  if (!canOptimizeImageUpload(file)) return file;
+
+  try {
+    const image = await loadBrowserImage(file);
+    const scale = Math.min(1, MAX_UPLOAD_IMAGE_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d", { alpha: true });
+    if (!context) return file;
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", IMAGE_UPLOAD_QUALITY);
+    });
+
+    if (!blob || blob.size >= file.size * 0.92) return file;
+
+    return new File([blob], optimizedImageName(file.name), {
+      type: "image/webp",
+      lastModified: file.lastModified,
+    });
+  } catch (error) {
+    console.warn("Falha ao otimizar imagem antes do upload. Enviando arquivo original.", error);
+    return file;
+  }
 }
 
 function sanitizeFileName(fileName: string): string {
@@ -258,7 +338,7 @@ function buildPublicCMSData(payload: PublicSnapshotPayload): CMSData {
   const empty = createEmptyCMSData();
 
   return normalizeCMSData({
-    siteSettings: mapSingletonFromRow(payload.siteSettingsRow as any, defaultSiteSettings),
+    siteSettings: mapSiteSettingsFromRow(payload.siteSettingsRow),
     profile: mapSingletonFromRow(payload.profileRow as any, defaultProfile),
     projects: (payload.projectsRows ?? []).map((row) => mapProjectFromRow(row as Parameters<typeof mapProjectFromRow>[0])),
     blogPosts: (payload.blogPostsRows ?? []).map((row) => mapBlogPostFromRow(row as Parameters<typeof mapBlogPostFromRow>[0])),
@@ -388,7 +468,7 @@ export async function loadCmsData(client: SupabaseClient): Promise<CMSData> {
   const recommendations = ensureRows(recommendationsRows, "Erro ao carregar recomendacoes");
 
   return normalizeCMSData({
-    siteSettings: mapSingletonFromRow(siteSettingsRow.data as any, defaultSiteSettings),
+    siteSettings: mapSiteSettingsFromRow(siteSettingsRow.data as SingletonDatabaseRow),
     profile: mapSingletonFromRow(profileRow.data as any, defaultProfile),
     projects: projects.map((row) => mapProjectFromRow(row as Parameters<typeof mapProjectFromRow>[0])),
     blogPosts: blogPosts.map((row) => mapBlogPostFromRow(row as Parameters<typeof mapBlogPostFromRow>[0])),
@@ -475,22 +555,23 @@ export async function uploadMedia(
   file: File,
   visibility: MediaVisibility,
 ): Promise<MediaItem> {
+  const uploadFile = await optimizeImageUpload(file);
   const bucket = visibility === "public" ? PUBLIC_BUCKET : PRIVATE_BUCKET;
-  const safeName = sanitizeFileName(file.name);
+  const safeName = sanitizeFileName(uploadFile.name);
   const path = `${new Date().getFullYear()}/${Date.now()}-${safeName}`;
-  const kind: MediaItem["kind"] = isVideo(file.type) ? "video" : isImage(file.type) ? "image" : "file";
+  const kind: MediaItem["kind"] = isVideo(uploadFile.type) ? "video" : isImage(uploadFile.type) ? "image" : "file";
 
-  let uploadResult = await uploadObject(client, bucket, path, file, visibility);
+  let uploadResult = await uploadObject(client, bucket, path, uploadFile, visibility);
 
   if (uploadResult.error && isMaximumObjectSizeError(new Error(uploadResult.error.message))) {
-    const retried = await maybeIncreaseBucketLimitForFile(client, bucket, file).catch((error) => {
+    const retried = await maybeIncreaseBucketLimitForFile(client, bucket, uploadFile).catch((error) => {
       throw new Error(
-        `${uploadResult.error?.message}. Ajuste o limite do bucket ${bucket} no Supabase Storage para mais de ${Math.ceil(file.size / (1024 * 1024))} MB. ${error instanceof Error ? error.message : ""}`.trim(),
+        `${uploadResult.error?.message}. Ajuste o limite do bucket ${bucket} no Supabase Storage para mais de ${Math.ceil(uploadFile.size / (1024 * 1024))} MB. ${error instanceof Error ? error.message : ""}`.trim(),
       );
     });
 
     if (retried) {
-      uploadResult = await uploadObject(client, bucket, path, file, visibility);
+      uploadResult = await uploadObject(client, bucket, path, uploadFile, visibility);
     }
   }
 
@@ -498,12 +579,12 @@ export async function uploadMedia(
 
   const item: MediaItem = {
     id: crypto.randomUUID(),
-    name: file.name,
+    name: uploadFile.name,
     bucket,
     path,
     visibility,
-    mimeType: file.type,
-    size: file.size,
+    mimeType: uploadFile.type,
+    size: uploadFile.size,
     kind,
     url: await buildSignedOrPublicUrl(client, bucket, path, visibility),
     createdAt: new Date().toISOString(),

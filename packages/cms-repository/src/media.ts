@@ -165,6 +165,9 @@ function rewriteBlockMedia(block: ContentBlock, manifest: MediaManifest, assetBa
 export function rewriteCMSMediaUrls(data: CMSData, manifest: MediaManifest, options: { assetBaseUrl?: string } = {}) {
   const normalized = normalizeCMSData(data);
   const assetBaseUrl = options.assetBaseUrl;
+  const { publicSnapshot: _publicSnapshot, ...siteSettings } = normalized.siteSettings as typeof normalized.siteSettings & {
+    publicSnapshot?: unknown;
+  };
 
   return normalizeCMSData({
     ...normalized,
@@ -173,13 +176,13 @@ export function rewriteCMSMediaUrls(data: CMSData, manifest: MediaManifest, opti
       photo: rewriteKnownUrl(normalized.profile.photo, manifest, assetBaseUrl),
     },
     siteSettings: {
-      ...normalized.siteSettings,
-      homeGalleryItems: normalized.siteSettings.homeGalleryItems.map((item) => ({
+      ...siteSettings,
+      homeGalleryItems: siteSettings.homeGalleryItems.map((item) => ({
         ...item,
         image: rewriteKnownUrl(item.image, manifest, assetBaseUrl),
       })),
       projectCardOverrides: Object.fromEntries(
-        Object.entries(normalized.siteSettings.projectCardOverrides).map(([id, override]) => [
+        Object.entries(siteSettings.projectCardOverrides).map(([id, override]) => [
           id,
           {
             ...override,
@@ -188,7 +191,7 @@ export function rewriteCMSMediaUrls(data: CMSData, manifest: MediaManifest, opti
         ]),
       ),
       blogPostCardOverrides: Object.fromEntries(
-        Object.entries(normalized.siteSettings.blogPostCardOverrides).map(([id, override]) => [
+        Object.entries(siteSettings.blogPostCardOverrides).map(([id, override]) => [
           id,
           {
             ...override,

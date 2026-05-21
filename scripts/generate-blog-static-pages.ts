@@ -1,7 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildArticleSeoData, trimTrailingSlash } from "@portfolio/core";
-import { createDefaultCMSRepository } from "@portfolio/cms-repository";
+import { createDefaultCMSRepository, isSupabaseStorageUrl } from "@portfolio/cms-repository";
+
+const DISABLED_MEDIA_MODES = new Set(["off", "disabled", "placeholder", "none"]);
+const ENABLED_MEDIA_MODES = new Set(["on", "enabled", "lazy", "supabase"]);
 
 function escapeHtml(value: string) {
   return value
@@ -22,6 +25,11 @@ function injectHead(template: string, headTags: string[]) {
     "</head>",
     `${headTags.slice(1).map((tag) => `    ${tag}`).join("\n")}\n  </head>`,
   );
+}
+
+function shouldBlockSupabaseMedia() {
+  const mode = (process.env.VITE_SUPABASE_MEDIA_MODE || "").trim().toLowerCase();
+  return DISABLED_MEDIA_MODES.has(mode) || !ENABLED_MEDIA_MODES.has(mode);
 }
 
 async function main() {
@@ -51,6 +59,7 @@ async function main() {
         locale: siteLocale,
         fallbackTitle: data.profile.name || data.siteSettings.siteTitle || "Portfolio",
       });
+      const imageUrl = shouldBlockSupabaseMedia() && isSupabaseStorageUrl(seo.imageUrl) ? "" : seo.imageUrl;
       const headTags = [
         escapeHtml(seo.title),
         `<meta name="description" content="${escapeHtml(seo.description)}" />`,
@@ -61,16 +70,16 @@ async function main() {
         `<meta property="og:site_name" content="${escapeHtml(seo.siteName)}" />`,
         `<meta property="og:locale" content="${escapeHtml(seo.locale)}" />`,
         `<meta property="og:url" content="${escapeHtml(seo.url || articlePath)}" />`,
-        `<meta name="twitter:card" content="${escapeHtml(seo.twitterCard)}" />`,
+        `<meta name="twitter:card" content="${escapeHtml(imageUrl ? seo.twitterCard : "summary")}" />`,
         `<meta name="twitter:title" content="${escapeHtml(seo.title)}" />`,
         `<meta name="twitter:description" content="${escapeHtml(seo.description)}" />`,
       ];
 
-      if (seo.imageUrl) {
+      if (imageUrl) {
         headTags.push(
-          `<meta property="og:image" content="${escapeHtml(seo.imageUrl)}" />`,
+          `<meta property="og:image" content="${escapeHtml(imageUrl)}" />`,
           `<meta property="og:image:alt" content="${escapeHtml(seo.title)}" />`,
-          `<meta name="twitter:image" content="${escapeHtml(seo.imageUrl)}" />`,
+          `<meta name="twitter:image" content="${escapeHtml(imageUrl)}" />`,
           `<meta name="twitter:image:alt" content="${escapeHtml(seo.title)}" />`,
         );
       }
