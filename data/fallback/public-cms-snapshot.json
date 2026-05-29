@@ -1,5 +1,5 @@
 {
-  "cachedAt": 1779331199892,
+  "cachedAt": 1780060048617,
   "data": {
     "siteSettings": {
       "id": "main",
@@ -77,9 +77,7 @@
             "fontSize": 48,
             "fontWeight": 700,
             "lineHeight": 54
-          },
-          "image": "/cms-assets/capa-transformando-rotina-comercial-dados.png",
-          "imagePosition": "50% 50%"
+          }
         },
         "1774227718230": {
           "title": "<strong><span style=\"font-size: 16px;\">Do formulário ao autosserviço: digitalizando o endosso de apólices Vida em Grupo</span></strong>",
@@ -88,9 +86,7 @@
             "fontSize": 48,
             "fontWeight": 700,
             "lineHeight": 54
-          },
-          "image": "/cms-assets/capa-endosso-apolices-vida-em-grupo.png",
-          "imagePosition": "50% 50%"
+          }
         },
         "1777948428907": {
           "image": "/cms-assets/d2deb7f539ccf5abd592a61e.png",
@@ -105,7 +101,7 @@
           "imagePosition": "50% 50%"
         },
         "1777949326664": {
-          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png",
+          "image": "/cms-assets/30a022babc8c68c186eab778.png",
           "title": "Deloitte - Compliance on Hands",
           "subtitle": "Compliance on Hands é uma plataforma de ensino sobre as políticas de compliance das empresas parceiras.",
           "imagePosition": "50% 50%"
@@ -138,7 +134,7 @@
       "currentCompanyUrl": "",
       "email": "gabriel.baltar21@hotmail.com",
       "phone": "+55 21 989090580",
-      "photo": "/cms-assets/foto-de-perfil.png",
+      "photo": "/cms-assets/907eea5d5e2bee14189d2481.jpg",
       "twitter": "https://www.behance.net/gabrielbaltar",
       "twitterLabel": "Behance",
       "instagram": "",
@@ -165,9 +161,9 @@
         "services": "Plataforma B2C",
         "client": "Mag Seguros",
         "year": "2024",
-        "image": "/cms-assets/capa-transformando-rotina-comercial-dados.png",
+        "image": "/cms-assets/f18565d8b49567edf7fa8671.png",
         "imageBgColor": "",
-        "imagePosition": "50% 50%",
+        "imagePosition": "55% 67%",
         "galleryImages": [],
         "galleryPositions": [],
         "link": "#",
@@ -265,13 +261,13 @@
             "type": "paragraph"
           },
           {
-            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776020907983-roadmap-gestao-oportunidade.png",
+            "url": "/cms-assets/e0abaaefe6f294477e16709b.png",
             "type": "image",
             "caption": "",
             "position": "50% 50%",
             "borderRadius": 12,
             "galleryImages": [
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776022314391-roadmap-gestao-oportunidade2.png"
+              "/cms-assets/6692cad09ab0c95aa12c690e.png"
             ],
             "galleryPositions": [
               "50% 50%"
@@ -282,7 +278,7 @@
             "type": "paragraph"
           },
           {
-            "text": "<span style=\"font-size: 16px;\">\u0013✠<span style=\"font-size: 16px;\">Como os corretores planejavam atividades;<br data-rich-text-break=\"true\"></span>\u0013✼span style=\"font-size: 16px;\"> Como a liderança acompanhava a execução;</span><br data-rich-text-break=\"true\">\u0013✼span style=\"font-size: 16px;\"> Q</span>uais dados eram necessários para gestão; <br data-rich-text-break=\"true\">\u0013✠Quais restrições existiam no Salesforce;<br data-rich-text-break=\"true\">\u0013✠Quais diferenças existiam entre o módulo de prospecção, manutenção e administrativo.</span>",
+            "text": "<span style=\"font-size: 16px;\">✓ <span style=\"font-size: 16px;\">Como os corretores planejavam atividades;<br data-rich-text-break=\"true\"></span>✓<span style=\"font-size: 16px;\"> Como a liderança acompanhava a execução;</span><br data-rich-text-break=\"true\">✓<span style=\"font-size: 16px;\"> Q</span>uais dados eram necessários para gestão; <br data-rich-text-break=\"true\">✓ Quais restrições existiam no Salesforce;<br data-rich-text-break=\"true\">✓ Quais diferenças existiam entre o módulo de prospecção, manutenção e administrativo.</span>",
             "type": "paragraph",
             "lineHeight": 34
           },
@@ -293,7 +289,7 @@
             "showInSummary": true
           },
           {
-            "text": "<span style=\"font-size: 16px;\"></span><span style=\"font-size: 16px;\"><span style=\"font-size: 16px;\">\u0013✼span style=\"font-size: 16px;\"> B</span>aixa padronização na rotina comercial;<span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\"></span></span><span style=\"font-size: 16px;\">\u0013✠D</span>ificuldade de consolidar dados;<span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">\u0013✠D</span>ependência de processos paralelos; <br data-rich-text-break=\"true\">\u0013✠Necessidade de gestão por etapas;<br data-rich-text-break=\"true\">\u0013✠Restrições técnicas importantes na plataforma.</span>",
+            "text": "<span style=\"font-size: 16px;\"></span><span style=\"font-size: 16px;\"><span style=\"font-size: 16px;\">✓<span style=\"font-size: 16px;\"> B</span>aixa padronização na rotina comercial;<span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\"></span></span><span style=\"font-size: 16px;\">✓ D</span>ificuldade de consolidar dados;<span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">✓ D</span>ependência de processos paralelos; <br data-rich-text-break=\"true\">✓ Necessidade de gestão por etapas;<br data-rich-text-break=\"true\">✓ Restrições técnicas importantes na plataforma.</span>",
             "type": "paragraph",
             "lineHeight": 34
           },
@@ -342,14 +338,14 @@
             "type": "paragraph"
           },
           {
-            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029894604-modulo-de-propeccao.png",
+            "url": "/cms-assets/fed4ad86a4255398c4da7324.png",
             "type": "image",
             "caption": "",
             "position": "19% 51%",
             "borderRadius": 12,
             "galleryImages": [
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029882366-modulo-de-manutencao.png",
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029748392-modulo-administrativo.png"
+              "/cms-assets/ab2e96ec087229b65decfa3d.png",
+              "/cms-assets/b7242c76b214566b8bd766c2.png"
             ],
             "galleryPositions": [
               "99% 55%",
@@ -394,8 +390,8 @@
             "galleryImages": [
               "/cms-assets/1c2fa3225e485dc91195b7bf.png",
               "/cms-assets/54ca5fc2135b475e1224366e.png",
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775951406600-gac-mobile.png",
-              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775953927174-gac-mobile2.png"
+              "/cms-assets/0ced7475f5ab72885380edbc.png",
+              "/cms-assets/9e7e42ed99f44b4a0f6430a5.png"
             ],
             "galleryPositions": [
               "50% 50%",
@@ -419,17 +415,17 @@
             "type": "paragraph"
           },
           {
-            "text": "<strong><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\">Adoção<br data-rich-text-break=\"true\"></span></span></strong><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">\u0013✠<span style=\"font-size: 20px;\"><strong><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 48px;\"><span style=\"font-size: 16px;\">+230</span></span></span></strong></span> gerentes impactados;<br data-rich-text-break=\"true\">\u0013✠<span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 18px;\"><strong><span style=\"font-size: 16px;\">73%</span></strong></span></span> das atividades planejadas no sistema.<br data-rich-text-break=\"true\"></span><span style=\"font-size: 16px;\">\u0013✠<strong><span style=\"color: rgb(245, 245, 245);\">+31K</span></strong> atividades registradas sendo <strong><span style=\"color: rgb(245, 245, 245);\">14%</span></strong> relacionadas a prospecção de novos clientes;</span><span style=\"font-size: 16px;\"></span><strong><span style=\"font-size: 18px;\"></span></strong>",
+            "text": "<strong><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\">Adoção<br data-rich-text-break=\"true\"></span></span></strong><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">✓ <span style=\"font-size: 20px;\"><strong><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 48px;\"><span style=\"font-size: 16px;\">+230</span></span></span></strong></span> gerentes impactados;<br data-rich-text-break=\"true\">✓ <span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 18px;\"><strong><span style=\"font-size: 16px;\">73%</span></strong></span></span> das atividades planejadas no sistema.<br data-rich-text-break=\"true\"></span><span style=\"font-size: 16px;\">✓ <strong><span style=\"color: rgb(245, 245, 245);\">+31K</span></strong> atividades registradas sendo <strong><span style=\"color: rgb(245, 245, 245);\">14%</span></strong> relacionadas a prospecção de novos clientes;</span><span style=\"font-size: 16px;\"></span><strong><span style=\"font-size: 18px;\"></span></strong>",
             "type": "paragraph",
             "lineHeight": 28
           },
           {
-            "text": "<span style=\"font-size: 18px;\"><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\"><span data-no-translate=\"true\"><strong><span style=\"font-size: 18px;\">Gestão<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"></span></strong></span></span></span></span><span style=\"font-size: 16px;\">\u0013✠Maior visibilidade da rotina comercial;<br data-rich-text-break=\"true\">\u0013✠Dados mais estruturados para liderança;<br data-rich-text-break=\"true\">\u0013✠Acompanhamento mais padronizado das atividades.</span><span style=\"font-size: 18px;\"><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\"><strong><span style=\"font-size: 18px;\"><br data-rich-text-break=\"true\"></span></strong></span></span></span>",
+            "text": "<span style=\"font-size: 18px;\"><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\"><span data-no-translate=\"true\"><strong><span style=\"font-size: 18px;\">Gestão<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"></span></strong></span></span></span></span><span style=\"font-size: 16px;\">✓ Maior visibilidade da rotina comercial;<br data-rich-text-break=\"true\">✓ Dados mais estruturados para liderança;<br data-rich-text-break=\"true\">✓ Acompanhamento mais padronizado das atividades.</span><span style=\"font-size: 18px;\"><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\"><strong><span style=\"font-size: 18px;\"><br data-rich-text-break=\"true\"></span></strong></span></span></span>",
             "type": "paragraph",
             "lineHeight": 28
           },
           {
-            "text": "<strong><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\">Negócio</span><br data-rich-text-break=\"true\"></span></strong><span style=\"font-size: 16px;\"><strong><span style=\"font-size: 18px;\"><br data-rich-text-break=\"true\"></span></strong>\u0013✠Base para previsibilidade comercial;<br data-rich-text-break=\"true\">\u0013✠Maior capacidade de cruzar esforço e resultado;<br data-rich-text-break=\"true\">\u0013✠Redução da dependência de controles informais.</span><strong><span style=\"font-size: 18px;\"></span></strong>",
+            "text": "<strong><span style=\"font-size: 18px;\"><span style=\"color: rgb(245, 245, 245);\">Negócio</span><br data-rich-text-break=\"true\"></span></strong><span style=\"font-size: 16px;\"><strong><span style=\"font-size: 18px;\"><br data-rich-text-break=\"true\"></span></strong>✓ Base para previsibilidade comercial;<br data-rich-text-break=\"true\">✓ Maior capacidade de cruzar esforço e resultado;<br data-rich-text-break=\"true\">✓ Redução da dependência de controles informais.</span><strong><span style=\"font-size: 18px;\"></span></strong>",
             "type": "paragraph",
             "lineHeight": 28
           },
@@ -501,8 +497,8 @@
         },
         "cardTitle": "<span style=\"font-size: 18px;\"><strong><span style=\"font-size: 16px;\">Transformando a rotina comercial em uma operação orientada por dados.</span></strong></span>",
         "cardSubtitle": "<span style=\"font-size: 13px;\">Como estruturamos uma solução em Salesforce para padronizar, registrar e acompanhar atividades comerciais em escala, criando visibilidade gerencial para mais de 230 usuários e mais de 31 mil atividades registradas. </span>",
-        "cardImage": "/cms-assets/capa-transformando-rotina-comercial-dados.png",
-        "cardImagePosition": "50% 50%"
+        "cardImage": "",
+        "cardImagePosition": "55% 67%"
       },
       {
         "id": "1774227718230",
@@ -512,7 +508,7 @@
         "services": "B2B",
         "client": "MAG Seguros",
         "year": "2025",
-        "image": "/cms-assets/capa-endosso-apolices-vida-em-grupo.png",
+        "image": "/cms-assets/cbcbba588728fbadb0e11135.png",
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryImages": [],
@@ -645,7 +641,7 @@
             "type": "paragraph"
           },
           {
-            "text": "<strong><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><span style=\"color: rgb(245, 245, 245);\">3. Usuários não tinham todos os dados em mãos<br data-rich-text-break=\"true\"></span></span><br data-rich-text-break=\"true\"></span></strong><span style=\"font-size: 16px;\">Durante os testes, identificamos que campos como \u001c⁎úmero da Proposta\u001d†tinham baixa disponibilidade para os usuários, enquanto o CNPJ era um dado mais acessível e adequado para busca.</span><strong><span style=\"font-size: 16px;\"></span></strong>",
+            "text": "<strong><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><span style=\"color: rgb(245, 245, 245);\">3. Usuários não tinham todos os dados em mãos<br data-rich-text-break=\"true\"></span></span><br data-rich-text-break=\"true\"></span></strong><span style=\"font-size: 16px;\">Durante os testes, identificamos que campos como “Número da Proposta” tinham baixa disponibilidade para os usuários, enquanto o CNPJ era um dado mais acessível e adequado para busca.</span><strong><span style=\"font-size: 16px;\"></span></strong>",
             "type": "paragraph"
           },
           {
@@ -719,7 +715,7 @@
             "showInSummary": true
           },
           {
-            "text": "<span style=\"color: rgb(245, 245, 245);\"><strong></strong></span><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 1</strong> ℼ/span> Priorizar alterações críticas no MVP em vez de tentar cobrir todos os cenários de endosso na primeira versão, priorizamos as alterações mais vitais: capital global, número de vidas e adição/remoção de coberturas.</span>",
+            "text": "<span style=\"color: rgb(245, 245, 245);\"><strong></strong></span><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 1</strong> →</span> Priorizar alterações críticas no MVP em vez de tentar cobrir todos os cenários de endosso na primeira versão, priorizamos as alterações mais vitais: capital global, número de vidas e adição/remoção de coberturas.</span>",
             "type": "paragraph"
           },
           {
@@ -732,7 +728,7 @@
             "variant": "default"
           },
           {
-            "text": "<span style=\"font-size: 16px;\"><strong></strong></span><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 16px;\"><strong>Decisão 2</strong></span><span style=\"font-size: 16px;\"> ℼ/span></span><span style=\"font-size: 16px;\"> </span><span style=\"font-size: 16px;\">Usar CNPJ como principal chave de busca. A busca foi inicialmente pensada com CNPJ, número do contrato e número da proposta. Durante os testes, identificamos que o número da proposta raramente estava disponível para os usuários, então a experiência passou a priorizar dados mais acessíveis, como CNPJ e contrato.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"></span><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Trade-off:</strong></span> menos campos de busca, porém maior aderência ao contexto real de uso.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Ganho:</span></strong> redução de atrito cognitivo e aumento da chance de sucesso na tarefa.</span><span style=\"font-size: 16px;\"></span>",
+            "text": "<span style=\"font-size: 16px;\"><strong></strong></span><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 16px;\"><strong>Decisão 2</strong></span><span style=\"font-size: 16px;\"> →</span></span><span style=\"font-size: 16px;\"> </span><span style=\"font-size: 16px;\">Usar CNPJ como principal chave de busca. A busca foi inicialmente pensada com CNPJ, número do contrato e número da proposta. Durante os testes, identificamos que o número da proposta raramente estava disponível para os usuários, então a experiência passou a priorizar dados mais acessíveis, como CNPJ e contrato.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"></span><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Trade-off:</strong></span> menos campos de busca, porém maior aderência ao contexto real de uso.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Ganho:</span></strong> redução de atrito cognitivo e aumento da chance de sucesso na tarefa.</span><span style=\"font-size: 16px;\"></span>",
             "type": "paragraph"
           },
           {
@@ -741,7 +737,7 @@
             "variant": "default"
           },
           {
-            "text": "<span style=\"font-size: 16px;\"><strong></strong><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 3 </strong></span></span><span style=\"color: rgb(245, 245, 245);\">ℼ/span><span style=\"font-size: 16px;\"> Criar revisão comparativa antes da confirmação. Como a atualização altera dados contratuais sensíveis, desenhamos uma etapa de revisão comparando valores anteriores e novos antes da confirmação.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> adicionamos uma etapa extra no fluxo.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Ganho: </span></strong>mais segurança, clareza e confiança para o usuário antes de confirmar a movimentação.</span>",
+            "text": "<span style=\"font-size: 16px;\"><strong></strong><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 3 </strong></span></span><span style=\"color: rgb(245, 245, 245);\">→</span><span style=\"font-size: 16px;\"> Criar revisão comparativa antes da confirmação. Como a atualização altera dados contratuais sensíveis, desenhamos uma etapa de revisão comparando valores anteriores e novos antes da confirmação.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> adicionamos uma etapa extra no fluxo.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Ganho: </span></strong>mais segurança, clareza e confiança para o usuário antes de confirmar a movimentação.</span>",
             "type": "paragraph"
           },
           {
@@ -750,7 +746,7 @@
             "variant": "default"
           },
           {
-            "text": "<span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 4</strong> </span></span><span style=\"color: rgb(245, 245, 245);\">ℼ/span><span style=\"font-size: 16px;\"> Incluir validação por token. Por se tratar de uma transação sensível, adicionamos validação por token via e-mail, SMS ou WhatsApp. Nos testes, o WhatsApp apareceu como canal preferido pelos usuários.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> aumento de uma etapa de segurança no fluxo.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><span style=\"color: rgb(245, 245, 245);\"><strong>Ganho:</strong></span> maior proteção da transação e aderência ao comportamento real do público.</span><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\"></span>",
+            "text": "<span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Decisão 4</strong> </span></span><span style=\"color: rgb(245, 245, 245);\">→</span><span style=\"font-size: 16px;\"> Incluir validação por token. Por se tratar de uma transação sensível, adicionamos validação por token via e-mail, SMS ou WhatsApp. Nos testes, o WhatsApp apareceu como canal preferido pelos usuários.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> aumento de uma etapa de segurança no fluxo.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><span style=\"color: rgb(245, 245, 245);\"><strong>Ganho:</strong></span> maior proteção da transação e aderência ao comportamento real do público.</span><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\"></span>",
             "type": "paragraph"
           },
           {
@@ -759,7 +755,7 @@
             "variant": "default"
           },
           {
-            "text": "<span style=\"font-size: 16px;\"><strong><span style=\"color: rgb(245, 245, 245);\">Decisão 5</span></strong> </span><span style=\"color: rgb(245, 245, 245);\">ℼ/span> <span style=\"font-size: 16px;\">Restringir visualização por papel do usuário. A solução precisou considerar LGPD e regras de negócio, limitando os dados exibidos conforme o papel do usuário. Corretores visualizam apenas sua carteira, enquanto estipulantes acessam somente seus contratos.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> maior complexidade de permissão e integração.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><span style=\"font-size: 16px;\"></span><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Ganho:</strong></span></span> </span>segurança, conformidade e redução de exposição indevida de dados.</span>",
+            "text": "<span style=\"font-size: 16px;\"><strong><span style=\"color: rgb(245, 245, 245);\">Decisão 5</span></strong> </span><span style=\"color: rgb(245, 245, 245);\">→</span> <span style=\"font-size: 16px;\">Restringir visualização por papel do usuário. A solução precisou considerar LGPD e regras de negócio, limitando os dados exibidos conforme o papel do usuário. Corretores visualizam apenas sua carteira, enquanto estipulantes acessam somente seus contratos.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><strong><span style=\"color: rgb(245, 245, 245);\">Trade-off:</span></strong> maior complexidade de permissão e integração.<br data-rich-text-break=\"true\"><br data-rich-text-break=\"true\"><span style=\"font-size: 16px;\"></span><span style=\"color: rgb(245, 245, 245);\"><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\"><strong>Ganho:</strong></span></span> </span>segurança, conformidade e redução de exposição indevida de dados.</span>",
             "type": "paragraph"
           },
           {
@@ -817,13 +813,13 @@
         },
         "cardTitle": "<strong><span style=\"font-size: 16px;\">Do formulário ao autosserviço: digitalizando o endosso de apólices Vida em Grupo</span></strong>",
         "cardSubtitle": "<span style=\"font-size: 13px;\">Como redesenhamos a atualização de contratos globais de seguros B2B, substituindo formulários manuais, cálculos descentralizados e acionamentos operacionais por uma experiência digital com cálculo automatizado, revisão comparativa, validação por token e histórico versionado.</span>",
-        "cardImage": "/cms-assets/capa-endosso-apolices-vida-em-grupo.png",
+        "cardImage": "",
         "cardImagePosition": "50% 50%"
       },
       {
         "id": "1777948428907",
         "title": "Segurança sem fricção: redesenhando o primeiro acesso ao Portal Vida em Grupo",
-        "subtitle": "<span style=\"font-size: 16px;\">Como desenhei a jornada de autenticação e autoatendimento para segurados corporativos, traduzindo o \u001c⁳egurês\u001d‬ reduzindo barreiras cognitivas e equilibrando restrições de sistemas legados, segurança da informação e escalabilidade operacional.</span>",
+        "subtitle": "<span style=\"font-size: 16px;\">Como desenhei a jornada de autenticação e autoatendimento para segurados corporativos, traduzindo o “segurês”, reduzindo barreiras cognitivas e equilibrando restrições de sistemas legados, segurança da informação e escalabilidade operacional.</span>",
         "category": "",
         "services": "",
         "client": "",
@@ -925,7 +921,7 @@
         "publishedAt": "2026-05-05T04:19:53.15+00:00",
         "cardTitle": "Deloitte - Compliance on Hands",
         "cardSubtitle": "Compliance on Hands é uma plataforma de ensino sobre as políticas de compliance das empresas parceiras.",
-        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png",
+        "cardImage": "/cms-assets/30a022babc8c68c186eab778.png",
         "cardImagePosition": "50% 50%"
       }
     ],
@@ -1116,7 +1112,7 @@
         "name": "Figma",
         "description": "Design de interfaces",
         "color": "#222",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480448606-figma-logo.svg",
+        "logo": "/cms-assets/2a3b4d43ee86e0ee292a98f2.svg",
         "link": "https://www.figma.com/",
         "sortOrder": 1,
         "logoRadius": 0
@@ -1136,7 +1132,7 @@
         "name": "Notion",
         "description": "Ferramenta de Produtividade",
         "color": "#ffffff",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480538498-notion.png",
+        "logo": "/cms-assets/755b3bfc846e11a0fc0bfc4d.png",
         "link": "https://notion.so/",
         "sortOrder": 3,
         "logoRadius": 0
@@ -1146,7 +1142,7 @@
         "name": "Microsoft Clarity",
         "description": "Ferramenta de Análise ",
         "color": "#ffffff",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490024883-clairty.png",
+        "logo": "/cms-assets/9e11c3d92a2f28261d9ac48c.png",
         "link": "https://clarity.microsoft.com/lang/pt-br",
         "sortOrder": 4,
         "logoRadius": 0
@@ -1156,7 +1152,7 @@
         "name": "ZeroHeight",
         "description": "Documentação de Design Systems",
         "color": "#ffffff",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489997777-zeroheight.png",
+        "logo": "/cms-assets/ec5651cd0885a5cf703dbaf4.png",
         "link": "https://zeroheight.com/",
         "sortOrder": 5,
         "logoRadius": 0
@@ -1166,7 +1162,7 @@
         "name": "Miro",
         "description": "Ferramenta de Colaboração",
         "color": "#FFDE21",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774484302425-miro_miro_icon_0.svg",
+        "logo": "/cms-assets/89245a679d166151682b7f31.svg",
         "link": "https://miro.com/pt/",
         "sortOrder": 6,
         "logoRadius": 0
@@ -1176,7 +1172,7 @@
         "name": "Goolge Analytics",
         "description": "Ferramenta de Análise de Dados",
         "color": "#ffffff",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489680215-google-analytics-4.svg",
+        "logo": "/cms-assets/6f6bc234e55154268fc553bd.svg",
         "link": "https://marketingplatform.google.com/about/analytics/",
         "sortOrder": 7,
         "logoRadius": 0
@@ -1186,7 +1182,7 @@
         "name": "Hotjar",
         "description": "Ferramenta de Análise",
         "color": "#555",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490351570-hotjar.png",
+        "logo": "/cms-assets/6fe5c69e23100a9f8f463aa0.png",
         "link": "https://www.hotjar.com/",
         "sortOrder": 8,
         "logoRadius": 0
@@ -1196,7 +1192,7 @@
         "name": "Maze ",
         "description": "Ferramenta de Teste de Usabilidade",
         "color": "#555",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493040969-maze.avif",
+        "logo": "/cms-assets/237b28ce454dc50ef5104725.avif",
         "link": "https://maze.co/",
         "sortOrder": 9,
         "logoRadius": 0
@@ -1206,7 +1202,7 @@
         "name": "PostHog",
         "description": "Ferramenta de Análise de Produto",
         "color": "#555",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493205808-posthog.svg",
+        "logo": "/cms-assets/6c0a85834a4f2def7a407311.svg",
         "link": "https://posthog.com/",
         "sortOrder": 10,
         "logoRadius": 0
@@ -1216,7 +1212,7 @@
         "name": "Storybook",
         "description": "Documentação de Design Systems",
         "color": "#ffffff",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493928032-storybook.png",
+        "logo": "/cms-assets/c87eef38790e464a1c7d648e.png",
         "link": "https://storybook.js.org/",
         "sortOrder": 11,
         "logoRadius": 0
@@ -1226,7 +1222,7 @@
         "name": "Power BI",
         "description": "Ferramenta de Business Intelligence",
         "color": "#555",
-        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493994668-power.png",
+        "logo": "/cms-assets/d0545f512f0c1bb7511b6297.png",
         "link": "https://app.powerbi.com",
         "sortOrder": 12,
         "logoRadius": 0
@@ -1279,7 +1275,7 @@
         "publisher": "Modern Web Magazine",
         "date": "28 de mar. de 2026",
         "description": "Neste artigo, você vai aprender como conectar o <span data-no-translate=\"true\">Figma mcp</span> no Claude code para criar aplicações com mais rapidez, atualizar deisgn system com poucos comandos.",
-        "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774238822637-capa.png",
+        "image": "/cms-assets/c193c65157b3e3a8a9ab1fae.png",
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryPositions": [],

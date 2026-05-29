@@ -31,3 +31,4 @@ pnpm-debug.log*
 # misc
 coverage/
 /recovered/
+data/fallback/supabase-storage-maintenance-report.json

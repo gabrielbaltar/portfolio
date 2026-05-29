@@ -23,7 +23,7 @@ async function main() {
   const provider = createSupabaseProvider({
     url: getEnv("SUPABASE_URL"),
     key: process.env.SUPABASE_ANON_KEY?.trim() || getEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    timeoutMs: Number(process.env.CMS_PROVIDER_TIMEOUT_MS || 3000),
+    timeoutMs: Number(process.env.CMS_PROVIDER_TIMEOUT_MS || 15000),
   });
   const data = await provider.loadPublicCMSData();
   const snapshot = { cachedAt: Date.now(), data };

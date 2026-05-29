@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-21T02:40:45.900Z",
+  "generatedAt": "2026-05-29T13:08:08.437Z",
   "assetBasePath": "/cms-assets",
   "entries": {
     "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773296460273-uxday-2025-matriz-236.jpg": {
@@ -27,7 +27,7 @@
       "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775941676225-mockup.png",
       "fallbackPath": "b9f4d07ce8904f5b23547c78.png",
       "contentType": "image/png",
-      "size": 3160899,
+      "size": 1843708,
       "mirroredAt": "2026-05-18T06:07:10.593Z"
     },
     "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775947721994-mockup2.png": {
@@ -64,6 +64,167 @@
       "contentType": "image/png",
       "size": 93379,
       "mirroredAt": "2026-05-18T06:07:10.728Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774238822637-capa.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774238822637-capa.png",
+      "fallbackPath": "c193c65157b3e3a8a9ab1fae.png",
+      "contentType": "image/png",
+      "size": 1467919,
+      "mirroredAt": "2026-05-29T13:06:45.268Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480448606-figma-logo.svg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480448606-figma-logo.svg",
+      "fallbackPath": "2a3b4d43ee86e0ee292a98f2.svg",
+      "contentType": "image/svg+xml",
+      "size": 786,
+      "mirroredAt": "2026-05-29T13:06:46.146Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480538498-notion.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480538498-notion.png",
+      "fallbackPath": "755b3bfc846e11a0fc0bfc4d.png",
+      "contentType": "image/png",
+      "size": 20555,
+      "mirroredAt": "2026-05-29T13:06:46.653Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774484302425-miro_miro_icon_0.svg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774484302425-miro_miro_icon_0.svg",
+      "fallbackPath": "89245a679d166151682b7f31.svg",
+      "contentType": "image/svg+xml",
+      "size": 640,
+      "mirroredAt": "2026-05-29T13:06:47.319Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489680215-google-analytics-4.svg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489680215-google-analytics-4.svg",
+      "fallbackPath": "6f6bc234e55154268fc553bd.svg",
+      "contentType": "image/svg+xml",
+      "size": 1124,
+      "mirroredAt": "2026-05-29T13:06:47.836Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489997777-zeroheight.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489997777-zeroheight.png",
+      "fallbackPath": "ec5651cd0885a5cf703dbaf4.png",
+      "contentType": "image/png",
+      "size": 11263,
+      "mirroredAt": "2026-05-29T13:06:48.222Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490024883-clairty.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490024883-clairty.png",
+      "fallbackPath": "9e11c3d92a2f28261d9ac48c.png",
+      "contentType": "image/png",
+      "size": 37936,
+      "mirroredAt": "2026-05-29T13:06:48.615Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490351570-hotjar.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490351570-hotjar.png",
+      "fallbackPath": "6fe5c69e23100a9f8f463aa0.png",
+      "contentType": "image/png",
+      "size": 2017,
+      "mirroredAt": "2026-05-29T13:06:48.992Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493040969-maze.avif": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493040969-maze.avif",
+      "fallbackPath": "237b28ce454dc50ef5104725.avif",
+      "contentType": "image/avif",
+      "size": 5749,
+      "mirroredAt": "2026-05-29T13:06:49.385Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493205808-posthog.svg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493205808-posthog.svg",
+      "fallbackPath": "6c0a85834a4f2def7a407311.svg",
+      "contentType": "image/svg+xml",
+      "size": 1232,
+      "mirroredAt": "2026-05-29T13:06:49.819Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493928032-storybook.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493928032-storybook.png",
+      "fallbackPath": "c87eef38790e464a1c7d648e.png",
+      "contentType": "image/png",
+      "size": 11661,
+      "mirroredAt": "2026-05-29T13:06:50.221Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493994668-power.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493994668-power.png",
+      "fallbackPath": "d0545f512f0c1bb7511b6297.png",
+      "contentType": "image/png",
+      "size": 3570,
+      "mirroredAt": "2026-05-29T13:06:50.682Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775951406600-gac-mobile.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775951406600-gac-mobile.png",
+      "fallbackPath": "0ced7475f5ab72885380edbc.png",
+      "contentType": "image/png",
+      "size": 2732914,
+      "mirroredAt": "2026-05-29T13:06:51.209Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775953927174-gac-mobile2.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775953927174-gac-mobile2.png",
+      "fallbackPath": "9e7e42ed99f44b4a0f6430a5.png",
+      "contentType": "image/png",
+      "size": 2858192,
+      "mirroredAt": "2026-05-29T13:06:51.743Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776020907983-roadmap-gestao-oportunidade.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776020907983-roadmap-gestao-oportunidade.png",
+      "fallbackPath": "e0abaaefe6f294477e16709b.png",
+      "contentType": "image/png",
+      "size": 326548,
+      "mirroredAt": "2026-05-29T13:06:52.043Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776022314391-roadmap-gestao-oportunidade2.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776022314391-roadmap-gestao-oportunidade2.png",
+      "fallbackPath": "6692cad09ab0c95aa12c690e.png",
+      "contentType": "image/png",
+      "size": 354254,
+      "mirroredAt": "2026-05-29T13:06:52.316Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029748392-modulo-administrativo.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029748392-modulo-administrativo.png",
+      "fallbackPath": "b7242c76b214566b8bd766c2.png",
+      "contentType": "image/png",
+      "size": 304290,
+      "mirroredAt": "2026-05-29T13:06:52.601Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029882366-modulo-de-manutencao.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029882366-modulo-de-manutencao.png",
+      "fallbackPath": "ab2e96ec087229b65decfa3d.png",
+      "contentType": "image/png",
+      "size": 410846,
+      "mirroredAt": "2026-05-29T13:06:52.841Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029894604-modulo-de-propeccao.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029894604-modulo-de-propeccao.png",
+      "fallbackPath": "fed4ad86a4255398c4da7324.png",
+      "contentType": "image/png",
+      "size": 386766,
+      "mirroredAt": "2026-05-29T13:06:53.100Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png",
+      "fallbackPath": "30a022babc8c68c186eab778.png",
+      "contentType": "image/png",
+      "size": 21026,
+      "mirroredAt": "2026-05-29T13:06:53.422Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775537355718-capa-gac.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775537355718-capa-gac.png",
+      "fallbackPath": "f18565d8b49567edf7fa8671.png",
+      "contentType": "image/png",
+      "size": 281992,
+      "mirroredAt": "2026-05-29T13:07:27.842Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775605223167-card.png": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775605223167-card.png",
+      "fallbackPath": "cbcbba588728fbadb0e11135.png",
+      "contentType": "image/png",
+      "size": 606407,
+      "mirroredAt": "2026-05-29T13:07:28.101Z"
+    },
+    "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775875244894-img_0667-crop.jpg": {
+      "originalUrl": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775875244894-img_0667-crop.jpg",
+      "fallbackPath": "907eea5d5e2bee14189d2481.jpg",
+      "contentType": "image/jpeg",
+      "size": 118914,
+      "mirroredAt": "2026-05-29T13:07:28.606Z"
     }
   }
 }
