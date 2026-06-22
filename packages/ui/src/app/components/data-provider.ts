@@ -49,7 +49,6 @@ const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v2";
 const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
 const SUPABASE_READ_TIMEOUT_MS = 8000;
 const PUBLIC_DATA_CACHE_MAX_AGE_MS = 60 * 1000;
-const DEFAULT_PRODUCTION_CMS_REPOSITORY_URL = "https://portfolio-api.onrender.com/api/cms/public";
 
 type CachedSnapshot = {
   cachedAt: number;
@@ -98,8 +97,12 @@ function isDirectRemotePublicSource(source = getPublicDataSource()) {
   return ["supabase", "live", "remote", "realtime"].includes(source);
 }
 
+function hasDirectSupabasePublicConfig() {
+  return Boolean((import.meta.env.VITE_SUPABASE_URL || "").trim() && (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim());
+}
+
 function shouldUseRepositoryPublicSource() {
-  return isRepositoryPublicSource();
+  return isRepositoryPublicSource() && Boolean(getCmsRepositoryUrl());
 }
 
 function shouldUseBundledPublicSnapshot() {
@@ -147,10 +150,7 @@ function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
 }
 
 function getCmsRepositoryUrl() {
-  return (
-    import.meta.env.VITE_CMS_REPOSITORY_URL ||
-    (import.meta.env.PROD ? DEFAULT_PRODUCTION_CMS_REPOSITORY_URL : "/api/cms/public")
-  ).trim();
+  return (import.meta.env.VITE_CMS_REPOSITORY_URL || "").trim();
 }
 
 async function fetchFromCmsRepository(): Promise<CMSData> {
@@ -292,9 +292,27 @@ class SupabaseDataProvider {
       return this.publicLoadPromise;
     }
 
-    this.publicLoadPromise = (shouldUseRepositoryPublicSource()
-      ? fetchFromCmsRepository()
-      : loadPublicCMSDataFromSupabase(this.getReadClient()))
+    const loadRemoteData = async () => {
+      if (shouldUseRepositoryPublicSource()) {
+        try {
+          return await fetchFromCmsRepository();
+        } catch (error) {
+          if (!hasDirectSupabasePublicConfig()) {
+            throw error;
+          }
+
+          console.warn("[SupabaseDataProvider] CMS Repository failed. Falling back to Supabase.", error);
+        }
+      }
+
+      if (!hasDirectSupabasePublicConfig()) {
+        throw new Error("Nenhuma fonte publica remota do CMS foi configurada.");
+      }
+
+      return loadPublicCMSDataFromSupabase(this.getReadClient());
+    };
+
+    this.publicLoadPromise = loadRemoteData()
       .then((data) => {
         this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, data);
         return data;
