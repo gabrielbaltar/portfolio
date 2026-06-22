@@ -145,7 +145,8 @@ export function createDefaultCMSRepository(options: DefaultCMSRepositoryOptions 
     getOptionalEnv("CMS_MEDIA_MANIFEST_PATH") ||
     path.resolve(process.cwd(), "data/fallback/media-manifest.json");
   const mediaAssetBaseUrl = options.mediaAssetBaseUrl || getOptionalEnv("CMS_PUBLIC_ASSET_BASE_URL") || undefined;
-  const mediaManifest = readMediaManifest(mediaManifestPath, logger);
+  const disableMediaRewrite = getOptionalEnv("CMS_DISABLE_MEDIA_REWRITE") === "true";
+  const mediaManifest = disableMediaRewrite ? null : readMediaManifest(mediaManifestPath, logger);
 
   if (supabaseUrl && supabaseKey) {
     configuredProviders.supabase = createSupabaseProvider({ url: supabaseUrl, key: supabaseKey, timeoutMs: options.timeoutMs ?? 3000 });
