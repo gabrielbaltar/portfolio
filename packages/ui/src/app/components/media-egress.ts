@@ -14,6 +14,6 @@ export function isSupabaseStorageUrl(value?: string | null) {
 
 export function shouldBlockSupabaseMedia(value?: string | null) {
   const mode = (import.meta.env.VITE_SUPABASE_MEDIA_MODE || "").trim().toLowerCase();
-  const shouldBlock = DISABLED_MEDIA_MODES.has(mode) || (!ENABLED_MEDIA_MODES.has(mode) && import.meta.env.PROD);
+  const shouldBlock = DISABLED_MEDIA_MODES.has(mode);
   return shouldBlock && isSupabaseStorageUrl(value);
 }

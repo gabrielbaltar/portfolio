@@ -43,7 +43,7 @@ Frontend web:
 VITE_PUBLIC_DATA_SOURCE=repository
 VITE_ALLOW_REMOTE_PUBLIC_DATA=true
 VITE_CMS_REPOSITORY_URL=https://your-api-domain.com/api/cms/public
-VITE_SUPABASE_MEDIA_MODE=placeholder
+# VITE_SUPABASE_MEDIA_MODE=placeholder  # Apenas em emergencia de cota
 ```
 
 Nao configure `TURSO_AUTH_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY` em `apps/web/.env`, `apps/cms/.env` ou qualquer variavel `VITE_*`.
@@ -52,9 +52,9 @@ Em producao, deixe a API com `CMS_REPOSITORY_PROVIDER_ORDER=supabase,turso,stati
 
 ## Midia
 
-Para o portfolio publico, imagens e videos devem ser servidos pelo deploy estatico, nao pelo Supabase Storage.
+Por padrao, imagens e videos sao servidos diretamente pelo Supabase Storage. Nenhuma configuracao adicional e necessaria.
 
-Depois de exportar o snapshot publico, rode:
+Para reduzir egress em cenarios de alta carga, e possivel espelhar a midia localmente. Rode:
 
 ```bash
 npm run cms:mirror-media
@@ -69,7 +69,7 @@ Esse script:
 
 Por padrao, apenas URLs do Supabase Storage sao espelhadas. Para tambem copiar midias externas, rode com `CMS_MIRROR_EXTERNAL_MEDIA=true`.
 
-Em producao, mantenha `VITE_SUPABASE_MEDIA_MODE=placeholder`. Assim, se alguma URL do Supabase escapar sem espelho local, ela e bloqueada no frontend em vez de consumir egress do Supabase.
+Para que a API use o espelho em vez das URLs originais, remova `CMS_DISABLE_MEDIA_REWRITE` ou defina como `false`. Caso contrario, a API servira as URLs originais do Supabase.
 
 ## Turso
 

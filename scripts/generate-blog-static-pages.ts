@@ -29,7 +29,7 @@ function injectHead(template: string, headTags: string[]) {
 
 function shouldBlockSupabaseMedia() {
   const mode = (process.env.VITE_SUPABASE_MEDIA_MODE || "").trim().toLowerCase();
-  return DISABLED_MEDIA_MODES.has(mode) || !ENABLED_MEDIA_MODES.has(mode);
+  return DISABLED_MEDIA_MODES.has(mode);
 }
 
 async function main() {
