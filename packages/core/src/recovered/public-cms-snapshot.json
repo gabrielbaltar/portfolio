@@ -1,5 +1,5 @@
 {
-  "cachedAt": 1780060048617,
+  "cachedAt": 1782147426086,
   "data": {
     "siteSettings": {
       "id": "main",
@@ -89,19 +89,19 @@
           }
         },
         "1777948428907": {
-          "image": "/cms-assets/d2deb7f539ccf5abd592a61e.png",
+          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png",
           "title": "Portal Segurado VG - Segurança sem fricção",
           "subtitle": "Desenho da jornada de primeiro acesso e autoatendimento para segurados corporativos em um produto de Vida em Grupo.",
           "imagePosition": "50% 50%"
         },
         "1777948721174": {
-          "image": "/cms-assets/649161820f613eec960636a6.png",
+          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png",
           "title": "TIM Pra Mim - Gamificação para retenção",
           "subtitle": "Design da experiência de uma plataforma de benefícios gamificada para clientes B2C e SMB da TIM. A solução traduziu regras complexas de telecom, autenticação, inadimplência e segmentação em uma jornada de missões, Bytes e recompensas para apoiar a estratégia de retenção.",
           "imagePosition": "50% 50%"
         },
         "1777949326664": {
-          "image": "/cms-assets/30a022babc8c68c186eab778.png",
+          "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png",
           "title": "Deloitte - Compliance on Hands",
           "subtitle": "Compliance on Hands é uma plataforma de ensino sobre as políticas de compliance das empresas parceiras.",
           "imagePosition": "50% 50%"
@@ -120,7 +120,7 @@
         }
       },
       "createdAt": "2026-04-10T12:37:16.355+00:00",
-      "updatedAt": "2026-05-05T22:18:27.09035+00:00"
+      "updatedAt": "2026-06-22T16:49:35.872744+00:00"
     },
     "profile": {
       "id": "main",
@@ -134,7 +134,7 @@
       "currentCompanyUrl": "",
       "email": "gabriel.baltar21@hotmail.com",
       "phone": "+55 21 989090580",
-      "photo": "/cms-assets/907eea5d5e2bee14189d2481.jpg",
+      "photo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775875244894-img_0667-crop.jpg",
       "twitter": "https://www.behance.net/gabrielbaltar",
       "twitterLabel": "Behance",
       "instagram": "",
@@ -161,7 +161,7 @@
         "services": "Plataforma B2C",
         "client": "Mag Seguros",
         "year": "2024",
-        "image": "/cms-assets/f18565d8b49567edf7fa8671.png",
+        "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775537355718-capa-gac.png",
         "imageBgColor": "",
         "imagePosition": "55% 67%",
         "galleryImages": [],
@@ -261,13 +261,13 @@
             "type": "paragraph"
           },
           {
-            "url": "/cms-assets/e0abaaefe6f294477e16709b.png",
+            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776020907983-roadmap-gestao-oportunidade.png",
             "type": "image",
             "caption": "",
             "position": "50% 50%",
             "borderRadius": 12,
             "galleryImages": [
-              "/cms-assets/6692cad09ab0c95aa12c690e.png"
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776022314391-roadmap-gestao-oportunidade2.png"
             ],
             "galleryPositions": [
               "50% 50%"
@@ -338,14 +338,14 @@
             "type": "paragraph"
           },
           {
-            "url": "/cms-assets/fed4ad86a4255398c4da7324.png",
+            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029894604-modulo-de-propeccao.png",
             "type": "image",
             "caption": "",
             "position": "19% 51%",
             "borderRadius": 12,
             "galleryImages": [
-              "/cms-assets/ab2e96ec087229b65decfa3d.png",
-              "/cms-assets/b7242c76b214566b8bd766c2.png"
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029882366-modulo-de-manutencao.png",
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1776029748392-modulo-administrativo.png"
             ],
             "galleryPositions": [
               "99% 55%",
@@ -383,15 +383,15 @@
             "type": "paragraph"
           },
           {
-            "url": "/cms-assets/b9f4d07ce8904f5b23547c78.png",
+            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775941676225-mockup.png",
             "type": "image",
             "caption": "",
             "borderRadius": 12,
             "galleryImages": [
-              "/cms-assets/1c2fa3225e485dc91195b7bf.png",
-              "/cms-assets/54ca5fc2135b475e1224366e.png",
-              "/cms-assets/0ced7475f5ab72885380edbc.png",
-              "/cms-assets/9e7e42ed99f44b4a0f6430a5.png"
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775947721994-mockup2.png",
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775950080585-mockup3.png",
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775951406600-gac-mobile.png",
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775953927174-gac-mobile2.png"
             ],
             "galleryPositions": [
               "50% 50%",
@@ -508,7 +508,7 @@
         "services": "B2B",
         "client": "MAG Seguros",
         "year": "2025",
-        "image": "/cms-assets/cbcbba588728fbadb0e11135.png",
+        "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1775605223167-card.png",
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryImages": [],
@@ -789,11 +789,16 @@
             "type": "paragraph"
           },
           {
-            "text": "<strong><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\">5. Confirmar com token<br data-rich-text-break=\"true\"></span></span></strong><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">A alteração é validada por token, garantindo mais segurança para uma transação sensível e criando uma experiência mais próxima de padrões usados em produtos financeiros.</span>",
+            "text": "<strong><span style=\"font-size: 16px;\"><span style=\"color: rgb(245, 245, 245);\">5. Confirmar com token<br data-rich-text-break=\"true\"></span></span></strong><span style=\"font-size: 16px;\"><br data-rich-text-break=\"true\">A alteração é validada por token, garantindo mais segurança para uma transação sensível e criando uma experiência mais próxima de padrões usados em produtos financeiros. sdcsdcs</span>",
             "type": "paragraph"
+          },
+          {
+            "text": "Execução e protótipo",
+            "type": "heading2",
+            "showInSummary": true
           }
         ],
-        "password": "27531689",
+        "password": "",
         "status": "published",
         "tags": [
           "b2b",
@@ -804,8 +809,8 @@
         "seoTitle": "",
         "seoDescription": "",
         "createdAt": "2026-03-23T01:01:58.23+00:00",
-        "updatedAt": "2026-05-04T02:57:26.593796+00:00",
-        "publishedAt": "2026-05-02T05:31:30.215+00:00",
+        "updatedAt": "2026-06-22T16:49:35.614172+00:00",
+        "publishedAt": "2026-06-22T15:20:42.946+00:00",
         "titleAppearance": {
           "fontSize": 48,
           "fontWeight": 700,
@@ -848,7 +853,7 @@
         "publishedAt": null,
         "cardTitle": "Portal Segurado VG - Segurança sem fricção",
         "cardSubtitle": "Desenho da jornada de primeiro acesso e autoatendimento para segurados corporativos em um produto de Vida em Grupo.",
-        "cardImage": "/cms-assets/d2deb7f539ccf5abd592a61e.png",
+        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777948459515-prudential-capa.png",
         "cardImagePosition": "50% 50%"
       },
       {
@@ -863,7 +868,7 @@
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryImages": [
-          "/cms-assets/ce2d14e0861564c4fbace4f0.png"
+          "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949215076-tim-pra-mim-capa.png"
         ],
         "galleryPositions": [
           "50% 50%"
@@ -887,7 +892,7 @@
         "publishedAt": null,
         "cardTitle": "TIM Pra Mim - Gamificação para retenção",
         "cardSubtitle": "Design da experiência de uma plataforma de benefícios gamificada para clientes B2C e SMB da TIM. A solução traduziu regras complexas de telecom, autenticação, inadimplência e segmentação em uma jornada de missões, Bytes e recompensas para apoiar a estratégia de retenção.",
-        "cardImage": "/cms-assets/649161820f613eec960636a6.png",
+        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949223096-tim-pra-mim-capa.png",
         "cardImagePosition": "50% 50%"
       },
       {
@@ -921,7 +926,7 @@
         "publishedAt": "2026-05-05T04:19:53.15+00:00",
         "cardTitle": "Deloitte - Compliance on Hands",
         "cardSubtitle": "Compliance on Hands é uma plataforma de ensino sobre as políticas de compliance das empresas parceiras.",
-        "cardImage": "/cms-assets/30a022babc8c68c186eab778.png",
+        "cardImage": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1777949338483-deloitte.png",
         "cardImagePosition": "50% 50%"
       }
     ],
@@ -998,6 +1003,15 @@
         "university": "Colégio Flama",
         "description": "Formação técnica em Desenvolvimento Web Full Stack, com conhecimento em desenvolvimento de sites e aplicações web, além de integração com bancos de dados relacionais (SQL) e não relacionais (NoSQL).",
         "sortOrder": 3
+      },
+      {
+        "id": "1782142104479",
+        "location": "São Paulo",
+        "period": "2026 - 2028",
+        "degree": " MBA em Business Intelligence & Analytics",
+        "university": "USP - Universidade de São Paulo",
+        "description": "",
+        "sortOrder": 4
       }
     ],
     "certifications": [
@@ -1112,7 +1126,7 @@
         "name": "Figma",
         "description": "Design de interfaces",
         "color": "#222",
-        "logo": "/cms-assets/2a3b4d43ee86e0ee292a98f2.svg",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480448606-figma-logo.svg",
         "link": "https://www.figma.com/",
         "sortOrder": 1,
         "logoRadius": 0
@@ -1122,7 +1136,7 @@
         "name": "Framer",
         "description": "Ferramenta No-code",
         "color": "#111",
-        "logo": "/cms-assets/dfa2e3cdb36e760e2a38307c.svg",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489900604-framer-icon-black.svg",
         "link": "https://www.framer.com/",
         "sortOrder": 2,
         "logoRadius": 0
@@ -1132,7 +1146,7 @@
         "name": "Notion",
         "description": "Ferramenta de Produtividade",
         "color": "#ffffff",
-        "logo": "/cms-assets/755b3bfc846e11a0fc0bfc4d.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774480538498-notion.png",
         "link": "https://notion.so/",
         "sortOrder": 3,
         "logoRadius": 0
@@ -1142,7 +1156,7 @@
         "name": "Microsoft Clarity",
         "description": "Ferramenta de Análise ",
         "color": "#ffffff",
-        "logo": "/cms-assets/9e11c3d92a2f28261d9ac48c.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490024883-clairty.png",
         "link": "https://clarity.microsoft.com/lang/pt-br",
         "sortOrder": 4,
         "logoRadius": 0
@@ -1152,7 +1166,7 @@
         "name": "ZeroHeight",
         "description": "Documentação de Design Systems",
         "color": "#ffffff",
-        "logo": "/cms-assets/ec5651cd0885a5cf703dbaf4.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489997777-zeroheight.png",
         "link": "https://zeroheight.com/",
         "sortOrder": 5,
         "logoRadius": 0
@@ -1162,7 +1176,7 @@
         "name": "Miro",
         "description": "Ferramenta de Colaboração",
         "color": "#FFDE21",
-        "logo": "/cms-assets/89245a679d166151682b7f31.svg",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774484302425-miro_miro_icon_0.svg",
         "link": "https://miro.com/pt/",
         "sortOrder": 6,
         "logoRadius": 0
@@ -1172,7 +1186,7 @@
         "name": "Goolge Analytics",
         "description": "Ferramenta de Análise de Dados",
         "color": "#ffffff",
-        "logo": "/cms-assets/6f6bc234e55154268fc553bd.svg",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774489680215-google-analytics-4.svg",
         "link": "https://marketingplatform.google.com/about/analytics/",
         "sortOrder": 7,
         "logoRadius": 0
@@ -1182,7 +1196,7 @@
         "name": "Hotjar",
         "description": "Ferramenta de Análise",
         "color": "#555",
-        "logo": "/cms-assets/6fe5c69e23100a9f8f463aa0.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774490351570-hotjar.png",
         "link": "https://www.hotjar.com/",
         "sortOrder": 8,
         "logoRadius": 0
@@ -1192,7 +1206,7 @@
         "name": "Maze ",
         "description": "Ferramenta de Teste de Usabilidade",
         "color": "#555",
-        "logo": "/cms-assets/237b28ce454dc50ef5104725.avif",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493040969-maze.avif",
         "link": "https://maze.co/",
         "sortOrder": 9,
         "logoRadius": 0
@@ -1202,7 +1216,7 @@
         "name": "PostHog",
         "description": "Ferramenta de Análise de Produto",
         "color": "#555",
-        "logo": "/cms-assets/6c0a85834a4f2def7a407311.svg",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493205808-posthog.svg",
         "link": "https://posthog.com/",
         "sortOrder": 10,
         "logoRadius": 0
@@ -1212,7 +1226,7 @@
         "name": "Storybook",
         "description": "Documentação de Design Systems",
         "color": "#ffffff",
-        "logo": "/cms-assets/c87eef38790e464a1c7d648e.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493928032-storybook.png",
         "link": "https://storybook.js.org/",
         "sortOrder": 11,
         "logoRadius": 0
@@ -1222,7 +1236,7 @@
         "name": "Power BI",
         "description": "Ferramenta de Business Intelligence",
         "color": "#555",
-        "logo": "/cms-assets/d0545f512f0c1bb7511b6297.png",
+        "logo": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774493994668-power.png",
         "link": "https://app.powerbi.com",
         "sortOrder": 12,
         "logoRadius": 0
@@ -1275,7 +1289,7 @@
         "publisher": "Modern Web Magazine",
         "date": "28 de mar. de 2026",
         "description": "Neste artigo, você vai aprender como conectar o <span data-no-translate=\"true\">Figma mcp</span> no Claude code para criar aplicações com mais rapidez, atualizar deisgn system com poucos comandos.",
-        "image": "/cms-assets/c193c65157b3e3a8a9ab1fae.png",
+        "image": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1774238822637-capa.png",
         "imageBgColor": "",
         "imagePosition": "50% 50%",
         "galleryPositions": [],
@@ -1292,13 +1306,13 @@
             "type": "paragraph"
           },
           {
-            "url": "/cms-assets/a6f24c13b52bda3c0ef1282e.jpg",
+            "url": "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773297023253-land-o-lakes-inc-tqsvfz7nhuo-unsplash.jpg",
             "type": "image",
             "caption": "",
             "position": "50% 50%",
             "borderRadius": 12,
             "galleryImages": [
-              "/cms-assets/c859ca18f4755025e615d627.jpg"
+              "https://tlgztkougbrfuerquvps.supabase.co/storage/v1/object/public/portfolio-public/2026/1773296460273-uxday-2025-matriz-236.jpg"
             ],
             "galleryPositions": [
               "50% 50%"

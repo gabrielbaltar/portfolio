@@ -81,7 +81,7 @@ async function persistCollection<K extends CMSCollectionName>(key: K, previous: 
   await dataProvider.saveCollection(key, previous, next);
 }
 
-const PUBLIC_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+const PUBLIC_REFRESH_INTERVAL_MS = 60 * 1000;
 
 export function CMSProvider({ children, mode = "public" }: { children: ReactNode; mode?: CMSMode }) {
   const initialSnapshot = mode === "cms" ? dataProvider.getCachedCmsData() : dataProvider.getCachedPublicData();

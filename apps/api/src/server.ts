@@ -6,12 +6,12 @@ const repository = createDefaultCMSRepository({
   timeoutMs: Number(process.env.CMS_PROVIDER_TIMEOUT_MS || 3000),
 });
 
-function sendJson(response: http.ServerResponse, statusCode: number, body: unknown) {
+function sendJson(response: http.ServerResponse, statusCode: number, body: unknown, cacheControl = "no-store, max-age=0") {
   response.writeHead(statusCode, {
     "access-control-allow-origin": process.env.CMS_API_ALLOW_ORIGIN || "*",
     "access-control-allow-methods": "GET,OPTIONS",
     "access-control-allow-headers": "content-type",
-    "cache-control": "public, max-age=60, stale-while-revalidate=300",
+    "cache-control": cacheControl,
     "content-type": "application/json; charset=utf-8",
     "x-content-type-options": "nosniff",
   });
@@ -39,7 +39,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === "GET" && url.pathname === "/health") {
-    sendJson(response, 200, { ok: true });
+    sendJson(response, 200, { ok: true }, "public, max-age=30");
     return;
   }
 

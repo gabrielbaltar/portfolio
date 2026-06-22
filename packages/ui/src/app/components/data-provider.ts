@@ -45,9 +45,11 @@ import {
 } from "@portfolio/supabase";
 import recoveredPublicSnapshot from "@portfolio/core/recovered/public-cms-snapshot.json";
 
-const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v1";
+const PUBLIC_DATA_CACHE_KEY = "portfolio_public_cms_snapshot_v2";
 const CMS_DATA_CACHE_KEY = "portfolio_cms_snapshot_v1";
 const SUPABASE_READ_TIMEOUT_MS = 8000;
+const PUBLIC_DATA_CACHE_MAX_AGE_MS = 60 * 1000;
+const DEFAULT_PRODUCTION_CMS_REPOSITORY_URL = "https://portfolio-api.onrender.com/api/cms/public";
 
 type CachedSnapshot = {
   cachedAt: number;
@@ -63,7 +65,15 @@ const bundledPublicSnapshot = recoveredPublicSnapshot as CachedSnapshot;
 
 function getPublicDataSource() {
   const configuredSource = (import.meta.env.VITE_PUBLIC_DATA_SOURCE || "").trim().toLowerCase();
-  if (configuredSource) return configuredSource;
+  const forceStatic = import.meta.env.VITE_FORCE_STATIC_PUBLIC_DATA === "true";
+
+  if (configuredSource) {
+    if (["static", "snapshot", "bundled", "local"].includes(configuredSource) && !forceStatic && import.meta.env.PROD) {
+      return "repository";
+    }
+
+    return configuredSource;
+  }
 
   if ((import.meta.env.VITE_CMS_REPOSITORY_URL || "").trim()) {
     return "repository";
@@ -137,7 +147,10 @@ function getEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
 }
 
 function getCmsRepositoryUrl() {
-  return (import.meta.env.VITE_CMS_REPOSITORY_URL || "/api/cms/public").trim();
+  return (
+    import.meta.env.VITE_CMS_REPOSITORY_URL ||
+    (import.meta.env.PROD ? DEFAULT_PRODUCTION_CMS_REPOSITORY_URL : "/api/cms/public")
+  ).trim();
 }
 
 async function fetchFromCmsRepository(): Promise<CMSData> {
@@ -221,6 +234,12 @@ class SupabaseDataProvider {
     return persisted;
   }
 
+  private getFreshPublicSnapshot() {
+    const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
+    if (!snapshot) return null;
+    return Date.now() - snapshot.cachedAt <= PUBLIC_DATA_CACHE_MAX_AGE_MS ? snapshot : null;
+  }
+
   private getClient() {
     if (!this.client) {
       this.client = createBrowserSupabaseClient(getEnv("VITE_SUPABASE_URL"), getEnv("VITE_SUPABASE_ANON_KEY"));
@@ -246,7 +265,7 @@ class SupabaseDataProvider {
       return bundledPublicSnapshot.data;
     }
 
-    return this.getSnapshot(PUBLIC_DATA_CACHE_KEY)?.data ?? null;
+    return this.getFreshPublicSnapshot()?.data ?? null;
   }
 
   getCachedCmsData(): CMSData | null {
@@ -262,7 +281,7 @@ class SupabaseDataProvider {
   }
 
   loadPublicData(): Promise<CMSData> {
-    const snapshot = this.getSnapshot(PUBLIC_DATA_CACHE_KEY);
+    const snapshot = this.getFreshPublicSnapshot();
 
     if (shouldUseBundledPublicSnapshot()) {
       this.writeSnapshot(PUBLIC_DATA_CACHE_KEY, bundledPublicSnapshot.data);

@@ -2778,7 +2778,12 @@ export function CMSEditor() {
               {item.password && (
                 <button
                   type="button"
-                  onClick={() => updateField("password", "")}
+                  onClick={() => {
+                    const nextItem = { ...item, password: "", updatedAt: new Date().toISOString() };
+                    setItem(nextItem);
+                    setHasChanges(true);
+                    void saveItem(false, nextItem);
+                  }}
                   className="px-2.5 py-1.5 rounded-lg cursor-pointer border-none text-[#999] hover:text-red-400 transition-colors flex items-center gap-1"
                   style={{ fontSize: "12px", backgroundColor: "#1a1a1a" }}
                 >
@@ -3069,7 +3074,12 @@ export function CMSEditor() {
               {item.password && (
                 <button
                   type="button"
-                  onClick={() => updateField("password", "")}
+                  onClick={() => {
+                    const nextItem = { ...item, password: "", updatedAt: new Date().toISOString() };
+                    setItem(nextItem);
+                    setHasChanges(true);
+                    void saveItem(false, nextItem);
+                  }}
                   className="px-2.5 py-1.5 rounded-lg cursor-pointer border-none text-[#999] hover:text-red-400 transition-colors flex items-center gap-1"
                   style={{ fontSize: "12px", backgroundColor: "#1a1a1a" }}
                 >
