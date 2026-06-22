@@ -108,6 +108,10 @@ function shouldUseRepositoryPublicSource() {
 function shouldUseBundledPublicSnapshot() {
   const source = getPublicDataSource();
 
+  if (hasDirectSupabasePublicConfig() || getCmsRepositoryUrl()) {
+    return false;
+  }
+
   if (isRepositoryPublicSource(source)) {
     return false;
   }
