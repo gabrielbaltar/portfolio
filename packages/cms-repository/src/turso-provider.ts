@@ -81,6 +81,53 @@ async function loadRows(client: Client): Promise<CMSData> {
   return normalizeCMSData(data);
 }
 
+async function ensureSchema(client: Client): Promise<void> {
+  await client.execute(`
+    create table if not exists cms_content (
+      id text primary key,
+      type text not null,
+      slug text unique not null,
+      title text,
+      status text default 'published',
+      payload text not null,
+      created_at text default CURRENT_TIMESTAMP,
+      updated_at text default CURRENT_TIMESTAMP
+    )
+  `);
+
+  await client.execute(`
+    create index if not exists cms_content_type_status_idx
+    on cms_content (type, status)
+  `);
+}
+
+async function saveSnapshot(client: Client, data: CMSData): Promise<void> {
+  await ensureSchema(client);
+  const snapshot = normalizeCMSData(data);
+
+  await client.execute({
+    sql: `
+      insert into cms_content (id, type, slug, title, status, payload, updated_at)
+      values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      on conflict(id) do update set
+        type = excluded.type,
+        slug = excluded.slug,
+        title = excluded.title,
+        status = excluded.status,
+        payload = excluded.payload,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    args: [
+      "snapshot:public",
+      "snapshot",
+      "public",
+      "Public CMS snapshot",
+      "published",
+      JSON.stringify(snapshot),
+    ],
+  });
+}
+
 export function createTursoProvider({ url, authToken }: TursoProviderOptions): CMSProvider {
   const client = createClient({ url, authToken });
 
@@ -88,6 +135,9 @@ export function createTursoProvider({ url, authToken }: TursoProviderOptions): C
     name: "turso",
     async loadPublicCMSData() {
       return (await loadSnapshot(client)) ?? (await loadRows(client));
+    },
+    async savePublicCMSData(data) {
+      await saveSnapshot(client, data);
     },
   };
 }

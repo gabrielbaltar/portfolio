@@ -41,11 +41,14 @@ Frontend web:
 
 ```bash
 VITE_PUBLIC_DATA_SOURCE=repository
+VITE_ALLOW_REMOTE_PUBLIC_DATA=true
 VITE_CMS_REPOSITORY_URL=https://your-api-domain.com/api/cms/public
 VITE_SUPABASE_MEDIA_MODE=placeholder
 ```
 
 Nao configure `TURSO_AUTH_TOKEN` ou `SUPABASE_SERVICE_ROLE_KEY` em `apps/web/.env`, `apps/cms/.env` ou qualquer variavel `VITE_*`.
+
+Em producao, deixe a API com `CMS_REPOSITORY_PROVIDER_ORDER=supabase,turso,static`. Assim o conteudo salvo no CMS aparece pelo Supabase primeiro, o Turso continua como banco secundario, e o JSON local entra apenas como ultimo fallback.
 
 ## Midia
 

@@ -62,25 +62,48 @@ type PublicRepositoryResponse = {
 const bundledPublicSnapshot = recoveredPublicSnapshot as CachedSnapshot;
 
 function getPublicDataSource() {
-  return (import.meta.env.VITE_PUBLIC_DATA_SOURCE || "").trim().toLowerCase();
+  const configuredSource = (import.meta.env.VITE_PUBLIC_DATA_SOURCE || "").trim().toLowerCase();
+  if (configuredSource) return configuredSource;
+
+  if ((import.meta.env.VITE_CMS_REPOSITORY_URL || "").trim()) {
+    return "repository";
+  }
+
+  if ((import.meta.env.VITE_SUPABASE_URL || "").trim() && (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim()) {
+    return "supabase";
+  }
+
+  return "";
 }
 
 function allowsRemotePublicData() {
   return !import.meta.env.PROD || import.meta.env.VITE_ALLOW_REMOTE_PUBLIC_DATA === "true";
 }
 
+function isRepositoryPublicSource(source = getPublicDataSource()) {
+  return ["repository", "api", "server", "backend"].includes(source);
+}
+
+function isDirectRemotePublicSource(source = getPublicDataSource()) {
+  return ["supabase", "live", "remote", "realtime"].includes(source);
+}
+
 function shouldUseRepositoryPublicSource() {
-  return allowsRemotePublicData() && ["repository", "api", "server", "backend"].includes(getPublicDataSource());
+  return isRepositoryPublicSource();
 }
 
 function shouldUseBundledPublicSnapshot() {
   const source = getPublicDataSource();
 
-  if (!allowsRemotePublicData() && ["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
+  if (isRepositoryPublicSource(source)) {
+    return false;
+  }
+
+  if (!allowsRemotePublicData() && isDirectRemotePublicSource(source)) {
     return true;
   }
 
-  if (allowsRemotePublicData() && ["supabase", "live", "remote", "realtime", "repository", "api", "server", "backend"].includes(source)) {
+  if (allowsRemotePublicData() && isDirectRemotePublicSource(source)) {
     return false;
   }
 

@@ -10,6 +10,7 @@ export type CMSProviderName = "supabase" | "turso" | "static";
 export interface CMSProvider {
   readonly name: CMSProviderName;
   loadPublicCMSData(): Promise<CMSData>;
+  savePublicCMSData?(data: CMSData): Promise<void>;
 }
 
 export interface CMSRepositoryResult {

@@ -54,6 +54,8 @@ export function createCMSRepository({
   mediaManifest = null,
   mediaAssetBaseUrl,
 }: CMSRepositoryOptions): CMSRepository {
+  const mirroredPayloads = new Map<string, string>();
+
   return {
     async loadPublicCMSData(): Promise<CMSRepositoryResult> {
       let lastError: unknown = null;
@@ -65,6 +67,29 @@ export function createCMSRepository({
             ? rewriteCMSMediaUrls(loaded, mediaManifest, { assetBaseUrl: mediaAssetBaseUrl })
             : loaded;
           logger.info(`[cms-repository] provider used: ${provider.name}`);
+
+          if (provider.name === "supabase") {
+            const mirrorPayload = JSON.stringify(data);
+
+            for (const fallbackProvider of providers) {
+              if (fallbackProvider.name === provider.name || !fallbackProvider.savePublicCMSData) continue;
+              if (mirroredPayloads.get(fallbackProvider.name) === mirrorPayload) continue;
+
+              void withTimeout(
+                fallbackProvider.savePublicCMSData(data),
+                timeoutMs,
+                `${fallbackProvider.name} mirror`,
+              )
+                .then(() => {
+                  mirroredPayloads.set(fallbackProvider.name, mirrorPayload);
+                })
+                .catch((error) => {
+                  const message = error instanceof Error ? error.message : String(error);
+                  logger.warn(`[cms-repository] provider mirror failed: ${fallbackProvider.name} - ${message}`);
+                });
+            }
+          }
+
           return { provider: provider.name, data };
         } catch (error) {
           lastError = error;

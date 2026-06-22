@@ -66,6 +66,7 @@ Arquivo: [`apps/web/.env.example`](./apps/web/.env.example)
 | Variavel | Obrigatoria | Uso |
 | --- | --- | --- |
 | `VITE_PUBLIC_DATA_SOURCE` | Nao | Use `repository` para o site publico chamar a API de fallback; use `static` para snapshot embutido; use `supabase` apenas para modo direto/legado |
+| `VITE_ALLOW_REMOTE_PUBLIC_DATA` | Nao | Use `true` quando quiser permitir fonte publica remota em producao; `repository` tambem funciona sem expor tokens no front-end |
 | `VITE_CMS_REPOSITORY_URL` | Nao | URL da API `GET /api/cms/public` quando o backend estiver em outro dominio. Se ausente, usa `/api/cms/public` |
 | `VITE_SUPABASE_URL` | Nao | Necessario apenas se `VITE_PUBLIC_DATA_SOURCE=supabase` |
 | `VITE_SUPABASE_ANON_KEY` | Nao | Necessario apenas se `VITE_PUBLIC_DATA_SOURCE=supabase` |
@@ -124,7 +125,7 @@ O CMS roda em `http://localhost:4174`.
 
 ## Operacao com baixa cota de Supabase
 
-Para reduzir egress no plano gratuito, o web publico pode rodar com `VITE_PUBLIC_DATA_SOURCE=repository`. Nesse modo, o portfolio chama a API `GET /api/cms/public`, que tenta Supabase, Turso e JSON local com timeout por provider. Veja [docs/cms-fallback.md](./docs/cms-fallback.md).
+Para reduzir egress no plano gratuito sem perder atualizacao do CMS, o web publico deve rodar com `VITE_PUBLIC_DATA_SOURCE=repository`. Nesse modo, o portfolio chama a API `GET /api/cms/public`, que tenta Supabase, Turso e JSON local com timeout por provider. Veja [docs/cms-fallback.md](./docs/cms-fallback.md).
 
 Para midia publica, rode `npm run cms:mirror-media` depois de exportar o conteudo. O script copia imagens/videos do Supabase Storage para `apps/web/public/cms-assets` e reescreve o snapshot local para usar esses arquivos. Em producao, mantenha `VITE_SUPABASE_MEDIA_MODE=placeholder` para impedir que URLs do Supabase Storage nao espelhadas gerem egress.
 
@@ -294,6 +295,7 @@ No `portfolio-api`:
 - `TURSO_AUTH_TOKEN`
 - `CMS_API_ALLOW_ORIGIN=https://seu-portfolio.example.com`
 - `CMS_PROVIDER_TIMEOUT_MS=3000`
+- `CMS_REPOSITORY_PROVIDER_ORDER=supabase,turso,static`
 - `CMS_MEDIA_MANIFEST_PATH=data/fallback/media-manifest.json`
 - `CMS_PUBLIC_ASSET_BASE_URL=https://seu-portfolio.example.com/cms-assets`
 

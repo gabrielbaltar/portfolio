@@ -18,9 +18,9 @@ services:
       - key: VITE_EMAILJS_PUBLIC_KEY
         sync: false
       - key: VITE_PUBLIC_DATA_SOURCE
-        value: static
+        value: repository
       - key: VITE_ALLOW_REMOTE_PUBLIC_DATA
-        value: "false"
+        value: "true"
       - key: VITE_CMS_REPOSITORY_URL
         sync: false
       - key: VITE_SUPABASE_MEDIA_MODE
@@ -117,7 +117,7 @@ services:
       - key: CMS_PROVIDER_TIMEOUT_MS
         value: 3000
       - key: CMS_REPOSITORY_PROVIDER_ORDER
-        value: static,turso,supabase
+        value: supabase,turso,static
       - key: CMS_MEDIA_MANIFEST_PATH
         value: data/fallback/media-manifest.json
       - key: CMS_PUBLIC_ASSET_BASE_URL
