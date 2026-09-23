@@ -284,6 +284,14 @@ function normalizeContentBlocks(blocks: ContentBlock[] | undefined) {
       };
     }
 
+    if (block.type === "big-numbers") {
+      return {
+        ...block,
+        title: typeof block.title === "string" ? block.title : undefined,
+        items: Array.isArray(block.items) ? block.items : [],
+      };
+    }
+
     if (block.type === "table") {
       const columns = Array.isArray(block.columns) ? block.columns.map((column) => String(column ?? "")) : [];
       const fallbackColumns = columns.length > 0 ? columns : ["Coluna 1", "Coluna 2"];

@@ -61,6 +61,7 @@ const BLOCK_TYPES: { type: ContentBlock["type"]; label: string; icon: React.Reac
   { type: "quote", label: "Citacao", icon: <Quote size={14} /> },
   { type: "cta", label: "CTA / Botao", icon: <MousePointerClick size={14} /> },
   { type: "cards", label: "Cards", icon: <LayoutGrid size={14} /> },
+  { type: "big-numbers", label: "Estatisticas", icon: <Heading1 size={14} /> },
   { type: "embed", label: "Embed / Prototipo", icon: <Code size={14} /> },
   { type: "divider", label: "Divisor", icon: <Minus size={14} /> },
 ];
@@ -70,7 +71,7 @@ const LABEL_MAP: Record<string, string> = {
   "unordered-list": "Lista", "ordered-list": "Lista numerada", table: "Tabela",
   "style-guide": "Style guide", "color-palette": "Cores", typography: "Tipografia",
   "icon-grid": "Icones", "user-flow": "Fluxo do usuario", sitemap: "Sitemap",
-  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", embed: "Embed / Prototipo",
+  code: "Codigo", image: "Imagem / Animacao", video: "Video", divider: "Divisor", quote: "Citacao", cta: "CTA", cards: "Cards", "big-numbers": "Estatisticas", embed: "Embed / Prototipo",
 };
 
 const TABLE_TEXT_COLOR_OPTIONS = [
@@ -197,6 +198,14 @@ function createBlock(type: ContentBlock["type"]): ContentBlock {
             backgroundColor: "#0F1012",
             borderColor: "#2A2A2A",
           },
+        ],
+      };
+    case "big-numbers":
+      return {
+        type: "big-numbers",
+        title: "RESULT",
+        items: [
+          { prefix: "", number: "50%", suffix: "aumento" },
         ],
       };
     case "embed": return { type: "embed", url: "", caption: "" };
@@ -2597,6 +2606,129 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                 style={{ fontSize: "12px" }}
               >
                 <Plus size={12} /> Adicionar card
+              </button>
+            </div>
+          );
+        })()}
+
+        {block.type === "big-numbers" && (() => {
+          const bigNumbersBlock = block as Extract<ContentBlock, { type: "big-numbers" }>;
+          const items = bigNumbersBlock.items || [];
+
+          const moveItem = (itemIndex: number, direction: -1 | 1) => {
+            const nextIndex = itemIndex + direction;
+            if (nextIndex < 0 || nextIndex >= items.length) return;
+            const nextItems = [...items];
+            const [movedItem] = nextItems.splice(itemIndex, 1);
+            nextItems.splice(nextIndex, 0, movedItem);
+            onChange({ ...bigNumbersBlock, items: nextItems } as ContentBlock);
+          };
+
+          const updateItem = (itemIndex: number, updates: Partial<typeof items[number]>) => {
+            const nextItems = [...items];
+            nextItems[itemIndex] = { ...nextItems[itemIndex], ...updates };
+            onChange({ ...bigNumbersBlock, items: nextItems } as ContentBlock);
+          };
+
+          return (
+            <div className="space-y-3">
+              <label className="space-y-1">
+                <FieldLabel>Titulo do bloco (opcional)</FieldLabel>
+                <MiniInput
+                  value={bigNumbersBlock.title || ""}
+                  onChange={(title) => onChange({ ...bigNumbersBlock, title } as ContentBlock)}
+                  placeholder="Ex.: RESULT"
+                />
+              </label>
+
+              <div className="space-y-3">
+                {items.map((item, itemIndex) => (
+                  <div
+                    key={itemIndex}
+                    className="space-y-3 rounded-lg border p-3"
+                    style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        Estatistica {itemIndex + 1}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveItem(itemIndex, -1)}
+                          disabled={itemIndex === 0}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white disabled:opacity-25"
+                          title="Mover para cima"
+                        >
+                          <ChevronUp size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveItem(itemIndex, 1)}
+                          disabled={itemIndex === items.length - 1}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-white disabled:opacity-25"
+                          title="Mover para baixo"
+                        >
+                          <ChevronDown size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onChange({ ...bigNumbersBlock, items: items.filter((_, index) => index !== itemIndex) } as ContentBlock)}
+                          className="rounded border border-[#2a2a2a] p-1 text-[#555] transition-colors hover:text-red-400"
+                          title="Remover estatistica"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-[1fr_120px_1fr]">
+                      <div className="space-y-1">
+                        <FieldLabel>Texto antes</FieldLabel>
+                        <MiniTextarea
+                          value={item.prefix || ""}
+                          onChange={(prefix) => updateItem(itemIndex, { prefix })}
+                          placeholder="Texto inicial..."
+                          rows={2}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Numero em destaque</FieldLabel>
+                        <MiniInput
+                          value={item.number || ""}
+                          onChange={(number) => updateItem(itemIndex, { number })}
+                          placeholder="+59%"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <FieldLabel>Texto depois</FieldLabel>
+                        <MiniTextarea
+                          value={item.suffix || ""}
+                          onChange={(suffix) => updateItem(itemIndex, { suffix })}
+                          placeholder="Texto final..."
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...bigNumbersBlock,
+                    items: [
+                      ...items,
+                      { prefix: "", number: "", suffix: "" },
+                    ],
+                  } as ContentBlock)
+                }
+                className="flex items-center gap-1 text-[#666] transition-colors hover:text-[#aaa]"
+                style={{ fontSize: "12px" }}
+              >
+                <Plus size={12} /> Adicionar estatistica
               </button>
             </div>
           );

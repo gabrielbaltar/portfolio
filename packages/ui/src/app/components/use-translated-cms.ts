@@ -303,11 +303,23 @@ function collectBlockTexts(
       return;
     }
 
+    if (block.type === "big-numbers") {
+      if (typeof block.title === "string") {
+        addRichText(`${blockPath}.title`, block.title);
+      }
+      block.items.forEach((item, itemIndex) => {
+        if (typeof item.prefix === "string") addRichText(`${blockPath}.items.${itemIndex}.prefix`, item.prefix);
+        if (typeof item.number === "string") addRichText(`${blockPath}.items.${itemIndex}.number`, item.number);
+        if (typeof item.suffix === "string") addRichText(`${blockPath}.items.${itemIndex}.suffix`, item.suffix);
+      });
+      return;
+    }
+
     if ("text" in block && typeof block.text === "string") {
       addRichText(`${blockPath}.text`, block.text);
     }
 
-    if ("items" in block && Array.isArray(block.items)) {
+    if (block.type === "unordered-list" || block.type === "ordered-list") {
       collectListItemTexts(block.items, `${blockPath}.items`);
     }
 

@@ -108,6 +108,18 @@ export interface ContentTableBlock {
   itemFontSize?: number;
 }
 
+export interface BigNumberItem {
+  prefix: string;
+  number: string;
+  suffix: string;
+}
+
+export interface ContentBigNumbersBlock {
+  type: "big-numbers";
+  title?: string;
+  items: BigNumberItem[];
+}
+
 export type ContentBlock =
   | { type: "paragraph"; text: string; lineHeight?: number }
   | { type: "heading1"; text: string; lineHeight?: number; showInSummary?: boolean }
@@ -129,7 +141,8 @@ export type ContentBlock =
   | { type: "cta"; text: string; buttonText: string; buttonUrl: string; openInNewTab?: boolean; lineHeight?: number }
   | ContentTableBlock
   | { type: "cards"; cards: ContentCardItem[] }
-  | { type: "embed"; url: string; caption: string; height?: number };
+  | { type: "embed"; url: string; caption: string; height?: number }
+  | ContentBigNumbersBlock;
 
 export interface TimestampedEntity {
   createdAt: string;

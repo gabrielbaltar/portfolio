@@ -405,6 +405,44 @@ function ImageBlockSlider({
   );
 }
 
+function BigNumbersBlockView({ block }: { block: Extract<ContentBlock, { type: "big-numbers" }> }) {
+  if (!block.items || block.items.length === 0) return null;
+
+  return (
+    <figure className="my-10">
+      {block.title && (
+        <h4
+          className="font-['Inter',sans-serif] mb-6 font-semibold"
+          style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: "var(--text-secondary, #a6a6a6)" }}
+        >
+          — {block.title}
+        </h4>
+      )}
+      <div className="grid grid-cols-1 gap-6 min-[768px]:grid-cols-3 min-[768px]:gap-8">
+        {block.items.map((item, i) => (
+          <div key={i} className="flex flex-col min-w-0">
+            <p
+              className="font-['Inter',sans-serif] font-normal"
+              style={{ fontSize: "17px", lineHeight: "26px", color: "var(--text-primary, #fafafa)" }}
+            >
+              {item.prefix && <span><RichTextContent value={item.prefix} /> </span>}
+              {item.number && (
+                <strong
+                  className="font-semibold"
+                  style={{ color: "var(--accent-green, #00ff3c)" }}
+                >
+                  <RichTextContent value={item.number} />
+                </strong>
+              )}
+              {item.suffix && <span> <RichTextContent value={item.suffix} /></span>}
+            </p>
+          </div>
+        ))}
+      </div>
+    </figure>
+  );
+}
+
 export function BlockRenderer({
   blocks,
   imagesClickable = false,
@@ -666,6 +704,8 @@ export function BlockRenderer({
             );
           case "cards":
             return <CardsBlockView key={i} block={block} />;
+          case "big-numbers":
+            return <BigNumbersBlockView key={i} block={block} />;
           case "embed":
             return <ContentEmbed key={i} block={block} />;
           default:
