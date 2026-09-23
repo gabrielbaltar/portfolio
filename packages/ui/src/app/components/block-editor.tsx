@@ -2632,7 +2632,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
           return (
             <div className="space-y-3">
-              <label className="space-y-1">
+              <div className="space-y-1">
                 <FieldLabel>Titulo do bloco (opcional)</FieldLabel>
                 <RichTextEditor
                   value={bigNumbersBlock.title || ""}
@@ -2643,7 +2643,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                   editorStyle={{ fontSize: "13px", minHeight: "36px" }}
                   placeholder="Ex.: RESULT"
                 />
-              </label>
+              </div>
 
               <div className="space-y-3">
                 {items.map((item, itemIndex) => (
