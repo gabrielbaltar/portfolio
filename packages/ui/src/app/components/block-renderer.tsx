@@ -415,7 +415,7 @@ function BigNumbersBlockView({ block }: { block: Extract<ContentBlock, { type: "
           className="font-['Inter',sans-serif] mb-6 font-semibold"
           style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: "var(--text-secondary, #a6a6a6)" }}
         >
-          — {block.title}
+          <RichTextContent value={block.title} />
         </h4>
       )}
       <div className="grid grid-cols-1 gap-6 min-[768px]:grid-cols-3 min-[768px]:gap-8">
@@ -428,8 +428,8 @@ function BigNumbersBlockView({ block }: { block: Extract<ContentBlock, { type: "
               {item.prefix && <span><RichTextContent value={item.prefix} /> </span>}
               {item.number && (
                 <strong
-                  className="font-semibold"
-                  style={{ color: "var(--accent-green, #00ff3c)" }}
+                  className="font-semibold block my-1"
+                  style={{ color: "var(--accent-green, #00ff3c)", fontSize: "32px", lineHeight: "1.2" }}
                 >
                   <RichTextContent value={item.number} />
                 </strong>

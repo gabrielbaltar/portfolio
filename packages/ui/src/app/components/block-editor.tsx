@@ -2634,9 +2634,13 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
             <div className="space-y-3">
               <label className="space-y-1">
                 <FieldLabel>Titulo do bloco (opcional)</FieldLabel>
-                <MiniInput
+                <RichTextEditor
                   value={bigNumbersBlock.title || ""}
                   onChange={(title) => onChange({ ...bigNumbersBlock, title } as ContentBlock)}
+                  compact
+                  multiline={false}
+                  editorClassName="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa]"
+                  editorStyle={{ fontSize: "13px", minHeight: "36px" }}
                   placeholder="Ex.: RESULT"
                 />
               </label>
@@ -2682,31 +2686,41 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-[1fr_120px_1fr]">
+                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-3">
                       <div className="space-y-1">
                         <FieldLabel>Texto antes</FieldLabel>
-                        <MiniTextarea
+                        <RichTextEditor
                           value={item.prefix || ""}
                           onChange={(prefix) => updateItem(itemIndex, { prefix })}
+                          compact
+                          multiline
+                          editorClassName="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa]"
+                          editorStyle={{ fontSize: "13px", minHeight: "64px" }}
                           placeholder="Texto inicial..."
-                          rows={2}
                         />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Numero em destaque</FieldLabel>
-                        <MiniInput
+                        <RichTextEditor
                           value={item.number || ""}
                           onChange={(number) => updateItem(itemIndex, { number })}
+                          compact
+                          multiline={false}
+                          editorClassName="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa]"
+                          editorStyle={{ fontSize: "13px", minHeight: "64px" }}
                           placeholder="+59%"
                         />
                       </div>
                       <div className="space-y-1">
                         <FieldLabel>Texto depois</FieldLabel>
-                        <MiniTextarea
+                        <RichTextEditor
                           value={item.suffix || ""}
                           onChange={(suffix) => updateItem(itemIndex, { suffix })}
+                          compact
+                          multiline
+                          editorClassName="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa]"
+                          editorStyle={{ fontSize: "13px", minHeight: "64px" }}
                           placeholder="Texto final..."
-                          rows={2}
                         />
                       </div>
                     </div>
