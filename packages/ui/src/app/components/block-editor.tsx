@@ -2632,7 +2632,11 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
 
           return (
             <div className="space-y-3">
-              <div className="space-y-1">
+              <div 
+                className="space-y-1"
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                 <FieldLabel>Titulo do bloco (opcional)</FieldLabel>
                 <RichTextEditor
                   value={bigNumbersBlock.title || ""}
@@ -2651,6 +2655,8 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                     key={itemIndex}
                     className="space-y-3 rounded-lg border p-3"
                     style={{ borderColor: "#2a2a2a", backgroundColor: "#141414" }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[#777]" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
