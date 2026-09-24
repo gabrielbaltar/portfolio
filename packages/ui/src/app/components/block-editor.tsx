@@ -2692,19 +2692,7 @@ function DraggableBlock({ block, index, total, onChange, onRemove, onMove, moveB
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-3">
-                      <div className="space-y-1">
-                        <FieldLabel>Texto antes</FieldLabel>
-                        <RichTextEditor
-                          value={item.prefix || ""}
-                          onChange={(prefix) => updateItem(itemIndex, { prefix })}
-                          compact
-                          multiline
-                          editorClassName="w-full rounded border border-[#2a2a2a] bg-[#1a1a1a] px-2.5 py-1.5 text-[#fafafa]"
-                          editorStyle={{ fontSize: "13px", minHeight: "64px" }}
-                          placeholder="Texto inicial..."
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 gap-2 min-[720px]:grid-cols-2">
                       <div className="space-y-1">
                         <FieldLabel>Numero em destaque</FieldLabel>
                         <RichTextEditor

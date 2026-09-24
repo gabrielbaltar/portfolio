@@ -421,21 +421,22 @@ function BigNumbersBlockView({ block }: { block: Extract<ContentBlock, { type: "
       <div className="grid grid-cols-1 gap-6 min-[768px]:grid-cols-3 min-[768px]:gap-8">
         {block.items.map((item, i) => (
           <div key={i} className="flex flex-col min-w-0">
-            <p
-              className="font-['Inter',sans-serif] font-normal"
-              style={{ fontSize: "17px", lineHeight: "26px", color: "var(--text-primary, #fafafa)" }}
-            >
-              {item.prefix && <span><RichTextContent value={item.prefix} /> </span>}
-              {item.number && (
-                <strong
-                  className="font-semibold block my-1"
-                  style={{ color: "var(--accent-green, #00ff3c)", fontSize: "32px", lineHeight: "1.2" }}
-                >
-                  <RichTextContent value={item.number} />
-                </strong>
-              )}
-              {item.suffix && <span> <RichTextContent value={item.suffix} /></span>}
-            </p>
+            {item.number && (
+              <strong
+                className="font-semibold block"
+                style={{ color: "var(--text-primary, #fafafa)", fontSize: "32px", lineHeight: "1.2" }}
+              >
+                <RichTextContent value={item.number} />
+              </strong>
+            )}
+            {item.suffix && (
+              <p
+                className="font-['Inter',sans-serif] font-normal mt-2"
+                style={{ fontSize: "15px", lineHeight: "1.5", color: "var(--text-secondary, #a6a6a6)" }}
+              >
+                <RichTextContent value={item.suffix} />
+              </p>
+            )}
           </div>
         ))}
       </div>
