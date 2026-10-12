@@ -1510,7 +1510,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                       />
                     )}
                     {block.caption && (
-                      <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>
+                      <figcaption className="text-right mt-2 text-[#666]" style={{ fontSize: "12px", textAlign: "right" }}>
                         <RichTextContent value={block.caption} />
                       </figcaption>
                     )}
@@ -1535,7 +1535,7 @@ function VisualPreview({ item, contentType, onUpdate, previewMode, readOnly = fa
                       zoom={vBlock.zoom ?? 1}
                     />
                     {vBlock.caption && (
-                      <figcaption className="text-center mt-2 text-[#666]" style={{ fontSize: "12px" }}>{vBlock.caption}</figcaption>
+                      <figcaption className="text-right mt-2 text-[#666]" style={{ fontSize: "12px", textAlign: "right" }}>{vBlock.caption}</figcaption>
                     )}
                   </figure>
                 ) : (

@@ -593,8 +593,8 @@ export function BlockRenderer({
                 )}
                 {block.caption && (
                   <figcaption
-                    className="mt-2 text-center font-['Inter',sans-serif]"
-                    style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
+                    className="mt-2 text-right font-['Inter',sans-serif]"
+                    style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)", textAlign: "right" }}
                   >
                     <RichTextContent value={block.caption} />
                   </figcaption>

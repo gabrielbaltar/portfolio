@@ -848,8 +848,8 @@ export function VideoPlayer({
       {/* Caption */}
       {caption && (
         <p
-          className="text-center font-['Inter',sans-serif] mt-2"
-          style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)" }}
+          className="text-right font-['Inter',sans-serif] mt-2"
+          style={{ fontSize: "13px", color: "var(--text-secondary, #6f6f6f)", textAlign: "right" }}
         >
           {caption}
         </p>
